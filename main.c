@@ -41,11 +41,99 @@ int main(void)
 void read_program(FILE *fp, size_t size)
 {
     uint8_t *prg = calloc(size, sizeof(uint8_t));
+    uint16_t abs = 0;
+    int is_immediate = 0;
+    int is_absolute = 0;
+    int is_zeropage = 0;
     int i;
 
     fread(prg, sizeof(uint8_t), size, fp);
 
-    for (i = 0; i < 64; i++) {
+    for (i = 0; i < size; i++) {
+
+        if (is_immediate) {
+            printf("\t  #$%02X\n", prg[i]);
+            is_immediate = 0;
+            continue;
+        }
+        if (is_absolute == 2) {
+            abs = prg[i];
+            is_absolute--;
+            continue;
+        }
+        if (is_absolute == 1) {
+            abs += prg[i] << 8;
+            printf("\t  $%04X\n", abs);
+            is_absolute--;
+            continue;
+        }
+        if (is_zeropage) {
+            printf("\t  $00%02X\n", prg[i]);
+            is_zeropage = 0;
+            continue;
+        }
+
+        printf("[%04X] ", 0x8000 + i);
+
+        switch (prg[i]) {
+        case 0x00 + 0x00:
+            printf("BRK\n");
+            break;
+
+        case 0x40 + 0x0C:
+            printf("JMP a");
+            is_absolute = 2;
+            break;
+
+        case 0x60 + 0x18:
+            printf("SEI\n");
+            break;
+
+        case 0x80 + 0x00:
+            printf("NOP #i");
+            is_immediate = 1;
+            break;
+        case 0x80 + 0x08:
+            printf("DEY\n");
+            break;
+        case 0x80 + 0x0D:
+            printf("STA a");
+            is_absolute = 2;
+            break;
+        case 0x80 + 0x1A:
+            printf("TXS\n");
+            break;
+
+        case 0xA0 + 0x00:
+            printf("LDY #i");
+            is_immediate = 1;
+            break;
+        case 0xA0 + 0x02:
+            printf("LDX #i");
+            is_immediate = 1;
+            break;
+        case 0xA0 + 0x09:
+            printf("LDA #i");
+            is_immediate = 1;
+            break;
+        case 0xA0 + 0x1D:
+            printf("LDA (a,x)");
+            is_absolute = 2;
+            break;
+
+        case 0xC0 + 0x10:
+            printf("BNE *+d");
+            is_zeropage = 1;
+            break;
+
+        case 0xE0 + 0x08:
+            printf("INX\n");
+            break;
+
+        default:
+            printf("0x%02X\n", prg[i]);
+            break;
+        }
     }
 
     free(prg);
@@ -75,7 +163,9 @@ void read_character(FILE *fp, size_t size)
 
     for (i = 0; i < size / 8; i++) {
         for (j = 0; j < 8; j++)
+            if (0)
             print_row(chr[i * 8 + j]);
+        if (0)
         printf("\n");
     }
 
