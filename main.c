@@ -41,41 +41,47 @@ int main(void)
 void read_program(FILE *fp, size_t size)
 {
     uint8_t *prg = calloc(size, sizeof(uint8_t));
+    uint8_t *pc = prg;
+    uint8_t *end = prg + size;
     uint16_t abs = 0;
     int is_immediate = 0;
     int is_absolute = 0;
     int is_zeropage = 0;
-    int i;
 
     fread(prg, sizeof(uint8_t), size, fp);
 
-    for (i = 0; i < size; i++) {
+    while (pc < end) {
+        const int addr = 0x8000 + (pc - prg);
+        /* fetch */
+        uint8_t data = *pc++;
 
         if (is_immediate) {
-            printf("\t  #$%02X\n", prg[i]);
+            printf("\t  #$%02X\n", data);
             is_immediate = 0;
             continue;
         }
         if (is_absolute == 2) {
-            abs = prg[i];
+            abs = data;
             is_absolute--;
             continue;
         }
         if (is_absolute == 1) {
-            abs += prg[i] << 8;
+            abs += data << 8;
             printf("\t  $%04X\n", abs);
             is_absolute--;
             continue;
         }
         if (is_zeropage) {
-            printf("\t  $00%02X\n", prg[i]);
+            const int curr = 0x8000 + (pc - prg);
+            const int8_t offset = data;
+            printf("\t  $%04X\n", curr + offset);
             is_zeropage = 0;
             continue;
         }
 
-        printf("[%04X] ", 0x8000 + i);
+        printf("[%04X] ", addr);
 
-        switch (prg[i]) {
+        switch (data) {
         case 0x00 + 0x00:
             printf("BRK\n");
             break;
@@ -131,7 +137,7 @@ void read_program(FILE *fp, size_t size)
             break;
 
         default:
-            printf("0x%02X\n", prg[i]);
+            printf("0x%02X\n", data);
             break;
         }
     }
