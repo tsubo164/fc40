@@ -10,10 +10,15 @@ struct CPU {
     uint8_t *prog;
     size_t prog_size;
 
-    uint8_t *pc;
-};
+    uint16_t pc;
+    struct status {
+        char i;
+    } stat;
+} cpu = {0};
 
-void reset(struct CPU *cpu);
+static uint8_t fetch(void);
+void reset(void);
+void run(void);
 
 int main(void)
 {
@@ -45,17 +50,15 @@ int main(void)
     prog = read_program(fp, prog_size);
     read_character(fp, char_size);
 
-    print_program(prog, prog_size);
+    if (0)
+        print_program(prog, prog_size);
 
     {
-        struct CPU cpu;
         cpu.prog = prog;
         cpu.prog_size = prog_size;
-        cpu.pc = prog;
 
-        reset(&cpu);
-
-        printf("RESET: 0x%04X\n", *cpu.pc);
+        reset();
+        run();
     }
 
     fclose(fp);
@@ -207,31 +210,74 @@ void read_character(FILE *fp, size_t size)
     free(chr);
 }
 
-static uint8_t fetch(struct CPU *cpu)
+static uint8_t read_byte(uint16_t addr)
 {
-    return *cpu->pc++;
+    //return cpu->prog[addr - 0x8000];
+    return cpu.prog[addr - 0x8000];
 }
 
-static void jump(struct CPU *cpu, uint16_t addr)
-{
-    cpu->pc = cpu->prog + (addr - 0x8000);
-}
-
-static uint16_t read_word(struct CPU *cpu)
+static uint16_t read_word(uint16_t addr)
 {
     uint16_t lo, hi;
 
-    lo = fetch(cpu);
-    hi = fetch(cpu) << 8;
+    lo = read_byte(addr);
+    hi = read_byte(addr + 1);
 
-    return hi + lo;
+    return (hi << 8) + lo;
 }
 
-void reset(struct CPU *cpu)
+static uint8_t fetch(void)
+{
+    return read_byte(cpu.pc++);
+}
+
+static void jump(uint16_t addr)
+{
+    cpu.pc = addr;
+}
+
+void reset(void)
 {
     uint16_t addr;
 
-    jump(cpu, 0xFFFC);
-    addr = read_word(cpu);
-    jump(cpu, addr);
+    addr = read_word(0xFFFC);
+    jump(addr);
+}
+
+static void brk(void)
+{
+    /*
+    printf("%s\n", __func__);
+    */
+}
+
+static void sei(void)
+{
+    cpu.stat.i = 1;
+    printf("%s\n", __func__);
+}
+
+void run(void)
+{
+    for (;;) {
+        uint16_t addr = cpu.pc;
+        uint8_t code = fetch();
+
+        switch (code) {
+        case 0x00 + 0x00:
+            brk();
+            break;
+
+        case 0x60 + 0x18:
+            printf("[%04X] ", addr);
+            sei();
+            break;
+
+        default:
+            break;
+        }
+
+        if (cpu.pc == cpu.prog_size + 0x8000 - 1)
+            break;
+    }
 }
