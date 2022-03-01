@@ -212,7 +212,6 @@ void read_character(FILE *fp, size_t size)
 
 static uint8_t read_byte(uint16_t addr)
 {
-    //return cpu->prog[addr - 0x8000];
     return cpu.prog[addr - 0x8000];
 }
 
@@ -231,6 +230,16 @@ static uint8_t fetch(void)
     return read_byte(cpu.pc++);
 }
 
+static uint16_t fetch_word(void)
+{
+    uint16_t lo, hi;
+
+    lo = fetch();
+    hi = fetch();
+
+    return (hi << 8) + lo;
+}
+
 static void jump(uint16_t addr)
 {
     cpu.pc = addr;
@@ -244,16 +253,103 @@ void reset(void)
     jump(addr);
 }
 
+enum addressing_mode {
+    IMP = 0, /* implied */
+    ACC, /* A register */
+    IMM, /* immediate */
+    REL, /* immediate + pc */
+    ABS, /* absolute */
+    ABX, /* absolute + X */
+    ABY  /* absolute + Y */
+};
+
+static void bne(int mode)
+{
+    int8_t imm = (int8_t) fetch();
+    uint16_t abs = cpu.pc;
+
+    printf("%s $%04X\n", __func__, abs + imm);
+}
+
 static void brk(void)
 {
-    /*
     printf("%s\n", __func__);
-    */
+}
+
+static void dey(int mode)
+{
+    printf("%s\n", __func__);
+}
+
+static void inx(int mode)
+{
+    printf("%s\n", __func__);
+}
+
+static void jmp(int mode)
+{
+    uint16_t abs = fetch_word();
+
+    printf("%s $%04X\n", __func__, abs);
+}
+
+static void lda(int mode)
+{
+    uint8_t imm;
+    uint16_t abs;
+
+    switch (mode) {
+    case IMM:
+        imm = fetch();
+        printf("%s #$%02X\n", __func__, imm);
+        break;
+
+    case ABX:
+        abs = fetch_word();
+        printf("%s $%04X\n", __func__, abs);
+        break;
+
+    default:
+        break;
+    }
+}
+
+static void ldx(int mode)
+{
+    uint8_t imm = fetch();
+
+    printf("%s #$%02X\n", __func__, imm);
+}
+
+static void ldy(int mode)
+{
+    uint8_t imm = fetch();
+
+    printf("%s #$%02X\n", __func__, imm);
+}
+
+static void nop(int mode)
+{
+    uint8_t imm = fetch();
+
+    printf("%s #$%02X\n", __func__, imm);
 }
 
 static void sei(void)
 {
     cpu.stat.i = 1;
+    printf("%s\n", __func__);
+}
+
+static void sta(int mode)
+{
+    uint16_t abs = fetch_word();
+
+    printf("%s $%04X\n", __func__, abs);
+}
+
+static void txs(int mode)
+{
     printf("%s\n", __func__);
 }
 
@@ -265,7 +361,13 @@ void run(void)
 
         switch (code) {
         case 0x00 + 0x00:
+            printf("[%04X] ", addr);
             brk();
+            break;
+
+        case 0x40 + 0x0C:
+            printf("[%04X] ", addr);
+            jmp(ABS);
             break;
 
         case 0x60 + 0x18:
@@ -273,11 +375,60 @@ void run(void)
             sei();
             break;
 
+        case 0x80 + 0x00:
+            printf("[%04X] ", addr);
+            nop(IMM);
+            break;
+        case 0x80 + 0x08:
+            printf("[%04X] ", addr);
+            dey(0);
+            break;
+        case 0x80 + 0x0D:
+            printf("[%04X] ", addr);
+            sta(ABS);
+            break;
+        case 0x80 + 0x1A:
+            printf("[%04X] ", addr);
+            txs(0);
+            break;
+
+        case 0xA0 + 0x00:
+            printf("[%04X] ", addr);
+            ldy(IMM);
+            break;
+        case 0xA0 + 0x02:
+            printf("[%04X] ", addr);
+            ldx(IMM);
+            break;
+        case 0xA0 + 0x09:
+            printf("[%04X] ", addr);
+            lda(IMM);
+            break;
+        case 0xA0 + 0x1D:
+            printf("[%04X] ", addr);
+            lda(ABX);
+            break;
+
+        case 0xC0 + 0x10:
+            printf("[%04X] ", addr);
+            bne(REL);
+            break;
+
+        case 0xE0 + 0x08:
+            printf("[%04X] ", addr);
+            inx(IMP);
+            break;
+
         default:
+            printf("[%04X] ", addr);
+            printf("0x%02X\n", code);
             break;
         }
 
-        if (cpu.pc == cpu.prog_size + 0x8000 - 1)
+        if (cpu.pc == cpu.prog_size + 0x8000 - 1) {
+            printf("[%04X] ", cpu.pc);
+            printf("0x%02X\n", code);
             break;
+        }
     }
 }
