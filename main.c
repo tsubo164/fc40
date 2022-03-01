@@ -2,8 +2,18 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-void read_program(FILE *fp, size_t size);
+uint8_t *read_program(FILE *fp, size_t size);
+void print_program(uint8_t *prog, size_t size);
 void read_character(FILE *fp, size_t size);
+
+struct CPU {
+    uint8_t *prog;
+    size_t prog_size;
+
+    uint8_t *pc;
+};
+
+void reset(struct CPU *cpu);
 
 int main(void)
 {
@@ -11,6 +21,7 @@ int main(void)
     char header[16] = {'\0'};
     size_t prog_size = 0;
     size_t char_size = 0;
+    uint8_t *prog = NULL;
 
     fread(header, sizeof(char), 16, fp);
 
@@ -31,27 +42,47 @@ int main(void)
     printf("program size:   %ldKB\n", prog_size / 1024);
     printf("character size: %ldKB\n", char_size / 1024);
 
-    read_program(fp, prog_size);
+    prog = read_program(fp, prog_size);
     read_character(fp, char_size);
 
+    print_program(prog, prog_size);
+
+    {
+        struct CPU cpu;
+        cpu.prog = prog;
+        cpu.prog_size = prog_size;
+        cpu.pc = prog;
+
+        reset(&cpu);
+
+        printf("RESET: 0x%04X\n", *cpu.pc);
+    }
+
     fclose(fp);
+    free(prog);
     return 0;
 }
 
-void read_program(FILE *fp, size_t size)
+uint8_t *read_program(FILE *fp, size_t size)
 {
-    uint8_t *prg = calloc(size, sizeof(uint8_t));
-    uint8_t *pc = prg;
-    uint8_t *end = prg + size;
+    uint8_t *prog = calloc(size, sizeof(uint8_t));
+
+    fread(prog, sizeof(uint8_t), size, fp);
+
+    return prog;
+}
+
+void print_program(uint8_t *prog, size_t size)
+{
+    uint8_t *pc = prog;
+    uint8_t *end = prog + size;
     uint16_t abs = 0;
     int is_immediate = 0;
     int is_absolute = 0;
     int is_zeropage = 0;
 
-    fread(prg, sizeof(uint8_t), size, fp);
-
     while (pc < end) {
-        const int addr = 0x8000 + (pc - prg);
+        const int addr = 0x8000 + (pc - prog);
         /* fetch */
         uint8_t data = *pc++;
 
@@ -72,7 +103,7 @@ void read_program(FILE *fp, size_t size)
             continue;
         }
         if (is_zeropage) {
-            const int curr = 0x8000 + (pc - prg);
+            const int curr = 0x8000 + (pc - prog);
             const int8_t offset = data;
             printf("\t  $%04X\n", curr + offset);
             is_zeropage = 0;
@@ -141,8 +172,6 @@ void read_program(FILE *fp, size_t size)
             break;
         }
     }
-
-    free(prg);
 }
 
 static void print_row(uint8_t r)
@@ -176,4 +205,33 @@ void read_character(FILE *fp, size_t size)
     }
 
     free(chr);
+}
+
+static uint8_t fetch(struct CPU *cpu)
+{
+    return *cpu->pc++;
+}
+
+static void jump(struct CPU *cpu, uint16_t addr)
+{
+    cpu->pc = cpu->prog + (addr - 0x8000);
+}
+
+static uint16_t read_word(struct CPU *cpu)
+{
+    uint16_t lo, hi;
+
+    lo = fetch(cpu);
+    hi = fetch(cpu) << 8;
+
+    return hi + lo;
+}
+
+void reset(struct CPU *cpu)
+{
+    uint16_t addr;
+
+    jump(cpu, 0xFFFC);
+    addr = read_word(cpu);
+    jump(cpu, addr);
 }
