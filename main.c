@@ -3,19 +3,37 @@
 #include <stdint.h>
 
 static uint16_t op_address = 0;
+static int do_print_code = 1;
 
 uint8_t *read_program(FILE *fp, size_t size);
-void print_program(uint8_t *prog, size_t size);
 void read_character(FILE *fp, size_t size);
+static void jump(uint16_t addr);
+
+struct status {
+    char carry;
+    char zero;
+    char interrupt;
+    char decimal;
+    char brk;
+    char reserved;
+    char overflow;
+    char negative;
+};
+
+struct registers {
+    uint8_t a;
+    uint8_t x;
+    uint8_t y;
+    uint8_t s;
+    struct status p;
+    uint16_t pc;
+};
 
 struct CPU {
     uint8_t *prog;
     size_t prog_size;
 
-    uint16_t pc;
-    struct status {
-        char i;
-    } stat;
+    struct registers reg;
 } cpu = {0};
 
 static uint8_t fetch(void);
@@ -52,9 +70,6 @@ int main(void)
     prog = read_program(fp, prog_size);
     read_character(fp, char_size);
 
-    if (0)
-        print_program(prog, prog_size);
-
     {
         cpu.prog = prog;
         cpu.prog_size = prog_size;
@@ -75,108 +90,6 @@ uint8_t *read_program(FILE *fp, size_t size)
     fread(prog, sizeof(uint8_t), size, fp);
 
     return prog;
-}
-
-void print_program(uint8_t *prog, size_t size)
-{
-    uint8_t *pc = prog;
-    uint8_t *end = prog + size;
-    uint16_t abs = 0;
-    int is_immediate = 0;
-    int is_absolute = 0;
-    int is_zeropage = 0;
-
-    while (pc < end) {
-        const int addr = 0x8000 + (pc - prog);
-        /* fetch */
-        uint8_t data = *pc++;
-
-        if (is_immediate) {
-            printf("\t  #$%02X\n", data);
-            is_immediate = 0;
-            continue;
-        }
-        if (is_absolute == 2) {
-            abs = data;
-            is_absolute--;
-            continue;
-        }
-        if (is_absolute == 1) {
-            abs += data << 8;
-            printf("\t  $%04X\n", abs);
-            is_absolute--;
-            continue;
-        }
-        if (is_zeropage) {
-            const int curr = 0x8000 + (pc - prog);
-            const int8_t offset = data;
-            printf("\t  $%04X\n", curr + offset);
-            is_zeropage = 0;
-            continue;
-        }
-
-        printf("[%04X] ", addr);
-
-        switch (data) {
-        case 0x00 + 0x00:
-            printf("BRK\n");
-            break;
-
-        case 0x40 + 0x0C:
-            printf("JMP a");
-            is_absolute = 2;
-            break;
-
-        case 0x60 + 0x18:
-            printf("SEI\n");
-            break;
-
-        case 0x80 + 0x00:
-            printf("NOP #i");
-            is_immediate = 1;
-            break;
-        case 0x80 + 0x08:
-            printf("DEY\n");
-            break;
-        case 0x80 + 0x0D:
-            printf("STA a");
-            is_absolute = 2;
-            break;
-        case 0x80 + 0x1A:
-            printf("TXS\n");
-            break;
-
-        case 0xA0 + 0x00:
-            printf("LDY #i");
-            is_immediate = 1;
-            break;
-        case 0xA0 + 0x02:
-            printf("LDX #i");
-            is_immediate = 1;
-            break;
-        case 0xA0 + 0x09:
-            printf("LDA #i");
-            is_immediate = 1;
-            break;
-        case 0xA0 + 0x1D:
-            printf("LDA (a,x)");
-            is_absolute = 2;
-            break;
-
-        case 0xC0 + 0x10:
-            printf("BNE *+d");
-            is_zeropage = 1;
-            break;
-
-        case 0xE0 + 0x08:
-            printf("INX\n");
-            break;
-
-        default:
-            printf("0x%02X\n", data);
-            break;
-        }
-    }
 }
 
 static void print_row(uint8_t r)
@@ -229,7 +142,7 @@ static uint16_t read_word(uint16_t addr)
 
 static uint8_t fetch(void)
 {
-    return read_byte(cpu.pc++);
+    return read_byte(cpu.reg.pc++);
 }
 
 static uint16_t fetch_word(void)
@@ -244,7 +157,7 @@ static uint16_t fetch_word(void)
 
 static void jump(uint16_t addr)
 {
-    cpu.pc = addr;
+    cpu.reg.pc = addr;
 }
 
 void reset(void)
@@ -267,6 +180,9 @@ enum addressing_mode {
 
 static void print_code(const char *op, int mode, int operand)
 {
+    if (!do_print_code)
+        return;
+
     printf("[%04X] %s", op_address, op);
 
     switch (mode) {
@@ -294,7 +210,7 @@ static void print_code(const char *op, int mode, int operand)
 static void bne(int mode)
 {
     int8_t imm = (int8_t) fetch();
-    uint16_t abs = cpu.pc;
+    uint16_t abs = cpu.reg.pc;
 
     PRINT_CODE(mode, abs + imm);
 }
@@ -317,8 +233,9 @@ static void inx(int mode)
 static void jmp(int mode)
 {
     uint16_t abs = fetch_word();
+    jump(abs);
 
-    PRINT_CODE(mode, abs);
+    //PRINT_CODE(mode, abs);
 }
 
 static void lda(int mode)
@@ -345,8 +262,9 @@ static void lda(int mode)
 static void ldx(int mode)
 {
     uint8_t imm = fetch();
+    cpu.reg.x = imm;
 
-    PRINT_CODE(mode, imm);
+    //PRINT_CODE(mode, imm);
 }
 
 static void ldy(int mode)
@@ -365,9 +283,9 @@ static void nop(int mode)
 
 static void sei(int mode)
 {
-    cpu.stat.i = 1;
+    cpu.reg.p.interrupt = 1;
 
-    PRINT_CODE(mode, 0);
+    //PRINT_CODE(mode, 0);
 }
 
 static void sta(int mode)
@@ -384,8 +302,8 @@ static void txs(int mode)
 
 void run(void)
 {
-    while (cpu.pc) {
-        const uint16_t addr = cpu.pc;
+    while (cpu.reg.pc) {
+        const uint16_t addr = cpu.reg.pc;
         const uint8_t code = fetch();
         op_address = addr;
 
@@ -437,8 +355,11 @@ void run(void)
             break;
 
         default:
-            printf("[%04X] ", op_address);
-            printf("0x%02X\n", code);
+            {
+                char op_[8] = {'\0'};
+                sprintf(op_, "0x%02X", code);
+                print_code(op_, IMP, 0);
+            }
             break;
         }
     }
