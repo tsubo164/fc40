@@ -232,10 +232,14 @@ static void inx(int mode)
 
 static void jmp(int mode)
 {
+    static char tmp = 0;
     uint16_t abs = fetch_word();
     jump(abs);
 
-    //PRINT_CODE(mode, abs);
+    if (tmp == 0) {
+        tmp++;
+        PRINT_CODE(mode, abs);
+    }
 }
 
 static void lda(int mode)
@@ -246,6 +250,7 @@ static void lda(int mode)
     switch (mode) {
     case IMM:
         imm = fetch();
+        cpu.reg.a = imm;
         PRINT_CODE(mode, imm);
         break;
 
@@ -264,7 +269,7 @@ static void ldx(int mode)
     uint8_t imm = fetch();
     cpu.reg.x = imm;
 
-    //PRINT_CODE(mode, imm);
+    PRINT_CODE(mode, imm);
 }
 
 static void ldy(int mode)
@@ -285,7 +290,7 @@ static void sei(int mode)
 {
     cpu.reg.p.interrupt = 1;
 
-    //PRINT_CODE(mode, 0);
+    PRINT_CODE(mode, 0);
 }
 
 static void sta(int mode)
@@ -297,11 +302,14 @@ static void sta(int mode)
 
 static void txs(int mode)
 {
+    cpu.reg.s = cpu.reg.x + 0x0100;
     PRINT_CODE(mode, 0);
 }
 
 void run(void)
 {
+    uint64_t cnt = 0;
+
     while (cpu.reg.pc) {
         const uint16_t addr = cpu.reg.pc;
         const uint8_t code = fetch();
@@ -362,5 +370,13 @@ void run(void)
             }
             break;
         }
+
+        if (cnt++ > 1024 * 1024) {
+            printf("!!cnt reached: %llu\n", cnt);
+            break;
+        }
+
+        if (addr == 0x8004)
+            printf("--------------------------------\n");
     }
 }
