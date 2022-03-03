@@ -42,6 +42,16 @@ static uint8_t fetch(void);
 void reset(void);
 void run(void);
 
+/* ppu */
+typedef uint8_t byte;
+typedef uint16_t word;
+static word ppu_addr;
+static byte ppu_data;
+static byte bg_pallet_table[16] = {0};
+static byte name_table_0[0x03C0] = {0};
+
+void write_ppu_register(uint16_t addr, uint8_t data);
+
 int main(void)
 {
     FILE *fp = fopen("./sample1.nes", "rb");
@@ -137,7 +147,7 @@ static void write_byte(uint16_t addr, uint8_t data)
     }
     else if (addr <= 0x2007) {
         /* PPU registers */
-        ppu_reg[addr - 0x2000] = data;
+        write_ppu_register(addr, data);
     }
     else if (addr <= 0x3FFF) {
         /* PPU registers mirror */
@@ -402,5 +412,38 @@ void run(void)
             printf("!!cnt reached: %llu\n", cnt);
             break;
         }
+    }
+
+    {
+        printf("name_table_0\n");
+        for (int i = 0; i < 16; i++) {
+            printf("0x%02X", bg_pallet_table[i]);
+            printf("%c", i%4==3 ? '\n' : ' ');
+        }
+    }
+}
+
+void write_ppu_register(uint16_t addr, uint8_t data)
+{
+    if (addr == 0x2006) {
+        static int is_high = 1;
+        ppu_addr = is_high ? data << 8 : ppu_addr + data;
+        is_high = !is_high;
+    }
+    else if (addr == 0x2007) {
+        ppu_data = data;
+
+        /* ppu */
+        if (0x2000 <= ppu_addr && ppu_addr <= 0x23BF) {
+            name_table_0[ppu_addr - 0x2000] = data;
+            ppu_addr++;
+        }
+        if (0x3F00 <= ppu_addr && ppu_addr <= 0x3F0F) {
+            bg_pallet_table[ppu_addr - 0x3F00] = data;
+            ppu_addr++;
+        }
+    }
+    else {
+        ppu_reg[addr - 0x2000] = data;
     }
 }
