@@ -5,6 +5,8 @@
 static uint16_t op_address = 0;
 static int do_print_code = 1;
 
+static uint8_t ppu_reg[8] = {0};
+
 uint8_t *read_program(FILE *fp, size_t size);
 void read_character(FILE *fp, size_t size);
 static void jump(uint16_t addr);
@@ -125,6 +127,23 @@ void read_character(FILE *fp, size_t size)
     free(chr);
 }
 
+static void write_byte(uint16_t addr, uint8_t data)
+{
+    if (addr <= 0x07FF) {
+        /* WRAM */
+    }
+    else if (addr <= 0x1FFF) {
+        /* WRAM mirror */
+    }
+    else if (addr <= 0x2007) {
+        /* PPU registers */
+        ppu_reg[addr - 0x2000] = data;
+    }
+    else if (addr <= 0x3FFF) {
+        /* PPU registers mirror */
+    }
+}
+
 static uint8_t read_byte(uint16_t addr)
 {
     return cpu.prog[addr - 0x8000];
@@ -178,7 +197,7 @@ enum addressing_mode {
     ABY  /* absolute + Y */
 };
 
-static void print_code(const char *op, int mode, int operand)
+static void print_code(const char *op, int mode, uint16_t operand)
 {
     if (!do_print_code)
         return;
@@ -212,6 +231,8 @@ static void bne(int mode)
     int8_t imm = (int8_t) fetch();
     uint16_t abs = cpu.reg.pc;
 
+    if (cpu.reg.p.zero == 0)
+        jump(abs + imm);
     PRINT_CODE(mode, abs + imm);
 }
 
@@ -222,11 +243,14 @@ static void brk(int mode)
 
 static void dey(int mode)
 {
+    cpu.reg.y--;
+    cpu.reg.p.zero = (cpu.reg.y == 0);
     PRINT_CODE(mode, 0);
 }
 
 static void inx(int mode)
 {
+    cpu.reg.x++;
     PRINT_CODE(mode, 0);
 }
 
@@ -251,12 +275,13 @@ static void lda(int mode)
     case IMM:
         imm = fetch();
         cpu.reg.a = imm;
-        PRINT_CODE(mode, imm);
+        PRINT_CODE(mode, cpu.reg.a);
         break;
 
     case ABX:
         abs = fetch_word();
-        PRINT_CODE(mode, abs);
+        cpu.reg.a = read_byte(abs + cpu.reg.x);
+        PRINT_CODE(mode, abs + cpu.reg.x);
         break;
 
     default:
@@ -275,6 +300,7 @@ static void ldx(int mode)
 static void ldy(int mode)
 {
     uint8_t imm = fetch();
+    cpu.reg.y = imm;
 
     PRINT_CODE(mode, imm);
 }
@@ -296,6 +322,7 @@ static void sei(int mode)
 static void sta(int mode)
 {
     uint16_t abs = fetch_word();
+    write_byte(abs, cpu.reg.a);
 
     PRINT_CODE(mode, abs);
 }
@@ -375,8 +402,5 @@ void run(void)
             printf("!!cnt reached: %llu\n", cnt);
             break;
         }
-
-        if (addr == 0x8004)
-            printf("--------------------------------\n");
     }
 }
