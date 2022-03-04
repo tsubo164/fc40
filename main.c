@@ -5,12 +5,11 @@
 static uint16_t op_address = 0;
 static int do_print_code = 0;
 
-static uint8_t ppu_reg[8] = {0};
-
 uint8_t *read_program(FILE *fp, size_t size);
 uint8_t *read_character(FILE *fp, size_t size);
 static void jump(uint16_t addr);
 
+/* cpu */
 struct status {
     char carry;
     char zero;
@@ -43,17 +42,13 @@ void reset(void);
 void run(void);
 
 /* ppu */
-typedef uint8_t byte;
-typedef uint16_t word;
-static word ppu_addr;
-static byte ppu_data;
-static byte bg_pallet_table[16] = {0};
-static byte name_table_0[0x03C0] = {0};
+static uint16_t ppu_addr;
+static uint8_t ppu_data;
+static uint8_t bg_pallet_table[16] = {0};
+static uint8_t name_table_0[0x03C0] = {0};
 
-void write_ppu_register(uint16_t addr, uint8_t data);
-
-/* rom */
-static byte *char_rom = NULL;
+void write_ppu_addr(uint8_t hi_or_lo);
+void write_ppu_data(uint8_t data);
 
 static void set_row(uint8_t r, uint8_t *dst, uint8_t bit);
 
@@ -63,7 +58,8 @@ int main(void)
     char header[16] = {'\0'};
     size_t prog_size = 0;
     size_t char_size = 0;
-    uint8_t *prog = NULL;
+    uint8_t *prog_rom = NULL;
+    uint8_t *char_rom = NULL;
 
     fread(header, sizeof(char), 16, fp);
 
@@ -84,11 +80,11 @@ int main(void)
     printf("program size:   %ldKB\n", prog_size / 1024);
     printf("character size: %ldKB\n", char_size / 1024);
 
-    prog = read_program(fp, prog_size);
+    prog_rom = read_program(fp, prog_size);
     char_rom = read_character(fp, char_size);
 
     {
-        cpu.prog = prog;
+        cpu.prog = prog_rom;
         cpu.prog_size = prog_size;
 
         reset();
@@ -132,7 +128,7 @@ int main(void)
     }
 
     fclose(fp);
-    free(prog);
+    free(prog_rom);
     free(char_rom);
     return 0;
 }
@@ -199,9 +195,13 @@ static void write_byte(uint16_t addr, uint8_t data)
     else if (addr <= 0x1FFF) {
         /* WRAM mirror */
     }
-    else if (addr <= 0x2007) {
-        /* PPU registers */
-        write_ppu_register(addr, data);
+    else if (addr == 0x2000) {
+    }
+    else if (addr == 0x2006) {
+        write_ppu_addr(data);
+    }
+    else if (addr == 0x2007) {
+        write_ppu_data(data);
     }
     else if (addr <= 0x3FFF) {
         /* PPU registers mirror */
@@ -469,27 +469,26 @@ void run(void)
     }
 }
 
-void write_ppu_register(uint16_t addr, uint8_t data)
+/* ppu */
+void write_ppu_addr(uint8_t hi_or_lo)
 {
-    if (addr == 0x2006) {
-        static int is_high = 1;
-        ppu_addr = is_high ? data << 8 : ppu_addr + data;
-        is_high = !is_high;
-    }
-    else if (addr == 0x2007) {
-        ppu_data = data;
+    static int is_high = 1;
+    uint8_t data = hi_or_lo;
 
-        /* ppu */
-        if (0x2000 <= ppu_addr && ppu_addr <= 0x23BF) {
-            name_table_0[ppu_addr - 0x2000] = data;
-            ppu_addr++;
-        }
-        if (0x3F00 <= ppu_addr && ppu_addr <= 0x3F0F) {
-            bg_pallet_table[ppu_addr - 0x3F00] = data;
-            ppu_addr++;
-        }
+    ppu_addr = is_high ? data << 8 : ppu_addr + data;
+    is_high = !is_high;
+}
+
+void write_ppu_data(uint8_t data)
+{
+    ppu_data = data;
+
+    if (0x2000 <= ppu_addr && ppu_addr <= 0x23BF) {
+        name_table_0[ppu_addr - 0x2000] = data;
+        ppu_addr++;
     }
-    else {
-        ppu_reg[addr - 0x2000] = data;
+    if (0x3F00 <= ppu_addr && ppu_addr <= 0x3F0F) {
+        bg_pallet_table[ppu_addr - 0x3F00] = data;
+        ppu_addr++;
     }
 }
