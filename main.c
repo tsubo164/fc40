@@ -50,7 +50,9 @@ static uint8_t name_table_0[0x03C0] = {0};
 void write_ppu_addr(uint8_t hi_or_lo);
 void write_ppu_data(uint8_t data);
 
-static void set_row(uint8_t r, uint8_t *dst, uint8_t bit);
+/* tmp */
+static void print_bg_pallet_table(uint8_t *table);
+static void print_name_table(uint8_t *table, uint16_t size, uint8_t *chr);
 
 int main(void)
 {
@@ -80,52 +82,20 @@ int main(void)
     printf("program size:   %ldKB\n", prog_size / 1024);
     printf("character size: %ldKB\n", char_size / 1024);
 
+    /* read */
     prog_rom = read_program(fp, prog_size);
     char_rom = read_character(fp, char_size);
 
-    {
-        cpu.prog = prog_rom;
-        cpu.prog_size = prog_size;
+    /* run */
+    cpu.prog = prog_rom;
+    cpu.prog_size = prog_size;
+    reset();
+    run();
 
-        reset();
-        run();
-    }
-    {
-        printf("bg_pallet_table\n");
-        for (int i = 0; i < 16; i++) {
-            printf("0x%02X", bg_pallet_table[i]);
-            printf("%c", i%4==3 ? '\n' : ' ');
-        }
-    }
-    {
-        int k;
-
-        printf("name_table_0\n");
-
-        for (k = 0; k < sizeof(name_table_0); k++) {
-            uint8_t data = name_table_0[k];
-
-            if (data) {
-                uint8_t obj[64] = {0};
-                int i, j;
-
-                i = 16 * data;
-                for (j = 0; j < 8; j++)
-                    set_row(char_rom[i + j], &obj[j * 8], 0);
-
-                i = 16 * data + 8;
-                for (j = 0; j < 8; j++)
-                    set_row(char_rom[i + j], &obj[j * 8], 1);
-
-                for (i = 0; i < 64; i++) {
-                    printf("%d", obj[i]);
-                    if (i % 8 == 7)
-                        printf("\n");
-                }
-                printf("\n");
-            }
-        }
-    }
+    printf("--------------------------------\n");
+    print_bg_pallet_table(bg_pallet_table);
+    printf("--------------------------------\n");
+    print_name_table(name_table_0, sizeof(name_table_0), char_rom);
 
     fclose(fp);
     free(prog_rom);
@@ -490,5 +460,46 @@ void write_ppu_data(uint8_t data)
     if (0x3F00 <= ppu_addr && ppu_addr <= 0x3F0F) {
         bg_pallet_table[ppu_addr - 0x3F00] = data;
         ppu_addr++;
+    }
+}
+
+/* tmp */
+static void print_bg_pallet_table(uint8_t *table)
+{
+    printf("bg_pallet_table\n");
+    for (int i = 0; i < 16; i++) {
+        printf("0x%02X", table[i]);
+        printf("%c", i%4==3 ? '\n' : ' ');
+    }
+}
+
+static void print_name_table(uint8_t *table, uint16_t size, uint8_t *chr)
+{
+    int k;
+
+    printf("name_table_0\n");
+
+    for (k = 0; k < size; k++) {
+        uint8_t data = table[k];
+
+        if (data) {
+            uint8_t obj[64] = {0};
+            int i, j;
+
+            i = 16 * data;
+            for (j = 0; j < 8; j++)
+                set_row(chr[i + j], &obj[j * 8], 0);
+
+            i = 16 * data + 8;
+            for (j = 0; j < 8; j++)
+                set_row(chr[i + j], &obj[j * 8], 1);
+
+            for (i = 0; i < 64; i++) {
+                printf("%d", obj[i]);
+                if (i % 8 == 7)
+                    printf("\n");
+            }
+            printf("\n");
+        }
     }
 }
