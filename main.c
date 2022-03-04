@@ -3,12 +3,12 @@
 #include <stdint.h>
 
 static uint16_t op_address = 0;
-static int do_print_code = 1;
+static int do_print_code = 0;
 
 static uint8_t ppu_reg[8] = {0};
 
 uint8_t *read_program(FILE *fp, size_t size);
-void read_character(FILE *fp, size_t size);
+uint8_t *read_character(FILE *fp, size_t size);
 static void jump(uint16_t addr);
 
 struct status {
@@ -52,6 +52,11 @@ static byte name_table_0[0x03C0] = {0};
 
 void write_ppu_register(uint16_t addr, uint8_t data);
 
+/* rom */
+static byte *char_rom = NULL;
+
+static void add_row(uint8_t r, uint8_t *dst);
+
 int main(void)
 {
     FILE *fp = fopen("./sample1.nes", "rb");
@@ -80,7 +85,7 @@ int main(void)
     printf("character size: %ldKB\n", char_size / 1024);
 
     prog = read_program(fp, prog_size);
-    read_character(fp, char_size);
+    char_rom = read_character(fp, char_size);
 
     {
         cpu.prog = prog;
@@ -89,9 +94,46 @@ int main(void)
         reset();
         run();
     }
+    {
+        printf("bg_pallet_table\n");
+        for (int i = 0; i < 16; i++) {
+            printf("0x%02X", bg_pallet_table[i]);
+            printf("%c", i%4==3 ? '\n' : ' ');
+        }
+    }
+    {
+        int k;
+
+        printf("name_table_0\n");
+
+        for (k = 0; k < sizeof(name_table_0); k++) {
+            uint8_t data = name_table_0[k];
+
+            if (data) {
+                uint8_t obj[64] = {0};
+                int i, j;
+
+                i = 16 * data;
+                for (j = 0; j < 8; j++)
+                    add_row(char_rom[i + j], &obj[j * 8]);
+
+                i = 16 * data + 8;
+                for (j = 0; j < 8; j++)
+                    add_row(char_rom[i + j], &obj[j * 8]);
+
+                for (i = 0; i < 64; i++) {
+                    printf("%d", obj[i]);
+                    if (i % 8 == 7)
+                    printf("\n");
+                }
+                printf("\n");
+            }
+        }
+    }
 
     fclose(fp);
     free(prog);
+    free(char_rom);
     return 0;
 }
 
@@ -119,7 +161,18 @@ static void print_row(uint8_t r)
     printf("\n");
 }
 
-void read_character(FILE *fp, size_t size)
+static void add_row(uint8_t r, uint8_t *dst)
+{
+    int mask = 1 << 7;
+    int i;
+
+    for (i = 0; i < 8; i++) {
+        dst[i] += (r & mask) > 0;
+        mask >>= 1;
+    }
+}
+
+uint8_t *read_character(FILE *fp, size_t size)
 {
     uint8_t *chr = calloc(size, sizeof(uint8_t));
     int i, j;
@@ -134,7 +187,7 @@ void read_character(FILE *fp, size_t size)
         printf("\n");
     }
 
-    free(chr);
+    return chr;
 }
 
 static void write_byte(uint16_t addr, uint8_t data)
@@ -411,14 +464,6 @@ void run(void)
         if (cnt++ > 1024 * 1024) {
             printf("!!cnt reached: %llu\n", cnt);
             break;
-        }
-    }
-
-    {
-        printf("name_table_0\n");
-        for (int i = 0; i < 16; i++) {
-            printf("0x%02X", bg_pallet_table[i]);
-            printf("%c", i%4==3 ? '\n' : ' ');
         }
     }
 }
