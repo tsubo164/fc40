@@ -55,7 +55,7 @@ void write_ppu_register(uint16_t addr, uint8_t data);
 /* rom */
 static byte *char_rom = NULL;
 
-static void add_row(uint8_t r, uint8_t *dst);
+static void set_row(uint8_t r, uint8_t *dst, uint8_t bit);
 
 int main(void)
 {
@@ -115,16 +115,16 @@ int main(void)
 
                 i = 16 * data;
                 for (j = 0; j < 8; j++)
-                    add_row(char_rom[i + j], &obj[j * 8]);
+                    set_row(char_rom[i + j], &obj[j * 8], 0);
 
                 i = 16 * data + 8;
                 for (j = 0; j < 8; j++)
-                    add_row(char_rom[i + j], &obj[j * 8]);
+                    set_row(char_rom[i + j], &obj[j * 8], 1);
 
                 for (i = 0; i < 64; i++) {
                     printf("%d", obj[i]);
                     if (i % 8 == 7)
-                    printf("\n");
+                        printf("\n");
                 }
                 printf("\n");
             }
@@ -161,13 +161,14 @@ static void print_row(uint8_t r)
     printf("\n");
 }
 
-static void add_row(uint8_t r, uint8_t *dst)
+static void set_row(uint8_t r, uint8_t *dst, uint8_t bit)
 {
     int mask = 1 << 7;
     int i;
 
     for (i = 0; i < 8; i++) {
-        dst[i] += (r & mask) > 0;
+        const uint8_t val = (r & mask) > 0;
+        dst[i] += val << bit;
         mask >>= 1;
     }
 }
