@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include <GLFW/glfw3.h>
+
 static uint16_t op_address = 0;
 static int do_print_code = 0;
 
@@ -53,6 +55,7 @@ void write_ppu_data(uint8_t data);
 /* tmp */
 static void print_bg_pallet_table(uint8_t *table);
 static void print_name_table(uint8_t *table, uint16_t size, uint8_t *chr);
+int open_display(void);
 
 int main(void)
 {
@@ -86,6 +89,8 @@ int main(void)
     prog_rom = read_program(fp, prog_size);
     char_rom = read_character(fp, char_size);
 
+    fclose(fp);
+
     /* run */
     cpu.prog = prog_rom;
     cpu.prog_size = prog_size;
@@ -97,7 +102,8 @@ int main(void)
     printf("--------------------------------\n");
     print_name_table(name_table_0, sizeof(name_table_0), char_rom);
 
-    fclose(fp);
+    open_display();
+
     free(prog_rom);
     free(char_rom);
     return 0;
@@ -502,4 +508,130 @@ static void print_name_table(uint8_t *table, uint16_t size, uint8_t *chr)
             printf("\n");
         }
     }
+}
+
+#define TEXX (512/8)
+#define TEXY (480/8)
+const int RESX = 512;
+const int REXY = 480;
+
+static GLubyte pixels[TEXY][TEXX][3];
+GLuint texture_id;
+
+void init_texture(void);
+void init_gl(void);
+void render(void);
+void resize(GLFWwindow *const window, int w, int h);
+
+int open_display(void)
+{
+    GLFWwindow* window;
+
+    /* Initialize the library */
+    if (!glfwInit())
+        return -1;
+
+    glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
+
+    /* Create a windowed mode window and its OpenGL context */
+    window = glfwCreateWindow(RESX, REXY, "Famicom Emulator", NULL, NULL);
+    if (!window) {
+        glfwTerminate();
+        return -1;
+    }
+
+    /* Make the window's context current */
+    glfwMakeContextCurrent(window);
+    glfwSetWindowSizeCallback(window, resize);
+
+    init_texture();
+    init_gl();
+    resize(window, RESX, REXY);
+
+    /* Loop until the user closes the window */
+    while (!glfwWindowShouldClose(window)) {
+        /* Render here */
+        render();
+
+        /* Swap front and back buffers */
+        glfwSwapBuffers(window);
+
+        /* Poll for and process events */
+        glfwPollEvents();
+    }
+
+    glfwTerminate();
+    return 0;
+}
+
+void init_texture(void)
+{
+    unsigned int i , j;
+
+    for (i = 0 ; i < TEXY ; i++) {
+        int r = (i * 0xFF) / TEXY;
+        for (j = 0 ; j < TEXX ; j++) {
+            pixels[i][j][0] = (GLubyte)r;
+            pixels[i][j][1] = (GLubyte)(( j * 0xFF ) / TEXX);
+            pixels[i][j][2] = (GLubyte)~r;
+        }
+    }
+}
+
+void init_gl(void)
+{
+    const float bg = .25;
+
+    glEnable(GL_TEXTURE_2D);
+    glGenTextures(1, &texture_id);
+    glBindTexture(GL_TEXTURE_2D, texture_id);
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, TEXX, TEXY,
+            0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+    glClearColor(bg, bg, bg, 0);
+}
+
+void render(void)
+{
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    glClear(GL_COLOR_BUFFER_BIT);
+    glBindTexture(GL_TEXTURE_2D , texture_id);
+
+    glBegin(GL_QUADS);
+        glTexCoord2f(0, 0); glVertex2f(-RESX/2, -REXY/2);
+        glTexCoord2f(0, 1); glVertex2f(-RESX/2,  REXY/2);
+        glTexCoord2f(1, 1); glVertex2f( RESX/2,  REXY/2);
+        glTexCoord2f(1, 0); glVertex2f( RESX/2, -REXY/2);
+    glEnd();
+    glFlush();
+}
+
+void resize(GLFWwindow *const window, int width, int height)
+{
+    int win_w, win_h;
+    int fb_w, fb_h;
+
+    /* MaxOS Retina display has diffrent fb size than window size */
+    glfwGetFramebufferSize(window, &fb_w, &fb_h);
+    win_w = width;
+    win_h = height;
+
+    if (0) {
+        printf("(fb_w, fb_h) = (%d, %d)\n", fb_w, fb_h);
+        printf("(win_w, win_h) = (%d, %d)\n", win_w, win_h);
+        printf("(width, height) = (%d, %d)\n", width, height);
+    }
+
+    glViewport(0, 0, fb_w, fb_h);
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(-win_w/2, win_w/2, -win_h/2, win_h/2, -1., 1.);
 }
