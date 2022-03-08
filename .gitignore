@@ -1,2 +1,4 @@
-a.out
+nes
+*.o
+*.d
 *.swp

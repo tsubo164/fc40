@@ -4,6 +4,8 @@
 
 #include <GLFW/glfw3.h>
 
+#include "framebuffer.h"
+
 static uint16_t op_address = 0;
 static int do_print_code = 0;
 
@@ -57,10 +59,9 @@ static void print_bg_palette_table(uint8_t *table);
 static void print_name_table(uint8_t *table, uint16_t size, uint8_t *chr);
 int open_display(void);
 
-static uint8_t *framebuffer;
-static void fill_bg_tile(uint8_t *table, uint16_t size, uint8_t *chr);
-static void fill_tile(uint8_t *fbuf, uint8_t *tile, uint8_t tilex, uint8_t tiley);
-static void copy_tile(uint8_t *fbuf, uint8_t *tile, uint8_t tilex, uint8_t tiley);
+static struct framebuffer *framebuffer;
+static void fill_bg_tile(struct framebuffer *fbuf, uint8_t *table, uint16_t size, uint8_t *chr);
+static void copy_tile(struct framebuffer *fbuf, uint8_t *tile, uint8_t tilex, uint8_t tiley);
 static uint8_t *tmp_chr_rom;
 
 int main(void)
@@ -528,7 +529,7 @@ const int WINY = RESY * SCALE + MARGIN;
 GLuint texture_id;
 
 uint8_t *init_texture(void);
-void init_gl(void);
+void init_gl(const uint8_t *pixels);
 void render(void);
 void resize(GLFWwindow *const window, int w, int h);
 
@@ -554,15 +555,10 @@ int open_display(void)
     glfwMakeContextCurrent(window);
     glfwSetWindowSizeCallback(window, resize);
 
-    framebuffer = init_texture();
-    if (0) {
-        fill_tile(framebuffer, NULL, 0, 0);
-        fill_tile(framebuffer, NULL, 1, 1);
-        fill_tile(framebuffer, NULL, 31, 29);
-    }
-    fill_bg_tile(name_table_0, sizeof(name_table_0), tmp_chr_rom);
+    framebuffer = new_framebuffer(RESX, RESY);
+    fill_bg_tile(framebuffer, name_table_0, sizeof(name_table_0), tmp_chr_rom);
 
-    init_gl();
+    init_gl(framebuffer->data);
     resize(window, WINX, WINY);
 
     /* Loop until the user closes the window */
@@ -586,7 +582,7 @@ int open_display(void)
         f++;
     }
 
-    free(framebuffer);
+    free_framebuffer(framebuffer);
     glfwTerminate();
     return 0;
 }
@@ -598,7 +594,7 @@ uint8_t *init_texture(void)
     return fbuf;
 }
 
-void init_gl(void)
+void init_gl(const uint8_t *pixels)
 {
     const float bg = .25;
 
@@ -608,7 +604,7 @@ void init_gl(void)
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glTexImage2D(GL_TEXTURE_2D, 0, 3, RESX, RESY,
-            0, GL_RGB, GL_UNSIGNED_BYTE, framebuffer);
+            0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -658,24 +654,6 @@ void resize(GLFWwindow *const window, int width, int height)
     glOrtho(-win_w/2, win_w/2, -win_h/2, win_h/2, -1., 1.);
 }
 
-static void fill_tile(uint8_t *fbuf, uint8_t *tile, uint8_t tilex, uint8_t tiley)
-{
-    const int X0 = tilex * 8;
-    const int Y0 = tiley * 8;
-    const int X1 = X0 + 8;
-    const int Y1 = Y0 + 8;
-    int i, j;
-
-    for (j = Y0 ; j < Y1 ; j++) {
-        for (i = X0 ; i < X1 ; i++) {
-            uint8_t *p = fbuf + j * RESX * 3 + i * 3;
-            p[0] = 255;
-            p[1] = 0;
-            p[2] = 0;
-        }
-    }
-}
-
 const uint8_t palette_2C02[][3] = {
     /* 0x00 */
     {0x54, 0x54, 0x54}, {0x00, 0x1E, 0x74}, {0x08, 0x10, 0x90}, {0x30, 0x00, 0x88},
@@ -709,32 +687,28 @@ const uint8_t *get_color(int index)
     return palette_2C02[index];
 }
 
-static void copy_tile(uint8_t *fbuf, uint8_t *tile, uint8_t tilex, uint8_t tiley)
+static void copy_tile(struct framebuffer *fbuf, uint8_t *tile, uint8_t tilex, uint8_t tiley)
 {
     const int X0 = tilex * 8;
     const int Y0 = tiley * 8;
     const int X1 = X0 + 8;
     const int Y1 = Y0 + 8;
-    int i, j;
+    int x, y;
 
     const uint8_t *palette = get_bg_palette(0);
     uint8_t *src = tile;
 
-    for (j = Y0 ; j < Y1 ; j++) {
-        for (i = X0 ; i < X1 ; i++) {
+    for (y = Y0 ; y < Y1 ; y++) {
+        for (x = X0 ; x < X1 ; x++) {
             const uint8_t index = palette[*src];
             const uint8_t *color = get_color(index);
-            uint8_t *dst = fbuf + j * RESX * 3 + i * 3;
-
-            dst[0] = color[0];
-            dst[1] = color[1];
-            dst[2] = color[2];
+            set_color(fbuf, x, y, color);
             src++;
         }
     }
 }
 
-static void fill_bg_tile(uint8_t *table, uint16_t size, uint8_t *chr)
+static void fill_bg_tile(struct framebuffer *fbuf, uint8_t *table, uint16_t size, uint8_t *chr)
 {
     int k;
 
@@ -755,7 +729,7 @@ static void fill_bg_tile(uint8_t *table, uint16_t size, uint8_t *chr)
             for (j = 0; j < 8; j++)
                 set_row(chr[i + j], &obj[j * 8], 1);
 
-            copy_tile(framebuffer, obj, tilex, tiley);
+            copy_tile(fbuf, obj, tilex, tiley);
         }
     }
 }
