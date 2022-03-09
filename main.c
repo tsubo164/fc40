@@ -40,7 +40,7 @@ struct CPU {
     struct registers reg;
 } cpu = {0};
 
-static uint8_t fetch(void);
+static uint8_t fetch_(void);
 void reset(void);
 void run(void);
 
@@ -48,6 +48,8 @@ void run(void);
 int open_display(void);
 static struct framebuffer *framebuffer;
 static uint8_t *tmp_chr_rom;
+
+void exec(struct CPU *cpu, uint8_t code);
 
 int main(void)
 {
@@ -110,7 +112,7 @@ static uint16_t read_word(uint16_t addr)
     return (hi << 8) + lo;
 }
 
-static uint8_t fetch(void)
+static uint8_t fetch_(void)
 {
     return read_byte(cpu.reg.pc++);
 }
@@ -119,8 +121,8 @@ static uint16_t fetch_word(void)
 {
     uint16_t lo, hi;
 
-    lo = fetch();
-    hi = fetch();
+    lo = fetch_();
+    hi = fetch_();
 
     return (hi << 8) + lo;
 }
@@ -139,13 +141,13 @@ void reset(void)
 }
 
 enum addressing_mode {
-    IMP = 0, /* implied */
-    ACC, /* A register */
-    IMM, /* immediate */
-    REL, /* immediate + pc */
-    ABS, /* absolute */
-    ABX, /* absolute + X */
-    ABY  /* absolute + Y */
+    IMP_ = 0, /* implied */
+    ACC_, /* A register */
+    IMM_, /* immediate */
+    REL_, /* immediate + pc */
+    ABS_, /* absolute */
+    ABX_, /* absolute + X */
+    ABY_  /* absolute + Y */
 };
 
 static void print_code(const char *op, int mode, uint16_t operand)
@@ -156,17 +158,17 @@ static void print_code(const char *op, int mode, uint16_t operand)
     printf("[%04X] %s", op_address, op);
 
     switch (mode) {
-    case IMP:
+    case IMP_:
         printf("\n");
         break;
 
-    case IMM:
+    case IMM_:
         printf(" #$%02X\n", operand);
         break;
 
-    case REL:
-    case ABS:
-    case ABX:
+    case REL_:
+    case ABS_:
+    case ABX_:
         printf(" $%04X\n", operand);
         break;
 
@@ -177,9 +179,9 @@ static void print_code(const char *op, int mode, uint16_t operand)
 
 #define PRINT_CODE(mode, operand) print_code(__func__, mode, operand)
 
-static void bne(int mode)
+static void bne_(int mode)
 {
-    int8_t imm = (int8_t) fetch();
+    int8_t imm = (int8_t) fetch_();
     uint16_t abs = cpu.reg.pc;
 
     if (cpu.reg.p.zero == 0)
@@ -187,25 +189,25 @@ static void bne(int mode)
     PRINT_CODE(mode, abs + imm);
 }
 
-static void brk(int mode)
+static void brk_(int mode)
 {
     PRINT_CODE(mode, 0);
 }
 
-static void dey(int mode)
+static void dey_(int mode)
 {
     cpu.reg.y--;
     cpu.reg.p.zero = (cpu.reg.y == 0);
     PRINT_CODE(mode, 0);
 }
 
-static void inx(int mode)
+static void inx_(int mode)
 {
     cpu.reg.x++;
     PRINT_CODE(mode, 0);
 }
 
-static void jmp(int mode)
+static void jmp_(int mode)
 {
     static char tmp = 0;
     uint16_t abs = fetch_word();
@@ -217,19 +219,19 @@ static void jmp(int mode)
     }
 }
 
-static void lda(int mode)
+static void lda_(int mode)
 {
     uint8_t imm;
     uint16_t abs;
 
     switch (mode) {
-    case IMM:
-        imm = fetch();
+    case IMM_:
+        imm = fetch_();
         cpu.reg.a = imm;
         PRINT_CODE(mode, cpu.reg.a);
         break;
 
-    case ABX:
+    case ABX_:
         abs = fetch_word();
         cpu.reg.a = read_byte(abs + cpu.reg.x);
         PRINT_CODE(mode, abs + cpu.reg.x);
@@ -240,37 +242,39 @@ static void lda(int mode)
     }
 }
 
-static void ldx(int mode)
+/*
+static void ldx_(int mode)
 {
-    uint8_t imm = fetch();
+    uint8_t imm = fetch_();
     cpu.reg.x = imm;
 
     PRINT_CODE(mode, imm);
 }
 
-static void ldy(int mode)
+static void ldy_(int mode)
 {
-    uint8_t imm = fetch();
+    uint8_t imm = fetch_();
     cpu.reg.y = imm;
 
     PRINT_CODE(mode, imm);
 }
 
-static void nop(int mode)
+static void nop_(int mode)
 {
-    uint8_t imm = fetch();
+    uint8_t imm = fetch_();
 
     PRINT_CODE(mode, imm);
 }
 
-static void sei(int mode)
+static void sei_(int mode)
 {
     cpu.reg.p.interrupt = 1;
 
     PRINT_CODE(mode, 0);
 }
+*/
 
-static void sta(int mode)
+static void sta_(int mode)
 {
     uint16_t abs = fetch_word();
     write_byte(abs, cpu.reg.a);
@@ -278,7 +282,7 @@ static void sta(int mode)
     PRINT_CODE(mode, abs);
 }
 
-static void txs(int mode)
+static void txs_(int mode)
 {
     cpu.reg.s = cpu.reg.x + 0x0100;
     PRINT_CODE(mode, 0);
@@ -289,62 +293,68 @@ void run(void)
     uint64_t cnt = 0;
 
     while (cpu.reg.pc) {
+        //uint16_t operand = 0;
+
         const uint16_t addr = cpu.reg.pc;
-        const uint8_t code = fetch();
+        const uint8_t code = fetch_();
         op_address = addr;
 
         switch (code) {
         case 0x00 + 0x00:
-            brk(IMP);
+            brk_(IMP_);
             break;
 
         case 0x40 + 0x0C:
-            jmp(ABS);
+            jmp_(ABS_);
             break;
 
         case 0x60 + 0x18:
-            sei(IMP);
+            exec(&cpu, code);
+            //sei_(IMP_);
             break;
 
         case 0x80 + 0x00:
-            nop(IMM);
+            exec(&cpu, code);
+            //nop_(IMM_);
             break;
         case 0x80 + 0x08:
-            dey(IMP);
+            dey_(IMP_);
             break;
         case 0x80 + 0x0D:
-            sta(ABS);
+            sta_(ABS_);
             break;
         case 0x80 + 0x1A:
-            txs(IMP);
+            txs_(IMP_);
             break;
 
         case 0xA0 + 0x00:
-            ldy(IMM);
+            exec(&cpu, code);
+            //ldy_(IMM_);
             break;
         case 0xA0 + 0x02:
-            ldx(IMM);
+            exec(&cpu, code);
+            //ldx_(IMM_);
             break;
         case 0xA0 + 0x09:
-            lda(IMM);
+            lda_(IMM_);
             break;
         case 0xA0 + 0x1D:
-            lda(ABX);
+            lda_(ABX_);
             break;
 
         case 0xC0 + 0x10:
-            bne(REL);
+            bne_(REL_);
             break;
 
         case 0xE0 + 0x08:
-            inx(IMP);
+            inx_(IMP_);
             break;
 
         default:
             {
                 char op_[8] = {'\0'};
                 sprintf(op_, "0x%02X", code);
-                print_code(op_, IMP, 0);
+                print_code(op_, IMP_, 0);
             }
             break;
         }
@@ -403,7 +413,7 @@ int open_display(void)
         const double time = glfwGetTime();
         if (time > .1) {
             glfwSetTime(0.);
-            printf("FPS: %8.3f\n", f/time);
+            //printf("FPS: %8.3f\n", f/time);
             f = 0;
         }
 
@@ -477,12 +487,6 @@ void resize(GLFWwindow *const window, int width, int height)
     glfwGetFramebufferSize(window, &fb_w, &fb_h);
     win_w = width;
     win_h = height;
-
-    if (0) {
-        printf("(fb_w, fb_h) = (%d, %d)\n", fb_w, fb_h);
-        printf("(win_w, win_h) = (%d, %d)\n", win_w, win_h);
-        printf("(width, height) = (%d, %d)\n", width, height);
-    }
 
     glViewport(0, 0, fb_w, fb_h);
 

@@ -5,7 +5,7 @@ CFLAGS  = $(DEF) $(OPT) -Wall --pedantic-errors -c
 LDFLAGS = -lglfw -framework Cocoa -framework OpenGL -framework IOKit
 RM      = rm -f
 
-SRCS    := cartridge framebuffer main ppu
+SRCS    := cartridge cpu framebuffer main ppu
 
 .PHONY: clean run
 
