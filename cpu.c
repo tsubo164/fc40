@@ -2,11 +2,6 @@
 #include "cpu.h"
 #include "ppu.h"
 
-static void jump(struct CPU *cpu, uint16_t addr)
-{
-    cpu->reg.pc = addr;
-}
-
 static void write_byte(uint16_t addr, uint8_t data)
 {
     if (addr <= 0x07FF) {
@@ -33,7 +28,6 @@ static uint8_t read_byte(struct CPU *cpu, uint16_t addr)
     return cpu->prog[addr - 0x8000];
 }
 
-/*
 static uint16_t read_word(struct CPU *cpu, uint16_t addr)
 {
     uint16_t lo, hi;
@@ -43,7 +37,6 @@ static uint16_t read_word(struct CPU *cpu, uint16_t addr)
 
     return (hi << 8) + lo;
 }
-*/
 
 uint8_t fetch(struct CPU *cpu)
 {
@@ -64,6 +57,11 @@ static int8_t as_signed(uint16_t operand)
 {
     uint8_t ret = operand;
     return (int8_t) ret;
+}
+
+static void jump(struct CPU *cpu, uint16_t addr)
+{
+    cpu->reg.pc = addr;
 }
 
 enum addr_mode {ABS, ABX, ABY, IMM, IMP, INA, IZX, IZY, REL, ZPG, ZPX, ZPY};
@@ -282,11 +280,34 @@ void exec(struct CPU *cpu, uint8_t code)
     case INA: break;
     case IZX: break;
     case IZY: break;
-    case REL: break;
+    case REL: printf(" $%02X", operand); break;
     case ZPG: break;
     case ZPX: break;
     case ZPY: break;
     default: break;
     }
     printf("\n");
+}
+
+void reset(struct CPU *cpu)
+{
+    uint16_t addr;
+
+    addr = read_word(cpu, 0xFFFC);
+    jump(cpu, addr);
+}
+
+void run(struct CPU *cpu)
+{
+    uint64_t cnt = 0;
+
+    while (cpu->reg.pc) {
+        const uint8_t code = fetch(cpu);
+        exec(cpu, code);
+
+        if (cnt++ > 1024 * 1024) {
+            printf("!!cnt reached: %llu\n", cnt);
+            break;
+        }
+    }
 }

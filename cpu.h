@@ -31,4 +31,7 @@ struct CPU {
     struct registers reg;
 };
 
+extern void reset(struct CPU *cpu);
+extern void run(struct CPU *cpu);
+
 #endif /* _H */

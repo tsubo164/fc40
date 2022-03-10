@@ -5,46 +5,15 @@
 
 #include "framebuffer.h"
 #include "cartridge.h"
+#include "cpu.h"
 #include "ppu.h"
 
-/* cpu */
-struct status {
-    char carry;
-    char zero;
-    char interrupt;
-    char decimal;
-    char brk;
-    char reserved;
-    char overflow;
-    char negative;
-};
-
-struct registers {
-    uint8_t a;
-    uint8_t x;
-    uint8_t y;
-    uint8_t s;
-    struct status p;
-    uint16_t pc;
-};
-
-struct CPU {
-    uint8_t *prog;
-    size_t prog_size;
-
-    struct registers reg;
-} cpu = {0};
-
-static uint8_t fetch_(void);
-void reset(void);
-void run(void);
+struct CPU cpu = {0};
 
 /* tmp */
 int open_display(void);
 static struct framebuffer *framebuffer;
 static uint8_t *tmp_chr_rom;
-
-void exec(struct CPU *cpu, uint8_t code);
 
 int main(void)
 {
@@ -61,62 +30,14 @@ int main(void)
     /* run */
     cpu.prog = cart->prog_rom;
     cpu.prog_size = cart->prog_size;
-    reset();
-    run();
+    reset(&cpu);
+    run(&cpu);
 
     tmp_chr_rom = cart->char_rom;
     open_display();
 
     close_cartridge(cart);
     return 0;
-}
-
-static uint8_t read_byte(uint16_t addr)
-{
-    return cpu.prog[addr - 0x8000];
-}
-
-static uint16_t read_word(uint16_t addr)
-{
-    uint16_t lo, hi;
-
-    lo = read_byte(addr);
-    hi = read_byte(addr + 1);
-
-    return (hi << 8) + lo;
-}
-
-static uint8_t fetch_(void)
-{
-    return read_byte(cpu.reg.pc++);
-}
-
-static void jump(uint16_t addr)
-{
-    cpu.reg.pc = addr;
-}
-
-void reset(void)
-{
-    uint16_t addr;
-
-    addr = read_word(0xFFFC);
-    jump(addr);
-}
-
-void run(void)
-{
-    uint64_t cnt = 0;
-
-    while (cpu.reg.pc) {
-        const uint8_t code = fetch_();
-        exec(&cpu, code);
-
-        if (cnt++ > 1024 * 1024) {
-            printf("!!cnt reached: %llu\n", cnt);
-            break;
-        }
-    }
 }
 
 const int MARGIN = 32;
