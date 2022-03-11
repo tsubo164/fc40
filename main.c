@@ -31,7 +31,6 @@ int main(void)
     cpu.prog = cart->prog_rom;
     cpu.prog_size = cart->prog_size;
     reset(&cpu);
-    run(&cpu);
 
     tmp_chr_rom = cart->char_rom;
     open_display();
@@ -49,9 +48,10 @@ const int WINY = RESY * SCALE + MARGIN;
 
 GLuint texture_id;
 
-uint8_t *init_texture(void);
+void transfer_texture(const uint8_t *pixels);
 void init_gl(const uint8_t *pixels);
 void render(void);
+void render_grid(void);
 void resize(GLFWwindow *const window, int w, int h);
 
 int open_display(void)
@@ -77,8 +77,6 @@ int open_display(void)
     glfwSetWindowSizeCallback(window, resize);
 
     framebuffer = new_framebuffer(RESX, RESY);
-    fill_bg_tile(framebuffer, tmp_chr_rom);
-
     init_gl(framebuffer->data);
     resize(window, WINX, WINY);
 
@@ -87,9 +85,14 @@ int open_display(void)
         const double time = glfwGetTime();
         if (time > .1) {
             glfwSetTime(0.);
-            //printf("FPS: %8.3f\n", f/time);
+            printf("FPS: %8.3f\n", f/time);
             f = 0;
         }
+
+        execute(&cpu);
+
+        fill_bg_tile(framebuffer, tmp_chr_rom);
+        transfer_texture(framebuffer->data);
 
         /* Render here */
         render();
@@ -108,47 +111,48 @@ int open_display(void)
     return 0;
 }
 
-uint8_t *init_texture(void)
+void transfer_texture(const uint8_t *pixels)
 {
-    uint8_t *fbuf = calloc(RESX * RESY * 3, sizeof(uint8_t));
-
-    return fbuf;
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, RESX, RESY,
+            0, GL_RGB, GL_UNSIGNED_BYTE, framebuffer->data);
 }
 
 void init_gl(const uint8_t *pixels)
 {
     const float bg = .25;
 
-    glEnable(GL_TEXTURE_2D);
     glGenTextures(1, &texture_id);
     glBindTexture(GL_TEXTURE_2D, texture_id);
-
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, RESX, RESY,
-            0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, RESX, RESY,
+            0, GL_RGB, GL_UNSIGNED_BYTE, framebuffer->data);
     glClearColor(bg, bg, bg, 0);
 }
 
 void render(void)
 {
+    glClear(GL_COLOR_BUFFER_BIT);
+
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-
     glScalef(SCALE, SCALE, SCALE);
 
-    glClear(GL_COLOR_BUFFER_BIT);
-    glBindTexture(GL_TEXTURE_2D , texture_id);
-
+    glEnable(GL_TEXTURE_2D);
     glBegin(GL_QUADS);
         glTexCoord2f(0, 0); glVertex2f(-RESX/2,  RESY/2);
         glTexCoord2f(1, 0); glVertex2f( RESX/2,  RESY/2);
         glTexCoord2f(1, 1); glVertex2f( RESX/2, -RESY/2);
         glTexCoord2f(0, 1); glVertex2f(-RESX/2, -RESY/2);
     glEnd();
+    glDisable(GL_TEXTURE_2D);
+
+    if (0)
+        render_grid();
+
     glFlush();
 }
 
@@ -167,4 +171,23 @@ void resize(GLFWwindow *const window, int width, int height)
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glOrtho(-win_w/2, win_w/2, -win_h/2, win_h/2, -1., 1.);
+}
+
+void render_grid(void)
+{
+    int i;
+
+    glPushAttrib(GL_CURRENT_BIT);
+    glColor3f(0, 1, 0);
+    glBegin(GL_LINES);
+    for (i = 0; i <= RESX / 8; i++) {
+        glVertex3f(-RESX/2 + i * 8,  RESY/2, .1);
+        glVertex3f(-RESX/2 + i * 8, -RESY/2, .1);
+    }
+    for (i = 0; i <= RESY / 8; i++) {
+        glVertex3f( RESX/2, -RESY/2 + i * 8, .1);
+        glVertex3f(-RESX/2, -RESY/2 + i * 8, .1);
+    }
+    glEnd();
+    glPopAttrib();
 }

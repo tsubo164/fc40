@@ -264,29 +264,25 @@ void exec(struct CPU *cpu, uint8_t code)
     default: break;
     }
 
-    {
-        static int tmp = 0;
-        if (opecode == JMP && tmp++ > 0)
-            return;
+    if (0) {
+        printf("[0x%04X] %s", addr, opecode_name_table[code]);
+        switch (mode) {
+        case ABS: printf(" $%04X", operand); break;
+        case ABX: printf(" $%02X", operand); break;
+        case ABY: break;
+        case IMM: printf(" #$%02X", operand); break;
+        case IMP: break;
+        case INA: break;
+        case IZX: break;
+        case IZY: break;
+        case REL: printf(" $%02X", operand); break;
+        case ZPG: break;
+        case ZPX: break;
+        case ZPY: break;
+        default: break;
+        }
+        printf("\n");
     }
-
-    printf("[0x%04X] %s", addr, opecode_name_table[code]);
-    switch (mode) {
-    case ABS: printf(" $%04X", operand); break;
-    case ABX: printf(" $%02X", operand); break;
-    case ABY: break;
-    case IMM: printf(" #$%02X", operand); break;
-    case IMP: break;
-    case INA: break;
-    case IZX: break;
-    case IZY: break;
-    case REL: printf(" $%02X", operand); break;
-    case ZPG: break;
-    case ZPX: break;
-    case ZPY: break;
-    default: break;
-    }
-    printf("\n");
 }
 
 void reset(struct CPU *cpu)
@@ -310,4 +306,10 @@ void run(struct CPU *cpu)
             break;
         }
     }
+}
+
+void execute(struct CPU *cpu)
+{
+    const uint8_t code = fetch(cpu);
+    exec(cpu, code);
 }
