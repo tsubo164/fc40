@@ -57,6 +57,8 @@ void resize(GLFWwindow *const window, int w, int h);
 int open_display(void)
 {
     uint64_t f = 0;
+    int x = 0;
+    int y = 0;
     GLFWwindow* window;
 
     /* Initialize the library */
@@ -91,7 +93,17 @@ int open_display(void)
 
         execute(&cpu);
 
-        fill_bg_tile(framebuffer, tmp_chr_rom);
+        for (int i = 0; i <100; i++) {
+            if (y < 240)
+                set_pixel_color(framebuffer, tmp_chr_rom, x, y);
+            x++;
+            if (x == 256) {
+                x = 0;
+                y++;
+            }
+            if (y >= 240)
+                y = 240;
+        }
         transfer_texture(framebuffer->data);
 
         /* Render here */

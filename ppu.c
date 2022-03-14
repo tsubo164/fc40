@@ -101,6 +101,41 @@ void fill_bg_tile(struct framebuffer *fbuf, uint8_t *chr)
     }
 }
 
+void set_pixel_color(struct framebuffer *fbuf, uint8_t *chr, int x, int y)
+{
+    uint8_t *table = name_table_0;
+    //const size_t size = sizeof(name_table_0);
+
+    const int namex = x / 8;
+    const int namey = y / 8;
+    const uint8_t data = table[namey * 32 + namex];
+
+    const int i = x % 8;
+    const int j = y % 8;
+
+    uint8_t lsb = chr[16 * data + j];
+    uint8_t msb = chr[16 * data + 8 + j];
+
+    const int mask = 1 << (7 - i);
+    uint8_t val = 0;
+
+    lsb = (lsb & mask) > 0;
+    msb = (msb & mask) > 0;
+    val = (msb << 1) | lsb;
+
+    {
+        uint8_t color[3] = {64, 0, 0};
+        set_color(fbuf, x, y, color);
+    }
+    if (val) {
+        const uint8_t *palette = get_bg_palette(0);
+        const uint8_t index = palette[val];
+        const uint8_t *color = get_color(index);
+
+        set_color(fbuf, x, y, color);
+    }
+}
+
 void write_ppu_addr(uint8_t hi_or_lo)
 {
     static int is_high = 1;
