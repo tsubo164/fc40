@@ -101,10 +101,9 @@ void fill_bg_tile(struct framebuffer *fbuf, uint8_t *chr)
     }
 }
 
-void set_pixel_color(struct framebuffer *fbuf, uint8_t *chr, int x, int y)
+void set_pixel_color(struct framebuffer *fbuf, const uint8_t *chr, int x, int y)
 {
     uint8_t *table = name_table_0;
-    //const size_t size = sizeof(name_table_0);
 
     const int namex = x / 8;
     const int namey = y / 8;

@@ -9,11 +9,11 @@
 #include "ppu.h"
 
 struct CPU cpu = {0};
+struct PPU ppu = {0};
 
 /* tmp */
-int open_display(void);
+int open_display(struct PPU *ppu);
 static struct framebuffer *framebuffer;
-static uint8_t *tmp_chr_rom;
 
 int main(void)
 {
@@ -30,10 +30,11 @@ int main(void)
     /* run */
     cpu.prog = cart->prog_rom;
     cpu.prog_size = cart->prog_size;
+    ppu.char_rom = cart->char_rom;
+    ppu.char_size = cart->char_size;
     reset(&cpu);
 
-    tmp_chr_rom = cart->char_rom;
-    open_display();
+    open_display(&ppu);
 
     close_cartridge(cart);
     return 0;
@@ -54,8 +55,9 @@ void render(void);
 void render_grid(void);
 void resize(GLFWwindow *const window, int w, int h);
 
-int open_display(void)
+int open_display(struct PPU *ppu)
 {
+    uint64_t clock = 0;
     uint64_t f = 0;
     int x = 0;
     int y = 0;
@@ -91,18 +93,28 @@ int open_display(void)
             f = 0;
         }
 
-        execute(&cpu);
-
         for (int i = 0; i <100; i++) {
             if (y < 240)
-                set_pixel_color(framebuffer, tmp_chr_rom, x, y);
+                set_pixel_color(framebuffer, ppu->char_rom, x, y);
+
+            clock++;
+            if (clock % 3 == 0)
+                execute(&cpu);
+
             x++;
             if (x == 256) {
                 x = 0;
                 y++;
             }
-            if (y >= 240)
-                y = 240;
+            if (y == 240) {
+                y = 0;
+                {
+                    uint8_t black[3] = {0};
+                    for (int Y=0; Y<framebuffer->height; Y++)
+                        for (int X=0; X<framebuffer->width; X++)
+                            set_color(framebuffer, X, Y, black);
+                }
+            }
         }
         transfer_texture(framebuffer->data);
 

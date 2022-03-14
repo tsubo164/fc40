@@ -152,6 +152,43 @@ static const char opecode_name_table[][4] = {
 "BEQ","SBC","STP","ISC","NOP","SBC","INC","ISC","SED","SBC","NOP","ISC","NOP","SBC","INC","ISC"
 };
 
+static const int cycle_table[] = {
+/*      +00 +01 +02 +03 +04 +05 +06 +07 +08 +09 +0A +0B +0C +0D +0E +0F */
+/*0x00*/  7,  6,  0,  8,  3,  3,  5,  5,  3,  2,  2,  2,  4,  4,  6,  6,
+/*0x10*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7,
+/*0x20*/  6,  6,  0,  8,  3,  3,  5,  5,  4,  2,  2,  2,  4,  4,  6,  6,
+/*0x30*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7,
+/*0x40*/  6,  6,  0,  8,  3,  3,  5,  5,  3,  2,  2,  2,  3,  4,  6,  6,
+/*0x50*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7,
+/*0x60*/  6,  6,  0,  8,  3,  3,  5,  5,  4,  2,  2,  2,  5,  4,  6,  6,
+/*0x70*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7,
+/*0x80*/  2,  6,  2,  6,  3,  3,  3,  3,  2,  2,  2,  2,  4,  4,  4,  4,
+/*0x90*/ -2,  6,  0,  6,  4,  4,  4,  4,  2,  5,  2,  5,  5,  5,  5,  5,
+/*0xA0*/  2,  6,  2,  6,  3,  3,  3,  3,  2,  2,  2,  2,  4,  4,  4,  4,
+/*0xB0*/ -2, -5,  0, -5,  4,  4,  4,  4,  2, -4,  2, -4, -4, -4, -4, -4,
+/*0xC0*/  2,  6,  2,  8,  3,  3,  5,  5,  2,  2,  2,  2,  4,  4,  6,  6,
+/*0xD0*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7,
+/*0xE0*/  2,  6,  2,  8,  3,  3,  5,  5,  2,  2,  2,  2,  4,  4,  6,  6,
+/*0xF0*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7
+};
+
+int get_cycle(uint8_t code)
+{
+    int cyc = cycle_table[code];
+
+    if (cyc == 0) {
+        /* illegal op */
+        return 0;
+    }
+
+    if (cyc < 0) {
+        /* add 1 cycle if page boundary is crossed */
+        return -1 * cyc;
+    }
+
+    return cyc;
+}
+
 void exec(struct CPU *cpu, uint8_t code)
 {
     const uint16_t addr = cpu->reg.pc - 1;
@@ -159,6 +196,7 @@ void exec(struct CPU *cpu, uint8_t code)
     const uint8_t mode = addr_mode_table[code];
     const uint8_t  opecode = opecode_table[code];
     const uint16_t operand = fetch_operand(cpu, mode);;
+    const int cycle = get_cycle(code);
 
     switch (opecode) {
     case ADC: break;
@@ -264,6 +302,8 @@ void exec(struct CPU *cpu, uint8_t code)
     default: break;
     }
 
+    cpu->cycle = cycle;
+
     if (0) {
         printf("[0x%04X] %s", addr, opecode_name_table[code]);
         switch (mode) {
@@ -310,6 +350,11 @@ void run(struct CPU *cpu)
 
 void execute(struct CPU *cpu)
 {
+    if (cpu->cycle > 0) {
+        cpu->cycle--;
+        return;
+    }
+
     const uint8_t code = fetch(cpu);
     exec(cpu, code);
 }
