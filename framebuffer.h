@@ -9,8 +9,9 @@ struct framebuffer {
 };
 
 extern struct framebuffer *new_framebuffer(int width, int height);
-extern void free_framebuffer(struct framebuffer *fbuf);
+extern void free_framebuffer(struct framebuffer *fb);
 
-extern void set_color(struct framebuffer *fbuf, int x, int y, const uint8_t *rgb);
+extern void set_color(struct framebuffer *fb, int x, int y, const uint8_t *rgb);
+extern void clear_color(struct framebuffer *fb);
 
 #endif /* _H */

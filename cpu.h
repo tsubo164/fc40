@@ -33,8 +33,6 @@ struct CPU {
 };
 
 extern void reset(struct CPU *cpu);
-extern void run(struct CPU *cpu);
-
-extern void execute(struct CPU *cpu);
+extern void clock_cpu(struct CPU *cpu);
 
 #endif /* _H */

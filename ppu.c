@@ -40,68 +40,7 @@ static const uint8_t *get_color(int index)
     return palette_2C02[index];
 }
 
-static void copy_tile(struct framebuffer *fbuf, uint8_t *tile, uint8_t tilex, uint8_t tiley)
-{
-    const int X0 = tilex * 8;
-    const int Y0 = tiley * 8;
-    const int X1 = X0 + 8;
-    const int Y1 = Y0 + 8;
-    int x, y;
-
-    const uint8_t *palette = get_bg_palette(0);
-    uint8_t *src = tile;
-
-    for (y = Y0 ; y < Y1 ; y++) {
-        for (x = X0 ; x < X1 ; x++) {
-            const uint8_t index = palette[*src];
-            const uint8_t *color = get_color(index);
-            set_color(fbuf, x, y, color);
-            src++;
-        }
-    }
-}
-
-static void set_row(uint8_t r, uint8_t *dst, uint8_t bit)
-{
-    int mask = 1 << 7;
-    int i;
-
-    for (i = 0; i < 8; i++) {
-        const uint8_t val = (r & mask) > 0;
-        dst[i] += val << bit;
-        mask >>= 1;
-    }
-}
-
-void fill_bg_tile(struct framebuffer *fbuf, uint8_t *chr)
-{
-    uint8_t *table = name_table_0;
-    size_t size = sizeof(name_table_0);
-    int k;
-
-    for (k = 0; k < size; k++) {
-        uint8_t data = table[k];
-
-        if (data) {
-            uint8_t tilex = k % 32;
-            uint8_t tiley = k / 32;
-            uint8_t obj[64] = {0};
-            int i, j;
-
-            i = 16 * data;
-            for (j = 0; j < 8; j++)
-                set_row(chr[i + j], &obj[j * 8], 0);
-
-            i = 16 * data + 8;
-            for (j = 0; j < 8; j++)
-                set_row(chr[i + j], &obj[j * 8], 1);
-
-            copy_tile(fbuf, obj, tilex, tiley);
-        }
-    }
-}
-
-void set_pixel_color(struct framebuffer *fbuf, const uint8_t *chr, int x, int y)
+static void set_pixel_color(struct framebuffer *fb, const uint8_t *chr, int x, int y)
 {
     uint8_t *table = name_table_0;
 
@@ -124,14 +63,30 @@ void set_pixel_color(struct framebuffer *fbuf, const uint8_t *chr, int x, int y)
 
     {
         uint8_t color[3] = {64, 0, 0};
-        set_color(fbuf, x, y, color);
+        set_color(fb, x, y, color);
     }
     if (val) {
         const uint8_t *palette = get_bg_palette(0);
         const uint8_t index = palette[val];
         const uint8_t *color = get_color(index);
 
-        set_color(fbuf, x, y, color);
+        set_color(fb, x, y, color);
+    }
+}
+
+void clock_ppu(struct PPU *ppu)
+{
+    if (ppu->y < 240)
+        set_pixel_color(ppu->fbuf, ppu->char_rom, ppu->x, ppu->y);
+
+    ppu->x++;
+    if (ppu->x == 256) {
+        ppu->x = 0;
+        ppu->y++;
+    }
+    if (ppu->y == 240) {
+        ppu->y = 0;
+        clear_color(ppu->fbuf);
     }
 }
 

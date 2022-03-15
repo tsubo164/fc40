@@ -59,8 +59,6 @@ int open_display(struct PPU *ppu)
 {
     uint64_t clock = 0;
     uint64_t f = 0;
-    int x = 0;
-    int y = 0;
     GLFWwindow* window;
 
     /* Initialize the library */
@@ -81,40 +79,25 @@ int open_display(struct PPU *ppu)
     glfwSetWindowSizeCallback(window, resize);
 
     framebuffer = new_framebuffer(RESX, RESY);
+    ppu->fbuf = framebuffer;
     init_gl(framebuffer->data);
     resize(window, WINX, WINY);
 
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window)) {
         const double time = glfwGetTime();
-        if (time > .1) {
-            glfwSetTime(0.);
+        if (time > 1.) {
             printf("FPS: %8.3f\n", f/time);
+            glfwSetTime(0.);
             f = 0;
         }
 
         for (int i = 0; i <100; i++) {
-            if (y < 240)
-                set_pixel_color(framebuffer, ppu->char_rom, x, y);
+            clock_ppu(ppu);
 
             clock++;
             if (clock % 3 == 0)
-                execute(&cpu);
-
-            x++;
-            if (x == 256) {
-                x = 0;
-                y++;
-            }
-            if (y == 240) {
-                y = 0;
-                {
-                    uint8_t black[3] = {0};
-                    for (int Y=0; Y<framebuffer->height; Y++)
-                        for (int X=0; X<framebuffer->width; X++)
-                            set_color(framebuffer, X, Y, black);
-                }
-            }
+                clock_cpu(&cpu);
         }
         transfer_texture(framebuffer->data);
 
@@ -185,7 +168,7 @@ void resize(GLFWwindow *const window, int width, int height)
     int win_w, win_h;
     int fb_w, fb_h;
 
-    /* MaxOS Retina display has diffrent fb size than window size */
+    /* MaxOS Retina display has different fb size than window size */
     glfwGetFramebufferSize(window, &fb_w, &fb_h);
     win_w = width;
     win_h = height;

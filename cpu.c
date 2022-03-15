@@ -38,7 +38,7 @@ static uint16_t read_word(struct CPU *cpu, uint16_t addr)
     return (hi << 8) + lo;
 }
 
-uint8_t fetch(struct CPU *cpu)
+static uint8_t fetch(struct CPU *cpu)
 {
     return read_byte(cpu, cpu->reg.pc++);
 }
@@ -66,7 +66,7 @@ static void jump(struct CPU *cpu, uint16_t addr)
 
 enum addr_mode {ABS, ABX, ABY, IMM, IMP, INA, IZX, IZY, REL, ZPG, ZPX, ZPY};
 
-static enum addr_mode addr_mode_table[] = {
+static const uint8_t addr_mode_table[] = {
 /*       +00  +01  +02  +03  +04  +05  +06  +07  +08  +09  +0A  +0B  +0C  +0D  +0E  +0F */
 /*0x00*/ IMP, IZX, IMP, IZX, ZPG, ZPG, ZPG, ZPG, IMP, IMM, IMP, IMM, ABS, ABS, ABS, ABS,
 /*0x10*/ REL, IZY, IMP, IZY, ZPX, ZPX, ZPX, ZPX, IMP, ABY, IMP, ABY, ABX, ABX, ABX, ABX,
@@ -86,7 +86,7 @@ static enum addr_mode addr_mode_table[] = {
 /*0xF0*/ REL, IZY, IMP, IZY, ZPX, ZPX, ZPX, ZPX, IMP, ABY, IMP, ABY, ABX, ABX, ABX, ABX
 };
 
-uint16_t fetch_operand(struct CPU *cpu, int mode)
+static uint16_t fetch_operand(struct CPU *cpu, int mode)
 {
     switch (mode) {
     case ABS: return fetch_word(cpu);
@@ -113,7 +113,7 @@ enum opecode {
     STP, STX, STY, TAS, TAX, TAY, TSX, TXA, TXS, TYA, XAA
 };
 
-static const enum opecode opecode_table[] = {
+static const uint8_t opecode_table[] = {
 /*       +00  +01  +02  +03  +04  +05  +06  +07  +08  +09  +0A  +0B  +0C  +0D  +0E  +0F */
 /*0x00*/ BRK, ORA, STP, SLO, NOP, ORA, ASL, SLO, PHP, ORA, ASL, ANC, NOP, ORA, ASL, SLO,
 /*0x10*/ BPL, ORA, STP, SLO, NOP, ORA, ASL, SLO, CLC, ORA, NOP, SLO, NOP, ORA, ASL, SLO,
@@ -152,7 +152,7 @@ static const char opecode_name_table[][4] = {
 "BEQ","SBC","STP","ISC","NOP","SBC","INC","ISC","SED","SBC","NOP","ISC","NOP","SBC","INC","ISC"
 };
 
-static const int cycle_table[] = {
+static const int8_t cycle_table[] = {
 /*      +00 +01 +02 +03 +04 +05 +06 +07 +08 +09 +0A +0B +0C +0D +0E +0F */
 /*0x00*/  7,  6,  0,  8,  3,  3,  5,  5,  3,  2,  2,  2,  4,  4,  6,  6,
 /*0x10*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7,
@@ -172,7 +172,7 @@ static const int cycle_table[] = {
 /*0xF0*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7
 };
 
-int get_cycle(uint8_t code)
+static int get_cycle(uint8_t code)
 {
     int cyc = cycle_table[code];
 
@@ -189,9 +189,31 @@ int get_cycle(uint8_t code)
     return cyc;
 }
 
-void exec(struct CPU *cpu, uint8_t code)
+static void print_code(uint16_t addr, uint8_t code, uint8_t mode, uint16_t operand)
 {
-    const uint16_t addr = cpu->reg.pc - 1;
+    printf("[0x%04X] %s", addr, opecode_name_table[code]);
+    switch (mode) {
+    case ABS: printf(" $%04X", operand); break;
+    case ABX: printf(" $%02X", operand); break;
+    case ABY: break;
+    case IMM: printf(" #$%02X", operand); break;
+    case IMP: break;
+    case INA: break;
+    case IZX: break;
+    case IZY: break;
+    case REL: printf(" $%02X", operand); break;
+    case ZPG: break;
+    case ZPX: break;
+    case ZPY: break;
+    default: break;
+    }
+    printf("\n");
+}
+
+static void exec_instruction(struct CPU *cpu)
+{
+    const uint16_t addr = cpu->reg.pc;
+    const uint8_t code = fetch(cpu);
 
     const uint8_t mode = addr_mode_table[code];
     const uint8_t  opecode = opecode_table[code];
@@ -304,25 +326,8 @@ void exec(struct CPU *cpu, uint8_t code)
 
     cpu->cycle = cycle;
 
-    if (0) {
-        printf("[0x%04X] %s", addr, opecode_name_table[code]);
-        switch (mode) {
-        case ABS: printf(" $%04X", operand); break;
-        case ABX: printf(" $%02X", operand); break;
-        case ABY: break;
-        case IMM: printf(" #$%02X", operand); break;
-        case IMP: break;
-        case INA: break;
-        case IZX: break;
-        case IZY: break;
-        case REL: printf(" $%02X", operand); break;
-        case ZPG: break;
-        case ZPX: break;
-        case ZPY: break;
-        default: break;
-        }
-        printf("\n");
-    }
+    if (0)
+        print_code(addr, code, mode, operand);
 }
 
 void reset(struct CPU *cpu)
@@ -333,28 +338,12 @@ void reset(struct CPU *cpu)
     jump(cpu, addr);
 }
 
-void run(struct CPU *cpu)
-{
-    uint64_t cnt = 0;
-
-    while (cpu->reg.pc) {
-        const uint8_t code = fetch(cpu);
-        exec(cpu, code);
-
-        if (cnt++ > 1024 * 1024) {
-            printf("!!cnt reached: %llu\n", cnt);
-            break;
-        }
-    }
-}
-
-void execute(struct CPU *cpu)
+void clock_cpu(struct CPU *cpu)
 {
     if (cpu->cycle > 0) {
         cpu->cycle--;
         return;
     }
 
-    const uint8_t code = fetch(cpu);
-    exec(cpu, code);
+    exec_instruction(cpu);
 }
