@@ -1,6 +1,7 @@
 #ifndef CARTRIDGE_H
 #define CARTRIDGE_H
 
+#include <stdlib.h>
 #include <stdint.h>
 
 struct cartridge {
