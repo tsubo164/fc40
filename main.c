@@ -43,13 +43,11 @@ int main(void)
 
 void update_frame(void)
 {
-    int i;
-
-    for (i = 0; i <100; i++) {
+    do {
         clock_ppu(&ppu);
 
-        clock++;
-        if (clock % 3 == 0)
+        if (clock++ % 3 == 0)
             clock_cpu(&cpu);
-    }
+
+    } while (!is_frame_ready(&ppu));
 }

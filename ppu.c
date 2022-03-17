@@ -61,11 +61,11 @@ static void set_pixel_color(struct framebuffer *fb, const uint8_t *chr, int x, i
     msb = (msb & mask) > 0;
     val = (msb << 1) | lsb;
 
-    {
+    if (0) {
         uint8_t color[3] = {64, 0, 0};
         set_color(fb, x, y, color);
     }
-    if (val) {
+    if (val || 1) {
         const uint8_t *palette = get_bg_palette(0);
         const uint8_t index = palette[val];
         const uint8_t *color = get_color(index);
@@ -74,19 +74,33 @@ static void set_pixel_color(struct framebuffer *fb, const uint8_t *chr, int x, i
     }
 }
 
+int is_frame_ready(const struct PPU *ppu)
+{
+    return ppu->cycle == 0 && ppu->scanline == 0;
+}
+
 void clock_ppu(struct PPU *ppu)
 {
-    if (ppu->y < 240)
-        set_pixel_color(ppu->fbuf, ppu->char_rom, ppu->x, ppu->y);
+    if (ppu->cycle == 0 && ppu->scanline == 0)
+        ppu->stat.vblank = 0;
 
-    ppu->x++;
-    if (ppu->x == 256) {
-        ppu->x = 0;
-        ppu->y++;
+    if ((ppu->cycle > 0 && ppu->cycle < 256) &&
+        (ppu->scanline >= 0 && ppu->scanline < 240))
+        set_pixel_color(ppu->fbuf, ppu->char_rom, ppu->cycle, ppu->scanline);
+
+    ppu->cycle++;
+
+    if (ppu->cycle == 341) {
+        ppu->cycle = 0;
+        ppu->scanline++;
     }
-    if (ppu->y == 240) {
-        ppu->y = 0;
-        clear_color(ppu->fbuf);
+
+    if (ppu->scanline == 240) {
+        ppu->stat.vblank = 1;
+    }
+
+    if (ppu->scanline == 261) {
+        ppu->scanline = 0;
     }
 }
 
