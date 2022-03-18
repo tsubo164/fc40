@@ -84,7 +84,7 @@ void clock_ppu(struct PPU *ppu)
     if (ppu->cycle == 0 && ppu->scanline == 0)
         ppu->stat.vblank = 0;
 
-    if ((ppu->cycle > 0 && ppu->cycle < 256) &&
+    if ((ppu->cycle >= 0 && ppu->cycle < 256) &&
         (ppu->scanline >= 0 && ppu->scanline < 240))
         set_pixel_color(ppu->fbuf, ppu->char_rom, ppu->cycle, ppu->scanline);
 

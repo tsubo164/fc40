@@ -25,7 +25,7 @@ clean:
 	$(RM) $(NES) *.o *.d
 
 run: $(NES)
-	./$(NES)
+	./$(NES) sample1.nes
 
 $(DEPS): %.d: %.c
 	$(CC) -I$(incdir) -c -MM $< > $@

@@ -47,7 +47,9 @@ int open_display(const struct framebuffer *fb, void (*update_frame_func)(void))
     while (!glfwWindowShouldClose(window)) {
         const double time = glfwGetTime();
         if (time > 1.) {
-            printf("FPS: %8.3f\n", f/time);
+            static char title[64] = {'\0'};
+            sprintf(title, "Famicom Emulator  FPS: %5.2f\n", f/time);
+            glfwSetWindowTitle(window, title);
             glfwSetTime(0.);
             f = 0;
         }

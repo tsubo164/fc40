@@ -12,13 +12,19 @@ static uint64_t clock = 0;
 
 void update_frame(void);
 
-int main(void)
+int main(int argc, char **argv)
 {
     const int RESX = 256;
     const int RESY = 240;
     struct framebuffer *fbuf = NULL;
-    struct cartridge *cart = open_cartridge("./sample1.nes");
+    struct cartridge *cart = NULL;
 
+    if (argc != 2) {
+        fprintf(stderr, "missing file name\n");
+        return -1;
+    }
+
+    cart = open_cartridge(argv[1]);
     if (!cart) {
         fprintf(stderr, "not a *.nes file\n");
         return -1;
