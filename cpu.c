@@ -35,7 +35,7 @@ static uint16_t read_word(struct CPU *cpu, uint16_t addr)
     lo = read_byte(cpu, addr);
     hi = read_byte(cpu, addr + 1);
 
-    return (hi << 8) + lo;
+    return (hi << 8) | lo;
 }
 
 static uint8_t fetch(struct CPU *cpu)
@@ -50,13 +50,7 @@ static uint16_t fetch_word(struct CPU *cpu)
     lo = fetch(cpu);
     hi = fetch(cpu);
 
-    return (hi << 8) + lo;
-}
-
-static int8_t as_signed(uint16_t operand)
-{
-    uint8_t ret = operand;
-    return (int8_t) ret;
+    return (hi << 8) | lo;
 }
 
 static void jump(struct CPU *cpu, uint16_t addr)
@@ -97,7 +91,12 @@ static uint16_t fetch_operand(struct CPU *cpu, int mode)
     case INA: return 0;
     case IZX: return 0;
     case IZY: return 0;
-    case REL: return fetch(cpu);
+    case REL:
+        {
+            /* fetch data first, then add it to the pc */
+            uint8_t offset = fetch(cpu);
+            return cpu->reg.pc + (int8_t)offset;
+        }
     case ZPG: return 0;
     case ZPX: return 0;
     case ZPY: return 0;
@@ -210,7 +209,7 @@ static void print_code(uint16_t addr, uint8_t code, uint8_t mode, uint16_t opera
     printf("\n");
 }
 
-static void exec_instruction(struct CPU *cpu)
+static void execute(struct CPU *cpu)
 {
     const uint16_t addr = cpu->reg.pc;
     const uint8_t code = fetch(cpu);
@@ -236,7 +235,7 @@ static void exec_instruction(struct CPU *cpu)
     case BMI: break;
     case BNE:
         if (cpu->reg.p.zero == 0)
-            jump(cpu, cpu->reg.pc + as_signed(operand));
+            jump(cpu, operand);
         break;
     case BPL: break;
     case BRK:
@@ -332,18 +331,27 @@ static void exec_instruction(struct CPU *cpu)
 
 void reset(struct CPU *cpu)
 {
+    const struct status ini = {0};
     uint16_t addr;
 
     addr = read_word(cpu, 0xFFFC);
     jump(cpu, addr);
+
+    /* registers */
+    cpu->reg.a = 0;
+    cpu->reg.x = 0;
+    cpu->reg.y = 0;
+    cpu->reg.s = 0xFD;
+    cpu->reg.p = ini;
+
+    /* takes cycles */
+    cpu->cycle = 8;
 }
 
 void clock_cpu(struct CPU *cpu)
 {
-    if (cpu->cycle > 0) {
-        cpu->cycle--;
-        return;
-    }
+    if (cpu->cycle == 0)
+        execute(cpu);
 
-    exec_instruction(cpu);
+    cpu->cycle--;
 }
