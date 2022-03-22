@@ -23,17 +23,15 @@ static void write_byte(uint16_t addr, uint8_t data)
     }
 }
 
-static uint8_t read_byte(struct CPU *cpu, uint16_t addr)
+static uint8_t read_byte(const struct CPU *cpu, uint16_t addr)
 {
     return cpu->prog[addr - 0x8000];
 }
 
-static uint16_t read_word(struct CPU *cpu, uint16_t addr)
+static uint16_t read_word(const struct CPU *cpu, uint16_t addr)
 {
-    uint16_t lo, hi;
-
-    lo = read_byte(cpu, addr);
-    hi = read_byte(cpu, addr + 1);
+    const uint16_t lo = read_byte(cpu, addr);
+    const uint16_t hi = read_byte(cpu, addr + 1);
 
     return (hi << 8) | lo;
 }
@@ -45,12 +43,15 @@ static uint8_t fetch(struct CPU *cpu)
 
 static uint16_t fetch_word(struct CPU *cpu)
 {
-    uint16_t lo, hi;
-
-    lo = fetch(cpu);
-    hi = fetch(cpu);
+    const uint16_t lo = fetch(cpu);
+    const uint16_t hi = fetch(cpu);
 
     return (hi << 8) | lo;
+}
+
+static uint8_t is_page_crossing(uint16_t addr, uint8_t addend)
+{
+    return (addr & 0x00FF) + (addend & 0x00FF) > 0x00FF;
 }
 
 static void jump(struct CPU *cpu, uint16_t addr)
@@ -58,7 +59,7 @@ static void jump(struct CPU *cpu, uint16_t addr)
     cpu->reg.pc = addr;
 }
 
-enum addr_mode {ABS, ABX, ABY, IMM, IMP, INA, IZX, IZY, REL, ZPG, ZPX, ZPY};
+enum addr_mode {ABS, ABX, ABY, IMM, IMP, IND, IZX, IZY, REL, ZPG, ZPX, ZPY};
 
 static const uint8_t addr_mode_table[] = {
 /*       +00  +01  +02  +03  +04  +05  +06  +07  +08  +09  +0A  +0B  +0C  +0D  +0E  +0F */
@@ -68,7 +69,7 @@ static const uint8_t addr_mode_table[] = {
 /*0x30*/ REL, IZY, IMP, IZY, ZPX, ZPX, ZPX, ZPX, IMP, ABY, IMP, ABY, ABX, ABX, ABX, ABX,
 /*0x40*/ IMP, IZX, IMP, IZX, ZPG, ZPG, ZPG, ZPG, IMP, IMM, IMP, IMM, ABS, ABS, ABS, ABS,
 /*0x50*/ REL, IZY, IMP, IZY, ZPX, ZPX, ZPX, ZPX, IMP, ABY, IMP, ABY, ABX, ABX, ABX, ABX,
-/*0x60*/ IMP, IZX, IMP, IZX, ZPG, ZPG, ZPG, ZPG, IMP, IMM, IMP, IMM, INA, ABS, ABS, ABS,
+/*0x60*/ IMP, IZX, IMP, IZX, ZPG, ZPG, ZPG, ZPG, IMP, IMM, IMP, IMM, IND, ABS, ABS, ABS,
 /*0x70*/ REL, IZY, IMP, IZY, ZPX, ZPX, ZPX, ZPX, IMP, ABY, IMP, ABY, ABX, ABX, ABX, ABX,
 /*0x80*/ IMM, IZX, IMM, IZX, ZPG, ZPG, ZPG, ZPG, IMP, IMM, IMP, IMM, ABS, ABS, ABS, ABS,
 /*0x90*/ REL, IZY, IMP, IZY, ZPX, ZPX, ZPY, ZPY, IMP, ABY, IMP, ABY, ABX, ABX, ABY, ABY,
@@ -80,27 +81,84 @@ static const uint8_t addr_mode_table[] = {
 /*0xF0*/ REL, IZY, IMP, IZY, ZPX, ZPX, ZPX, ZPX, IMP, ABY, IMP, ABY, ABX, ABX, ABX, ABX
 };
 
-static uint16_t fetch_operand(struct CPU *cpu, int mode)
+static uint16_t fetch_operand(struct CPU *cpu, int mode, int *page_crossed)
 {
+    *page_crossed = 0;
+
     switch (mode) {
-    case ABS: return fetch_word(cpu);
-    case ABX: return read_byte(cpu, fetch_word(cpu) + cpu->reg.x);
+
+    case ABS:
+        return fetch_word(cpu);
+
+    case ABX:
+        {
+            /* addr = arg + X */
+            const uint16_t addr = fetch_word(cpu);
+            if (is_page_crossing(addr, cpu->reg.x))
+                *page_crossed = 1;
+            return read_byte(cpu, addr + cpu->reg.x);
+        }
+
     case ABY: return 0;
-    case IMM: return fetch(cpu);
-    case IMP: return 0;
-    case INA: return 0;
-    case IZX: return 0;
-    case IZY: return 0;
+        {
+            /* addr = arg + Y */
+            const uint16_t addr = fetch_word(cpu);
+            if (is_page_crossing(addr, cpu->reg.y))
+                *page_crossed = 1;
+            return read_byte(cpu, addr + cpu->reg.y);
+        }
+
+    case IMM:
+        return fetch(cpu);
+
+    case IMP:
+        return cpu->reg.a;
+
+    case IND:
+        {
+            const uint16_t addr = fetch_word(cpu);
+            if ((addr & 0x00FF) == 0x00FF)
+                /* emulate page boundary hardware bug */
+                return (read_byte(cpu, addr & 0xFF00) << 8) | read_byte(cpu, addr);
+            else
+                /* normal behavior */
+                return read_word(cpu, addr);
+        }
+
+    case IZX:
+        {
+            /* addr = {[arg + X], [arg + X + 1]} */
+            const uint16_t addr = read_word(cpu, fetch(cpu) + cpu->reg.x);
+            return read_word(cpu, addr);
+        }
+
+    case IZY:
+        {
+            /* addr = {[arg], [arg + 1]} + Y */
+            const uint16_t addr = read_word(cpu, fetch(cpu));
+            if (is_page_crossing(addr, cpu->reg.y))
+                *page_crossed = 1;
+            return read_word(cpu, addr + cpu->reg.y);
+        }
+
     case REL:
         {
             /* fetch data first, then add it to the pc */
-            uint8_t offset = fetch(cpu);
-            return cpu->reg.pc + (int8_t)offset;
+            const uint8_t offset = fetch(cpu);
+            return cpu->reg.pc + (int8_t) offset;
         }
-    case ZPG: return 0;
-    case ZPX: return 0;
-    case ZPY: return 0;
-    default: return 0;
+
+    case ZPG:
+        return read_word(cpu, fetch(cpu));
+
+    case ZPX:
+        return read_word(cpu, (fetch(cpu) + cpu->reg.x) & 0x00FF);
+
+    case ZPY:
+        return read_word(cpu, (fetch(cpu) + cpu->reg.y) & 0x00FF);
+
+    default:
+        return 0;
     }
 }
 
@@ -171,19 +229,17 @@ static const int8_t cycle_table[] = {
 /*0xF0*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7
 };
 
-static int get_cycle(uint8_t code)
+static int get_cycle(uint8_t code, int page_crossed)
 {
-    int cyc = cycle_table[code];
+    const int cyc = cycle_table[code];
 
-    if (cyc == 0) {
+    if (cyc == 0)
         /* illegal op */
         return 0;
-    }
 
-    if (cyc < 0) {
+    if (cyc < 0)
         /* add 1 cycle if page boundary is crossed */
-        return -1 * cyc;
-    }
+        return -1 * cyc + page_crossed;
 
     return cyc;
 }
@@ -197,7 +253,7 @@ static void print_code(uint16_t addr, uint8_t code, uint8_t mode, uint16_t opera
     case ABY: break;
     case IMM: printf(" #$%02X", operand); break;
     case IMP: break;
-    case INA: break;
+    case IND: break;
     case IZX: break;
     case IZY: break;
     case REL: printf(" $%02X", operand); break;
@@ -215,9 +271,10 @@ static void execute(struct CPU *cpu)
     const uint8_t code = fetch(cpu);
 
     const uint8_t mode = addr_mode_table[code];
-    const uint8_t  opecode = opecode_table[code];
-    const uint16_t operand = fetch_operand(cpu, mode);;
-    const int cycle = get_cycle(code);
+    const uint8_t opecode = opecode_table[code];
+    int page_crossed = 0;
+    const uint16_t operand = fetch_operand(cpu, mode, &page_crossed);;
+    const int cycle = get_cycle(code, page_crossed);
 
     switch (opecode) {
     case ADC: break;
