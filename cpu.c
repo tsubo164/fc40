@@ -99,7 +99,7 @@ static uint16_t fetch_operand(struct CPU *cpu, int mode, int *page_crossed)
             return read_byte(cpu, addr + cpu->reg.x);
         }
 
-    case ABY: return 0;
+    case ABY:
         {
             /* addr = arg + Y */
             const uint16_t addr = fetch_word(cpu);
@@ -281,7 +281,14 @@ static void execute(struct CPU *cpu)
     case AHX: break;
     case ALR: break;
     case ANC: break;
-    case AND: break;
+
+    /* A = A & M (N, Z) */
+    case AND:
+        cpu->reg.a &= operand;
+        cpu->reg.p.zero = (cpu->reg.a == 0x00);
+        cpu->reg.p.negative = (cpu->reg.a & 0x80);
+        break;
+
     case ARR: break;
     case ASL: break;
     case AXS: break;
@@ -308,18 +315,38 @@ static void execute(struct CPU *cpu)
     case CPY: break;
     case DCP: break;
     case DEC: break;
-    case DEX: break;
+
+    /* X = X - 1 (N, Z) */
+    case DEX:
+        cpu->reg.x--;
+        cpu->reg.p.zero = (cpu->reg.x == 0);
+        cpu->reg.p.negative = (cpu->reg.x & 0x80);
+        break;
+
+    /* Y = Y - 1 (N, Z) */
     case DEY:
         cpu->reg.y--;
         cpu->reg.p.zero = (cpu->reg.y == 0);
+        cpu->reg.p.negative = (cpu->reg.y & 0x80);
         break;
+
     case EOR: break;
     case INC: break;
+
+    /* X = X + 1 (N, Z) */
     case INX:
         cpu->reg.x++;
         cpu->reg.p.zero = (cpu->reg.x == 0);
+        cpu->reg.p.negative = (cpu->reg.x & 0x80);
         break;
-    case INY: break;
+
+    /* Y = Y + 1 (N, Z) */
+    case INY:
+        cpu->reg.y++;
+        cpu->reg.p.zero = (cpu->reg.y == 0);
+        cpu->reg.p.negative = (cpu->reg.y & 0x80);
+        break;
+
     case ISC: break;
     case JMP:
         jump(cpu, operand);
@@ -327,19 +354,39 @@ static void execute(struct CPU *cpu)
     case JSR: break;
     case LAS: break;
     case LAX: break;
+
+    /* A =  M (N, Z) */
     case LDA:
         cpu->reg.a = operand;
+        cpu->reg.p.zero = (cpu->reg.a == 0);
+        cpu->reg.p.negative = (cpu->reg.a & 0x80);
         break;
+
+    /* X =  M (N, Z) */
     case LDX:
         cpu->reg.x = operand;
+        cpu->reg.p.zero = (cpu->reg.x == 0);
+        cpu->reg.p.negative = (cpu->reg.x & 0x80);
         break;
+
+    /* Y =  M (N, Z) */
     case LDY:
         cpu->reg.y = operand;
+        cpu->reg.p.zero = (cpu->reg.y == 0);
+        cpu->reg.p.negative = (cpu->reg.y & 0x80);
         break;
+
     case LSR: break;
     case NOP:
         break;
-    case ORA: break;
+
+    /* A = A | M (N, Z) */
+    case ORA:
+        cpu->reg.a |= operand;
+        cpu->reg.p.zero = (cpu->reg.a == 0x00);
+        cpu->reg.p.negative = (cpu->reg.a & 0x80);
+        break;
+
     case PHA: break;
     case PHP: break;
     case PLA: break;
