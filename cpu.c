@@ -442,20 +442,67 @@ static void execute(struct CPU *cpu)
         write_byte(operand, cpu->reg.a);
         break;
 
+    /* XXX doesn't exist */
     case STP: break;
-    case STX: break;
-    case STY: break;
-    case TAS: break;
-    case TAX: break;
-    case TAY: break;
-    case TSX: break;
-    case TXA: break;
-    case TXS:
-        cpu->reg.s = cpu->reg.x + 0x0100;
+
+    /* Store Index Register X in Memory: M = X () */
+    case STX:
+        write_byte(operand, cpu->reg.x);
         break;
-    case TYA: break;
+
+    /* Store Index Register Y in Memory: M = Y () */
+    case STY:
+        write_byte(operand, cpu->reg.y);
+        break;
+
+    /* XXX doesn't exist */
+    case TAS: break;
+
+    /* Transfer Accumulator to Index X: X = A (N, Z) */
+    case TAX:
+        cpu->reg.x = cpu->reg.a;
+        cpu->reg.p.zero = (cpu->reg.x == 0);
+        cpu->reg.p.negative = (cpu->reg.x & 0x80);
+        break;
+
+    /* Transfer Accumulator to Index Y: Y = A (N, Z) */
+    case TAY:
+        cpu->reg.y = cpu->reg.a;
+        cpu->reg.p.zero = (cpu->reg.y == 0);
+        cpu->reg.p.negative = (cpu->reg.y & 0x80);
+        break;
+
+    /* Transfer Stack Pointer to Index X: X = S (N, Z) */
+    case TSX:
+        cpu->reg.x = cpu->reg.s;
+        cpu->reg.p.zero = (cpu->reg.x == 0);
+        cpu->reg.p.negative = (cpu->reg.x & 0x80);
+        break;
+
+    /* Transfer Index X to Accumulator: A = X (N, Z) */
+    case TXA:
+        cpu->reg.a = cpu->reg.x;
+        cpu->reg.p.zero = (cpu->reg.a == 0x00);
+        cpu->reg.p.negative = (cpu->reg.a & 0x80);
+        break;
+
+    /* Transfer Index X to Stack Pointer: S = X () */
+    case TXS:
+        cpu->reg.s = cpu->reg.x;
+        break;
+
+    /* Transfer Index Y to Accumulator: A = Y (N, Z) */
+    case TYA:
+        cpu->reg.a = cpu->reg.y;
+        cpu->reg.p.zero = (cpu->reg.a == 0x00);
+        cpu->reg.p.negative = (cpu->reg.a & 0x80);
+        break;
+
+    /* XXX doesn't exist */
     case XAA: break;
-    default: break;
+
+    default:
+        break;
     }
 
     cpu->cycle = cycle;
