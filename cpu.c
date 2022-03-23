@@ -449,9 +449,12 @@ static void execute(struct CPU *cpu)
 
     /* XXX doesn't exist */
     case ISC: break;
+
+    /* Jump Indirect: PC = {[PC+1],[PC+2]} () */
     case JMP:
-        jump(cpu, operand);
+        set_pc(cpu, operand);
         break;
+
     case JSR: break;
     /* XXX doesn't exist */
     case LAS: break;
@@ -492,8 +495,20 @@ static void execute(struct CPU *cpu)
         cpu->reg.p.negative = (cpu->reg.a & 0x80);
         break;
 
-    case PHA: break;
-    case PHP: break;
+    /* Push Accumulator on Stack: M = A () */
+    case PHA:
+        write_byte(0x0100 + cpu->reg.s, cpu->reg.a);
+        cpu->reg.s--;
+        break;
+
+    /* Push Processor Status on Stack: M = P () */
+    case PHP:
+        /*
+        write_byte(0x0100 + cpu->reg.s, cpu->reg.a);
+        cpu->reg.s--;
+        */
+        break;
+
     case PLA: break;
     case PLP: break;
     /* XXX doesn't exist */
@@ -507,8 +522,16 @@ static void execute(struct CPU *cpu)
     /* XXX doesn't exist */
     case SAX: break;
     case SBC: break;
-    case SEC: break;
-    case SED: break;
+
+    /* Set Carry Flag: C = 1 (C) */
+    case SEC:
+        cpu->reg.p.carry = 1;
+        break;
+
+    /* Set Decimal Mode: D = 1 (D) */
+    case SED:
+        cpu->reg.p.decimal = 1;
+        break;
 
     /* Set Interrupt Disable: I = 1 (I) */
     case SEI:
