@@ -265,6 +265,20 @@ static void print_code(uint16_t addr, uint8_t code, uint8_t mode, uint16_t opera
     printf("\n");
 }
 
+static void set_pc(struct CPU *cpu, uint16_t addr)
+{
+    cpu->reg.pc = addr;
+}
+
+static int branch_on(struct CPU *cpu, uint16_t addr, int test)
+{
+    if (!test)
+        return 0;
+
+    set_pc(cpu, addr);
+    return 1;
+}
+
 static void execute(struct CPU *cpu)
 {
     const uint16_t addr = cpu->reg.pc;
@@ -273,12 +287,15 @@ static void execute(struct CPU *cpu)
     const uint8_t mode = addr_mode_table[code];
     const uint8_t opecode = opecode_table[code];
     int page_crossed = 0;
+    int branch_taken = 0;
     const uint16_t operand = fetch_operand(cpu, mode, &page_crossed);;
-    const int cycle = get_cycle(code, page_crossed);
+    int cycle = get_cycle(code, page_crossed);
 
     switch (opecode) {
     case ADC: break;
+    /* XXX doesn't exist */
     case AHX: break;
+    /* XXX doesn't exist */
     case ALR: break;
     case ANC: break;
 
@@ -289,23 +306,82 @@ static void execute(struct CPU *cpu)
         cpu->reg.p.negative = (cpu->reg.a & 0x80);
         break;
 
+    /* XXX doesn't exist */
     case ARR: break;
     case ASL: break;
+    /* XXX doesn't exist */
     case AXS: break;
-    case BCC: break;
-    case BCS: break;
-    case BEQ: break;
-    case BIT: break;
-    case BMI: break;
-    case BNE:
-        if (cpu->reg.p.zero == 0)
-            jump(cpu, operand);
+
+    /* Branch on Carry Clear: () */
+    case BCC:
+        if (cpu->reg.p.carry == 0) {
+            set_pc(cpu, operand);
+            cycle++;
+        }
         break;
-    case BPL: break;
+
+    /* Branch on Carry Set: () */
+    case BCS:
+        if (cpu->reg.p.carry == 1) {
+            set_pc(cpu, operand);
+            cycle++;
+        }
+        break;
+
+    /* Branch on Result Zero: () */
+    case BEQ:
+        if (cpu->reg.p.zero == 1) {
+            set_pc(cpu, operand);
+            cycle++;
+        }
+        break;
+
+    case BIT: break;
+
+    /* Branch on Result Minus: () */
+    case BMI:
+        if (cpu->reg.p.negative == 1) {
+            set_pc(cpu, operand);
+            cycle++;
+        }
+        break;
+
+    /* Branch on Result Not Zero: () */
+    case BNE:
+        if (0)
+            branch_taken = branch_on(cpu, operand, cpu->reg.p.zero == 0);
+        if (cpu->reg.p.zero == 0) {
+            set_pc(cpu, operand);
+            cycle++;
+        }
+        break;
+
+    /* Branch on Result Minus: () */
+    case BPL:
+        if (cpu->reg.p.negative == 0) {
+            set_pc(cpu, operand);
+            cycle++;
+        }
+        break;
+
     case BRK:
         break;
-    case BVC: break;
-    case BVS: break;
+
+    /* Branch on Overflow Clear: () */
+    case BVC:
+        if (cpu->reg.p.overflow == 0) {
+            set_pc(cpu, operand);
+            cycle++;
+        }
+        break;
+
+    /* Branch on Overflow Set: () */
+    case BVS:
+        if (cpu->reg.p.overflow == 1) {
+            set_pc(cpu, operand);
+            cycle++;
+        }
+        break;
 
     /* Clear Carry Flag: C = 0 (C) */
     case CLC:
@@ -330,6 +406,7 @@ static void execute(struct CPU *cpu)
     case CMP: break;
     case CPX: break;
     case CPY: break;
+    /* XXX doesn't exist */
     case DCP: break;
     case DEC: break;
 
@@ -370,12 +447,15 @@ static void execute(struct CPU *cpu)
         cpu->reg.p.negative = (cpu->reg.y & 0x80);
         break;
 
+    /* XXX doesn't exist */
     case ISC: break;
     case JMP:
         jump(cpu, operand);
         break;
     case JSR: break;
+    /* XXX doesn't exist */
     case LAS: break;
+    /* XXX doesn't exist */
     case LAX: break;
 
     /* A =  M (N, Z) */
@@ -416,12 +496,15 @@ static void execute(struct CPU *cpu)
     case PHP: break;
     case PLA: break;
     case PLP: break;
+    /* XXX doesn't exist */
     case RLA: break;
     case ROL: break;
     case ROR: break;
+    /* XXX doesn't exist */
     case RRA: break;
     case RTI: break;
     case RTS: break;
+    /* XXX doesn't exist */
     case SAX: break;
     case SBC: break;
     case SEC: break;
@@ -432,9 +515,15 @@ static void execute(struct CPU *cpu)
         cpu->reg.p.interrupt = 1;
         break;
 
+    /* XXX doesn't exist */
     case SHX: break;
+    /* XXX doesn't exist */
     case SHY: break;
+
+    /* XXX doesn't exist */
     case SLO: break;
+
+    /* XXX doesn't exist */
     case SRE: break;
 
     /* Store Accumulator in Memory: M = A () */
