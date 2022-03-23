@@ -283,6 +283,32 @@ static uint8_t get_flag(const struct CPU *cpu, uint8_t flag)
     return (cpu->reg.p & flag) > 0;
 }
 
+static void set_a(struct CPU *cpu, uint8_t val)
+{
+    cpu->reg.a = val;
+    set_flag(cpu, Z, cpu->reg.a == 0x00);
+    set_flag(cpu, N, cpu->reg.a & 0x80);
+}
+
+static void set_x(struct CPU *cpu, uint8_t val)
+{
+    cpu->reg.x = val;
+    set_flag(cpu, Z, cpu->reg.x == 0x00);
+    set_flag(cpu, N, cpu->reg.x & 0x80);
+}
+
+static void set_y(struct CPU *cpu, uint8_t val)
+{
+    cpu->reg.y = val;
+    set_flag(cpu, Z, cpu->reg.y == 0x00);
+    set_flag(cpu, N, cpu->reg.y & 0x80);
+}
+
+static void set_s(struct CPU *cpu, uint8_t val)
+{
+    cpu->reg.s = val;
+}
+
 static int branch_on(struct CPU *cpu, uint16_t addr, int test)
 {
     if (!test)
@@ -314,9 +340,7 @@ static void execute(struct CPU *cpu)
 
     /* A = A & M (N, Z) */
     case AND:
-        cpu->reg.a &= operand;
-        set_flag(cpu, Z, cpu->reg.a == 0x00);
-        set_flag(cpu, N, cpu->reg.a & 0x80);
+        set_a(cpu, cpu->reg.a & operand);
         break;
 
     /* XXX doesn't exist */
@@ -425,39 +449,29 @@ static void execute(struct CPU *cpu)
 
     /* X = X - 1 (N, Z) */
     case DEX:
-        cpu->reg.x--;
-        set_flag(cpu, Z, cpu->reg.x == 0x00);
-        set_flag(cpu, N, cpu->reg.x & 0x80);
+        set_x(cpu, cpu->reg.x - 1);
         break;
 
     /* Y = Y - 1 (N, Z) */
     case DEY:
-        cpu->reg.y--;
-        set_flag(cpu, Z, cpu->reg.y == 0x00);
-        set_flag(cpu, N, cpu->reg.y & 0x80);
+        set_y(cpu, cpu->reg.y - 1);
         break;
 
     /* Exclusive OR Memory with Accumulator: A = A ^ M (N, Z) */
     case EOR:
-        cpu->reg.a ^= operand;
-        set_flag(cpu, Z, cpu->reg.a == 0x00);
-        set_flag(cpu, N, cpu->reg.a & 0x80);
+        set_a(cpu, cpu->reg.a ^ operand);
         break;
 
     case INC: break;
 
     /* X = X + 1 (N, Z) */
     case INX:
-        cpu->reg.x++;
-        set_flag(cpu, Z, cpu->reg.x == 0x00);
-        set_flag(cpu, N, cpu->reg.x & 0x80);
+        set_x(cpu, cpu->reg.x + 1);
         break;
 
     /* Y = Y + 1 (N, Z) */
     case INY:
-        cpu->reg.y++;
-        set_flag(cpu, Z, cpu->reg.y == 0x00);
-        set_flag(cpu, N, cpu->reg.y & 0x80);
+        set_y(cpu, cpu->reg.y + 1);
         break;
 
     /* XXX doesn't exist */
@@ -476,23 +490,17 @@ static void execute(struct CPU *cpu)
 
     /* A =  M (N, Z) */
     case LDA:
-        cpu->reg.a = operand;
-        set_flag(cpu, Z, cpu->reg.a == 0x00);
-        set_flag(cpu, N, cpu->reg.a & 0x80);
+        set_a(cpu, operand);
         break;
 
     /* X =  M (N, Z) */
     case LDX:
-        cpu->reg.x = operand;
-        set_flag(cpu, Z, cpu->reg.x == 0x00);
-        set_flag(cpu, N, cpu->reg.x & 0x80);
+        set_x(cpu, operand);
         break;
 
     /* Y =  M (N, Z) */
     case LDY:
-        cpu->reg.y = operand;
-        set_flag(cpu, Z, cpu->reg.y == 0x00);
-        set_flag(cpu, N, cpu->reg.y & 0x80);
+        set_y(cpu, operand);
         break;
 
     case LSR: break;
@@ -503,9 +511,7 @@ static void execute(struct CPU *cpu)
 
     /* OR Memory with Accumulator: A = A | M (N, Z) */
     case ORA:
-        cpu->reg.a |= operand;
-        set_flag(cpu, Z, cpu->reg.a == 0x00);
-        set_flag(cpu, N, cpu->reg.a & 0x80);
+        set_a(cpu, cpu->reg.a | operand);
         break;
 
     /* Push Accumulator on Stack: M = A () */
@@ -585,42 +591,32 @@ static void execute(struct CPU *cpu)
 
     /* Transfer Accumulator to Index X: X = A (N, Z) */
     case TAX:
-        cpu->reg.x = cpu->reg.a;
-        set_flag(cpu, Z, cpu->reg.x == 0x00);
-        set_flag(cpu, N, cpu->reg.x & 0x80);
+        set_x(cpu, cpu->reg.a);
         break;
 
     /* Transfer Accumulator to Index Y: Y = A (N, Z) */
     case TAY:
-        cpu->reg.y = cpu->reg.a;
-        set_flag(cpu, Z, cpu->reg.y == 0x00);
-        set_flag(cpu, N, cpu->reg.y & 0x80);
+        set_y(cpu, cpu->reg.a);
         break;
 
     /* Transfer Stack Pointer to Index X: X = S (N, Z) */
     case TSX:
-        cpu->reg.x = cpu->reg.s;
-        set_flag(cpu, Z, cpu->reg.x == 0x00);
-        set_flag(cpu, N, cpu->reg.x & 0x80);
+        set_x(cpu, cpu->reg.s);
         break;
 
     /* Transfer Index X to Accumulator: A = X (N, Z) */
     case TXA:
-        cpu->reg.a = cpu->reg.x;
-        set_flag(cpu, Z, cpu->reg.a == 0x00);
-        set_flag(cpu, N, cpu->reg.a & 0x80);
+        set_a(cpu, cpu->reg.x);
         break;
 
     /* Transfer Index X to Stack Pointer: S = X () */
     case TXS:
-        cpu->reg.s = cpu->reg.x;
+        set_s(cpu, cpu->reg.x);
         break;
 
     /* Transfer Index Y to Accumulator: A = Y (N, Z) */
     case TYA:
-        cpu->reg.a = cpu->reg.y;
-        set_flag(cpu, Z, cpu->reg.a == 0x00);
-        set_flag(cpu, N, cpu->reg.a & 0x80);
+        set_a(cpu, cpu->reg.y);
         break;
 
     /* XXX doesn't exist */
