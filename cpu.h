@@ -4,23 +4,23 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-struct status {
-    char carry;
-    char zero;
-    char interrupt;
-    char decimal;
-    char brk;
-    char reserved;
-    char overflow;
-    char negative;
+enum status_flag {
+    C = 1 << 0, /* carry */
+    Z = 1 << 1, /* zero */
+    I = 1 << 2, /* disable interrupts */
+    D = 1 << 3, /* decimal mode */
+    B = 1 << 4, /* break */
+    U = 1 << 5, /* unused */
+    V = 1 << 6, /* overflow */
+    N = 1 << 7  /* negative */
 };
 
 struct registers {
     uint8_t a;
     uint8_t x;
     uint8_t y;
-    uint8_t s;
-    struct status p;
+    uint8_t s; /* stack pointer */
+    uint8_t p; /* processor status */
     uint16_t pc;
 };
 

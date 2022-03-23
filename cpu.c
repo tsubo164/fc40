@@ -270,6 +270,19 @@ static void set_pc(struct CPU *cpu, uint16_t addr)
     cpu->reg.pc = addr;
 }
 
+static void set_flag(struct CPU *cpu, uint8_t flag, uint8_t val)
+{
+    if (val)
+        cpu->reg.p |= flag;
+    else
+        cpu->reg.p &= ~flag;
+}
+
+static uint8_t get_flag(const struct CPU *cpu, uint8_t flag)
+{
+    return (cpu->reg.p & flag) > 0;
+}
+
 static int branch_on(struct CPU *cpu, uint16_t addr, int test)
 {
     if (!test)
@@ -302,8 +315,8 @@ static void execute(struct CPU *cpu)
     /* A = A & M (N, Z) */
     case AND:
         cpu->reg.a &= operand;
-        cpu->reg.p.zero = (cpu->reg.a == 0x00);
-        cpu->reg.p.negative = (cpu->reg.a & 0x80);
+        set_flag(cpu, Z, cpu->reg.a == 0x00);
+        set_flag(cpu, N, cpu->reg.a & 0x80);
         break;
 
     /* XXX doesn't exist */
@@ -314,7 +327,7 @@ static void execute(struct CPU *cpu)
 
     /* Branch on Carry Clear: () */
     case BCC:
-        if (cpu->reg.p.carry == 0) {
+        if (get_flag(cpu, C) == 0) {
             set_pc(cpu, operand);
             cycle++;
         }
@@ -322,7 +335,7 @@ static void execute(struct CPU *cpu)
 
     /* Branch on Carry Set: () */
     case BCS:
-        if (cpu->reg.p.carry == 1) {
+        if (get_flag(cpu, C) == 1) {
             set_pc(cpu, operand);
             cycle++;
         }
@@ -330,7 +343,7 @@ static void execute(struct CPU *cpu)
 
     /* Branch on Result Zero: () */
     case BEQ:
-        if (cpu->reg.p.zero == 1) {
+        if (get_flag(cpu, Z) == 1) {
             set_pc(cpu, operand);
             cycle++;
         }
@@ -340,7 +353,7 @@ static void execute(struct CPU *cpu)
 
     /* Branch on Result Minus: () */
     case BMI:
-        if (cpu->reg.p.negative == 1) {
+        if (get_flag(cpu, N) == 1) {
             set_pc(cpu, operand);
             cycle++;
         }
@@ -349,8 +362,8 @@ static void execute(struct CPU *cpu)
     /* Branch on Result Not Zero: () */
     case BNE:
         if (0)
-            branch_taken = branch_on(cpu, operand, cpu->reg.p.zero == 0);
-        if (cpu->reg.p.zero == 0) {
+            branch_taken = branch_on(cpu, operand, get_flag(cpu, Z) == 0);
+        if (get_flag(cpu, Z) == 0) {
             set_pc(cpu, operand);
             cycle++;
         }
@@ -358,7 +371,7 @@ static void execute(struct CPU *cpu)
 
     /* Branch on Result Minus: () */
     case BPL:
-        if (cpu->reg.p.negative == 0) {
+        if (get_flag(cpu, N) == 0) {
             set_pc(cpu, operand);
             cycle++;
         }
@@ -369,7 +382,7 @@ static void execute(struct CPU *cpu)
 
     /* Branch on Overflow Clear: () */
     case BVC:
-        if (cpu->reg.p.overflow == 0) {
+        if (get_flag(cpu, V) == 0) {
             set_pc(cpu, operand);
             cycle++;
         }
@@ -377,7 +390,7 @@ static void execute(struct CPU *cpu)
 
     /* Branch on Overflow Set: () */
     case BVS:
-        if (cpu->reg.p.overflow == 1) {
+        if (get_flag(cpu, V) == 1) {
             set_pc(cpu, operand);
             cycle++;
         }
@@ -385,22 +398,22 @@ static void execute(struct CPU *cpu)
 
     /* Clear Carry Flag: C = 0 (C) */
     case CLC:
-        cpu->reg.p.carry = 0;
+        set_flag(cpu, C, 0);
         break;
 
     /* Clear Decimal Mode: D = 0 (D) */
     case CLD:
-        cpu->reg.p.decimal = 0;
+        set_flag(cpu, D, 0);
         break;
 
     /* Clear Interrupt Disable: I = 0 (I) */
     case CLI:
-        cpu->reg.p.interrupt = 0;
+        set_flag(cpu, I, 0);
         break;
 
     /* Clear Overflow Flag: V = 0 (V) */
     case CLV:
-        cpu->reg.p.overflow = 0;
+        set_flag(cpu, V, 0);
         break;
 
     case CMP: break;
@@ -413,22 +426,22 @@ static void execute(struct CPU *cpu)
     /* X = X - 1 (N, Z) */
     case DEX:
         cpu->reg.x--;
-        cpu->reg.p.zero = (cpu->reg.x == 0);
-        cpu->reg.p.negative = (cpu->reg.x & 0x80);
+        set_flag(cpu, Z, cpu->reg.x == 0x00);
+        set_flag(cpu, N, cpu->reg.x & 0x80);
         break;
 
     /* Y = Y - 1 (N, Z) */
     case DEY:
         cpu->reg.y--;
-        cpu->reg.p.zero = (cpu->reg.y == 0);
-        cpu->reg.p.negative = (cpu->reg.y & 0x80);
+        set_flag(cpu, Z, cpu->reg.y == 0x00);
+        set_flag(cpu, N, cpu->reg.y & 0x80);
         break;
 
     /* Exclusive OR Memory with Accumulator: A = A ^ M (N, Z) */
     case EOR:
         cpu->reg.a ^= operand;
-        cpu->reg.p.zero = (cpu->reg.a == 0x00);
-        cpu->reg.p.negative = (cpu->reg.a & 0x80);
+        set_flag(cpu, Z, cpu->reg.a == 0x00);
+        set_flag(cpu, N, cpu->reg.a & 0x80);
         break;
 
     case INC: break;
@@ -436,15 +449,15 @@ static void execute(struct CPU *cpu)
     /* X = X + 1 (N, Z) */
     case INX:
         cpu->reg.x++;
-        cpu->reg.p.zero = (cpu->reg.x == 0);
-        cpu->reg.p.negative = (cpu->reg.x & 0x80);
+        set_flag(cpu, Z, cpu->reg.x == 0x00);
+        set_flag(cpu, N, cpu->reg.x & 0x80);
         break;
 
     /* Y = Y + 1 (N, Z) */
     case INY:
         cpu->reg.y++;
-        cpu->reg.p.zero = (cpu->reg.y == 0);
-        cpu->reg.p.negative = (cpu->reg.y & 0x80);
+        set_flag(cpu, Z, cpu->reg.y == 0x00);
+        set_flag(cpu, N, cpu->reg.y & 0x80);
         break;
 
     /* XXX doesn't exist */
@@ -464,22 +477,22 @@ static void execute(struct CPU *cpu)
     /* A =  M (N, Z) */
     case LDA:
         cpu->reg.a = operand;
-        cpu->reg.p.zero = (cpu->reg.a == 0);
-        cpu->reg.p.negative = (cpu->reg.a & 0x80);
+        set_flag(cpu, Z, cpu->reg.a == 0x00);
+        set_flag(cpu, N, cpu->reg.a & 0x80);
         break;
 
     /* X =  M (N, Z) */
     case LDX:
         cpu->reg.x = operand;
-        cpu->reg.p.zero = (cpu->reg.x == 0);
-        cpu->reg.p.negative = (cpu->reg.x & 0x80);
+        set_flag(cpu, Z, cpu->reg.x == 0x00);
+        set_flag(cpu, N, cpu->reg.x & 0x80);
         break;
 
     /* Y =  M (N, Z) */
     case LDY:
         cpu->reg.y = operand;
-        cpu->reg.p.zero = (cpu->reg.y == 0);
-        cpu->reg.p.negative = (cpu->reg.y & 0x80);
+        set_flag(cpu, Z, cpu->reg.y == 0x00);
+        set_flag(cpu, N, cpu->reg.y & 0x80);
         break;
 
     case LSR: break;
@@ -491,8 +504,8 @@ static void execute(struct CPU *cpu)
     /* OR Memory with Accumulator: A = A | M (N, Z) */
     case ORA:
         cpu->reg.a |= operand;
-        cpu->reg.p.zero = (cpu->reg.a == 0x00);
-        cpu->reg.p.negative = (cpu->reg.a & 0x80);
+        set_flag(cpu, Z, cpu->reg.a == 0x00);
+        set_flag(cpu, N, cpu->reg.a & 0x80);
         break;
 
     /* Push Accumulator on Stack: M = A () */
@@ -525,17 +538,17 @@ static void execute(struct CPU *cpu)
 
     /* Set Carry Flag: C = 1 (C) */
     case SEC:
-        cpu->reg.p.carry = 1;
+        set_flag(cpu, C, 1);
         break;
 
     /* Set Decimal Mode: D = 1 (D) */
     case SED:
-        cpu->reg.p.decimal = 1;
+        set_flag(cpu, D, 1);
         break;
 
     /* Set Interrupt Disable: I = 1 (I) */
     case SEI:
-        cpu->reg.p.interrupt = 1;
+        set_flag(cpu, I, 1);
         break;
 
     /* XXX doesn't exist */
@@ -573,29 +586,29 @@ static void execute(struct CPU *cpu)
     /* Transfer Accumulator to Index X: X = A (N, Z) */
     case TAX:
         cpu->reg.x = cpu->reg.a;
-        cpu->reg.p.zero = (cpu->reg.x == 0);
-        cpu->reg.p.negative = (cpu->reg.x & 0x80);
+        set_flag(cpu, Z, cpu->reg.x == 0x00);
+        set_flag(cpu, N, cpu->reg.x & 0x80);
         break;
 
     /* Transfer Accumulator to Index Y: Y = A (N, Z) */
     case TAY:
         cpu->reg.y = cpu->reg.a;
-        cpu->reg.p.zero = (cpu->reg.y == 0);
-        cpu->reg.p.negative = (cpu->reg.y & 0x80);
+        set_flag(cpu, Z, cpu->reg.y == 0x00);
+        set_flag(cpu, N, cpu->reg.y & 0x80);
         break;
 
     /* Transfer Stack Pointer to Index X: X = S (N, Z) */
     case TSX:
         cpu->reg.x = cpu->reg.s;
-        cpu->reg.p.zero = (cpu->reg.x == 0);
-        cpu->reg.p.negative = (cpu->reg.x & 0x80);
+        set_flag(cpu, Z, cpu->reg.x == 0x00);
+        set_flag(cpu, N, cpu->reg.x & 0x80);
         break;
 
     /* Transfer Index X to Accumulator: A = X (N, Z) */
     case TXA:
         cpu->reg.a = cpu->reg.x;
-        cpu->reg.p.zero = (cpu->reg.a == 0x00);
-        cpu->reg.p.negative = (cpu->reg.a & 0x80);
+        set_flag(cpu, Z, cpu->reg.a == 0x00);
+        set_flag(cpu, N, cpu->reg.a & 0x80);
         break;
 
     /* Transfer Index X to Stack Pointer: S = X () */
@@ -606,8 +619,8 @@ static void execute(struct CPU *cpu)
     /* Transfer Index Y to Accumulator: A = Y (N, Z) */
     case TYA:
         cpu->reg.a = cpu->reg.y;
-        cpu->reg.p.zero = (cpu->reg.a == 0x00);
-        cpu->reg.p.negative = (cpu->reg.a & 0x80);
+        set_flag(cpu, Z, cpu->reg.a == 0x00);
+        set_flag(cpu, N, cpu->reg.a & 0x80);
         break;
 
     /* XXX doesn't exist */
@@ -625,7 +638,6 @@ static void execute(struct CPU *cpu)
 
 void reset(struct CPU *cpu)
 {
-    const struct status ini = {0};
     uint16_t addr;
 
     addr = read_word(cpu, 0xFFFC);
@@ -636,7 +648,7 @@ void reset(struct CPU *cpu)
     cpu->reg.x = 0;
     cpu->reg.y = 0;
     cpu->reg.s = 0xFD;
-    cpu->reg.p = ini;
+    cpu->reg.p = 0x00 | U;
 
     /* takes cycles */
     cpu->cycle = 8;
