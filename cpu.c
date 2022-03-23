@@ -306,10 +306,27 @@ static void execute(struct CPU *cpu)
         break;
     case BVC: break;
     case BVS: break;
-    case CLC: break;
-    case CLD: break;
-    case CLI: break;
-    case CLV: break;
+
+    /* Clear Carry Flag: C = 0 (C) */
+    case CLC:
+        cpu->reg.p.carry = 0;
+        break;
+
+    /* Clear Decimal Mode: D = 0 (D) */
+    case CLD:
+        cpu->reg.p.decimal = 0;
+        break;
+
+    /* Clear Interrupt Disable: I = 0 (I) */
+    case CLI:
+        cpu->reg.p.interrupt = 0;
+        break;
+
+    /* Clear Overflow Flag: V = 0 (V) */
+    case CLV:
+        cpu->reg.p.overflow = 0;
+        break;
+
     case CMP: break;
     case CPX: break;
     case CPY: break;
@@ -330,7 +347,13 @@ static void execute(struct CPU *cpu)
         cpu->reg.p.negative = (cpu->reg.y & 0x80);
         break;
 
-    case EOR: break;
+    /* Exclusive OR Memory with Accumulator: A = A ^ M (N, Z) */
+    case EOR:
+        cpu->reg.a ^= operand;
+        cpu->reg.p.zero = (cpu->reg.a == 0x00);
+        cpu->reg.p.negative = (cpu->reg.a & 0x80);
+        break;
+
     case INC: break;
 
     /* X = X + 1 (N, Z) */
@@ -377,10 +400,12 @@ static void execute(struct CPU *cpu)
         break;
 
     case LSR: break;
+
+    /* No Operation: () */
     case NOP:
         break;
 
-    /* A = A | M (N, Z) */
+    /* OR Memory with Accumulator: A = A | M (N, Z) */
     case ORA:
         cpu->reg.a |= operand;
         cpu->reg.p.zero = (cpu->reg.a == 0x00);
@@ -401,16 +426,22 @@ static void execute(struct CPU *cpu)
     case SBC: break;
     case SEC: break;
     case SED: break;
+
+    /* Set Interrupt Disable: I = 1 (I) */
     case SEI:
         cpu->reg.p.interrupt = 1;
         break;
+
     case SHX: break;
     case SHY: break;
     case SLO: break;
     case SRE: break;
+
+    /* Store Accumulator in Memory: M = A () */
     case STA:
         write_byte(operand, cpu->reg.a);
         break;
+
     case STP: break;
     case STX: break;
     case STY: break;
