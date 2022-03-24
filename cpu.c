@@ -357,16 +357,20 @@ static void execute(struct CPU *cpu)
     case AHX: break;
     /* XXX doesn't exist */
     case ALR: break;
+    /* XXX doesn't exist */
     case ANC: break;
 
-    /* A = A & M (N, Z) */
+    /* AND Memory with Accumulator: A & M -> A (N, Z) */
     case AND:
         set_a(cpu, cpu->reg.a & operand);
         break;
 
     /* XXX doesn't exist */
     case ARR: break;
+
+    /* Arithmetic Shift Left: C <- /M7...M0/ <- 0 (N, Z) */
     case ASL: break;
+
     /* XXX doesn't exist */
     case AXS: break;
 
@@ -394,7 +398,12 @@ static void execute(struct CPU *cpu)
         }
         break;
 
-    case BIT: break;
+    /* Test Bits in Memory with Accumulator: A & M (N, V, Z) */
+    case BIT:
+        set_flag(cpu, Z, (cpu->reg.a & operand) == 0x00);
+        set_flag(cpu, N, operand & (1 << 7));
+        set_flag(cpu, V, operand & (1 << 6));
+        break;
 
     /* Branch on Result Minus: () */
     case BMI:
@@ -490,7 +499,7 @@ static void execute(struct CPU *cpu)
         set_y(cpu, cpu->reg.y - 1);
         break;
 
-    /* Exclusive OR Memory with Accumulator: A = A ^ M (N, Z) */
+    /* Exclusive OR Memory with Accumulator: A ^ M -> A (N, Z) */
     case EOR:
         set_a(cpu, cpu->reg.a ^ operand);
         break;
@@ -542,7 +551,7 @@ static void execute(struct CPU *cpu)
     case NOP:
         break;
 
-    /* OR Memory with Accumulator: A = A | M (N, Z) */
+    /* OR Memory with Accumulator: A | M -> A (N, Z) */
     case ORA:
         set_a(cpu, cpu->reg.a | operand);
         break;
