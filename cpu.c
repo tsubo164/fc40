@@ -455,22 +455,22 @@ static void execute(struct CPU *cpu)
         }
         break;
 
-    /* Clear Carry Flag: C = 0 (C) */
+    /* Clear Carry Flag: 0 -> C (C) */
     case CLC:
         set_flag(cpu, C, 0);
         break;
 
-    /* Clear Decimal Mode: D = 0 (D) */
+    /* Clear Decimal Mode: 0 -> D (D) */
     case CLD:
         set_flag(cpu, D, 0);
         break;
 
-    /* Clear Interrupt Disable: I = 0 (I) */
+    /* Clear Interrupt Disable: 0 -> I (I) */
     case CLI:
         set_flag(cpu, I, 0);
         break;
 
-    /* Clear Overflow Flag: V = 0 (V) */
+    /* Clear Overflow Flag: 0 -> V (V) */
     case CLV:
         set_flag(cpu, V, 0);
         break;
@@ -494,12 +494,12 @@ static void execute(struct CPU *cpu)
     case DCP: break;
     case DEC: break;
 
-    /* X = X - 1 (N, Z) */
+    /* Decrement Index Register X by One: X - 1 -> X (N, Z) */
     case DEX:
         set_x(cpu, cpu->reg.x - 1);
         break;
 
-    /* Y = Y - 1 (N, Z) */
+    /* Decrement Index Register Y by One: Y - 1 -> Y (N, Z) */
     case DEY:
         set_y(cpu, cpu->reg.y - 1);
         break;
@@ -511,12 +511,12 @@ static void execute(struct CPU *cpu)
 
     case INC: break;
 
-    /* X = X + 1 (N, Z) */
+    /* Increment Index Register X by One: X + 1 -> X (N, Z) */
     case INX:
         set_x(cpu, cpu->reg.x + 1);
         break;
 
-    /* Y = Y + 1 (N, Z) */
+    /* Increment Index Register Y by One: Y + 1 -> Y (N, Z) */
     case INY:
         set_y(cpu, cpu->reg.y + 1);
         break;
@@ -535,17 +535,17 @@ static void execute(struct CPU *cpu)
     /* XXX doesn't exist */
     case LAX: break;
 
-    /* A =  M (N, Z) */
+    /* Load Accumulator with Memory: M -> A (N, Z) */
     case LDA:
         set_a(cpu, read_byte(cpu, addr));
         break;
 
-    /* X =  M (N, Z) */
+    /* Load Index Register X from Memory: M -> X (N, Z) */
     case LDX:
         set_x(cpu, read_byte(cpu, addr));
         break;
 
-    /* Y =  M (N, Z) */
+    /* Load Index Register Y from Memory: M -> Y (N, Z) */
     case LDY:
         set_y(cpu, read_byte(cpu, addr));
         break;
@@ -561,22 +561,22 @@ static void execute(struct CPU *cpu)
         set_a(cpu, cpu->reg.a | read_byte(cpu, addr));
         break;
 
-    /* Push Accumulator on Stack: M = A () */
+    /* Push Accumulator on Stack: () */
     case PHA:
         push(cpu, cpu->reg.a);
         break;
 
-    /* Push Processor Status on Stack: M = P () */
+    /* Push Processor Status on Stack: () */
     case PHP:
         push(cpu, cpu->reg.p);
         break;
 
-    /* Pull Accumulator from Stack: A = M (N, Z) */
+    /* Pull Accumulator from Stack: (N, Z) */
     case PLA:
         set_a(cpu, pop(cpu));
         break;
 
-    /* Pull Processor Status from Stack: P = M (N, V, D, I, Z, C) */
+    /* Pull Processor Status from Stack: (N, V, D, I, Z, C) */
     case PLP:
         set_p(cpu, pop(cpu));
         break;
@@ -593,17 +593,17 @@ static void execute(struct CPU *cpu)
     case SAX: break;
     case SBC: break;
 
-    /* Set Carry Flag: C = 1 (C) */
+    /* Set Carry Flag: 1 -> C (C) */
     case SEC:
         set_flag(cpu, C, 1);
         break;
 
-    /* Set Decimal Mode: D = 1 (D) */
+    /* Set Decimal Mode: 1 -> D (D) */
     case SED:
         set_flag(cpu, D, 1);
         break;
 
-    /* Set Interrupt Disable: I = 1 (I) */
+    /* Set Interrupt Disable: 1 -> I (I) */
     case SEI:
         set_flag(cpu, I, 1);
         break;
@@ -619,7 +619,7 @@ static void execute(struct CPU *cpu)
     /* XXX doesn't exist */
     case SRE: break;
 
-    /* Store Accumulator in Memory: M = A () */
+    /* Store Accumulator in Memory: A -> M () */
     case STA:
         write_byte(addr, cpu->reg.a);
         break;
@@ -627,12 +627,12 @@ static void execute(struct CPU *cpu)
     /* XXX doesn't exist */
     case STP: break;
 
-    /* Store Index Register X in Memory: M = X () */
+    /* Store Index Register X in Memory: X -> M () */
     case STX:
         write_byte(addr, cpu->reg.x);
         break;
 
-    /* Store Index Register Y in Memory: M = Y () */
+    /* Store Index Register Y in Memory: Y -> M () */
     case STY:
         write_byte(addr, cpu->reg.y);
         break;
@@ -640,32 +640,32 @@ static void execute(struct CPU *cpu)
     /* XXX doesn't exist */
     case TAS: break;
 
-    /* Transfer Accumulator to Index X: X = A (N, Z) */
+    /* Transfer Accumulator to Index X: A -> X (N, Z) */
     case TAX:
         set_x(cpu, cpu->reg.a);
         break;
 
-    /* Transfer Accumulator to Index Y: Y = A (N, Z) */
+    /* Transfer Accumulator to Index Y: A -> Y (N, Z) */
     case TAY:
         set_y(cpu, cpu->reg.a);
         break;
 
-    /* Transfer Stack Pointer to Index X: X = S (N, Z) */
+    /* Transfer Stack Pointer to Index X: S -> X (N, Z) */
     case TSX:
         set_x(cpu, cpu->reg.s);
         break;
 
-    /* Transfer Index X to Accumulator: A = X (N, Z) */
+    /* Transfer Index X to Accumulator: X -> A (N, Z) */
     case TXA:
         set_a(cpu, cpu->reg.x);
         break;
 
-    /* Transfer Index X to Stack Pointer: S = X () */
+    /* Transfer Index X to Stack Pointer: X -> S () */
     case TXS:
         set_s(cpu, cpu->reg.x);
         break;
 
-    /* Transfer Index Y to Accumulator: A = Y (N, Z) */
+    /* Transfer Index Y to Accumulator: Y -> A (N, Z) */
     case TYA:
         set_a(cpu, cpu->reg.y);
         break;
