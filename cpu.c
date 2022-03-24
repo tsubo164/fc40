@@ -54,11 +54,6 @@ static uint8_t is_page_crossing(uint16_t addr, uint8_t addend)
     return (addr & 0x00FF) + (addend & 0x00FF) > 0x00FF;
 }
 
-static void jump(struct CPU *cpu, uint16_t addr)
-{
-    cpu->reg.pc = addr;
-}
-
 enum addr_mode {ABS, ABX, ABY, IMM, IMP, IND, IZX, IZY, REL, ZPG, ZPX, ZPY};
 
 static const uint8_t addr_mode_table[] = {
@@ -309,6 +304,23 @@ static void set_s(struct CPU *cpu, uint8_t val)
     cpu->reg.s = val;
 }
 
+static void set_p(struct CPU *cpu, uint8_t val)
+{
+    cpu->reg.p = val | U;
+}
+
+static void push(struct CPU *cpu, uint8_t val)
+{
+    write_byte(0x0100 | cpu->reg.s, val);
+    set_s(cpu, cpu->reg.s - 1);
+}
+
+static uint8_t pop(struct CPU *cpu)
+{
+    set_s(cpu, cpu->reg.s + 1);
+    return read_byte(cpu, 0x0100 | cpu->reg.s);
+}
+
 static int branch_on(struct CPU *cpu, uint16_t addr, int test)
 {
     if (!test)
@@ -516,20 +528,24 @@ static void execute(struct CPU *cpu)
 
     /* Push Accumulator on Stack: M = A () */
     case PHA:
-        write_byte(0x0100 + cpu->reg.s, cpu->reg.a);
-        cpu->reg.s--;
+        push(cpu, cpu->reg.a);
         break;
 
     /* Push Processor Status on Stack: M = P () */
     case PHP:
-        /*
-        write_byte(0x0100 + cpu->reg.s, cpu->reg.a);
-        cpu->reg.s--;
-        */
+        push(cpu, cpu->reg.p);
         break;
 
-    case PLA: break;
-    case PLP: break;
+    /* Pull Accumulator from Stack: A = M (N, Z) */
+    case PLA:
+        set_a(cpu, pop(cpu));
+        break;
+
+    /* Pull Processor Status from Stack: P = M (N, V, D, I, Z, C) */
+    case PLP:
+        set_p(cpu, pop(cpu));
+        break;
+
     /* XXX doesn't exist */
     case RLA: break;
     case ROL: break;
@@ -637,14 +653,14 @@ void reset(struct CPU *cpu)
     uint16_t addr;
 
     addr = read_word(cpu, 0xFFFC);
-    jump(cpu, addr);
+    set_pc(cpu, addr);
 
     /* registers */
-    cpu->reg.a = 0;
-    cpu->reg.x = 0;
-    cpu->reg.y = 0;
-    cpu->reg.s = 0xFD;
-    cpu->reg.p = 0x00 | U;
+    set_a(cpu, 0x00);
+    set_x(cpu, 0x00);
+    set_y(cpu, 0x00);
+    set_s(cpu, 0xFD);
+    set_p(cpu, 0x00);
 
     /* takes cycles */
     cpu->cycle = 8;
