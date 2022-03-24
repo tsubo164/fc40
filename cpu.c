@@ -76,7 +76,7 @@ static const uint8_t addr_mode_table[] = {
 /*0xF0*/ REL, IZY, IMP, IZY, ZPX, ZPX, ZPX, ZPX, IMP, ABY, IMP, ABY, ABX, ABX, ABX, ABX
 };
 
-static uint16_t fetch_operand(struct CPU *cpu, int mode, int *page_crossed)
+static uint16_t fetch_address(struct CPU *cpu, int mode, int *page_crossed)
 {
     *page_crossed = 0;
 
@@ -91,7 +91,7 @@ static uint16_t fetch_operand(struct CPU *cpu, int mode, int *page_crossed)
             const uint16_t addr = fetch_word(cpu);
             if (is_page_crossing(addr, cpu->reg.x))
                 *page_crossed = 1;
-            return read_byte(cpu, addr + cpu->reg.x);
+            return addr + cpu->reg.x;
         }
 
     case ABY:
@@ -100,14 +100,16 @@ static uint16_t fetch_operand(struct CPU *cpu, int mode, int *page_crossed)
             const uint16_t addr = fetch_word(cpu);
             if (is_page_crossing(addr, cpu->reg.y))
                 *page_crossed = 1;
-            return read_byte(cpu, addr + cpu->reg.y);
+            return addr + cpu->reg.y;
         }
 
     case IMM:
-        return fetch(cpu);
+        /* address where the immediate value is stored */
+        return cpu->reg.pc++;
 
     case IMP:
-        return cpu->reg.a;
+        /* no address */
+        return 0;
 
     case IND:
         {
@@ -144,13 +146,13 @@ static uint16_t fetch_operand(struct CPU *cpu, int mode, int *page_crossed)
         }
 
     case ZPG:
-        return read_word(cpu, fetch(cpu));
+        return fetch(cpu);
 
     case ZPX:
-        return read_word(cpu, (fetch(cpu) + cpu->reg.x) & 0x00FF);
+        return (fetch(cpu) + cpu->reg.x) & 0x00FF;
 
     case ZPY:
-        return read_word(cpu, (fetch(cpu) + cpu->reg.y) & 0x00FF);
+        return (fetch(cpu) + cpu->reg.y) & 0x00FF;
 
     default:
         return 0;
@@ -341,14 +343,14 @@ static int branch_on(struct CPU *cpu, uint16_t addr, int test)
 
 static void execute(struct CPU *cpu)
 {
-    const uint16_t addr = cpu->reg.pc;
+    const uint16_t inst_addr = cpu->reg.pc;
     const uint8_t code = fetch(cpu);
 
     const uint8_t mode = addr_mode_table[code];
     const uint8_t opecode = opecode_table[code];
     int page_crossed = 0;
     int branch_taken = 0;
-    const uint16_t operand = fetch_operand(cpu, mode, &page_crossed);;
+    const uint16_t addr = fetch_address(cpu, mode, &page_crossed);;
     int cycle = get_cycle(code, page_crossed);
 
     switch (opecode) {
@@ -362,7 +364,7 @@ static void execute(struct CPU *cpu)
 
     /* AND Memory with Accumulator: A & M -> A (N, Z) */
     case AND:
-        set_a(cpu, cpu->reg.a & operand);
+        set_a(cpu, cpu->reg.a & read_byte(cpu, addr));
         break;
 
     /* XXX doesn't exist */
@@ -377,7 +379,7 @@ static void execute(struct CPU *cpu)
     /* Branch on Carry Clear: () */
     case BCC:
         if (get_flag(cpu, C) == 0) {
-            set_pc(cpu, operand);
+            set_pc(cpu, addr);
             cycle++;
         }
         break;
@@ -385,7 +387,7 @@ static void execute(struct CPU *cpu)
     /* Branch on Carry Set: () */
     case BCS:
         if (get_flag(cpu, C) == 1) {
-            set_pc(cpu, operand);
+            set_pc(cpu, addr);
             cycle++;
         }
         break;
@@ -393,22 +395,25 @@ static void execute(struct CPU *cpu)
     /* Branch on Result Zero: () */
     case BEQ:
         if (get_flag(cpu, Z) == 1) {
-            set_pc(cpu, operand);
+            set_pc(cpu, addr);
             cycle++;
         }
         break;
 
     /* Test Bits in Memory with Accumulator: A & M (N, V, Z) */
     case BIT:
-        set_flag(cpu, Z, (cpu->reg.a & operand) == 0x00);
-        set_flag(cpu, N, operand & (1 << 7));
-        set_flag(cpu, V, operand & (1 << 6));
+        {
+            const uint8_t data = read_byte(cpu, addr);
+            set_flag(cpu, Z, (cpu->reg.a & data) == 0x00);
+            set_flag(cpu, N, data & (1 << 7));
+            set_flag(cpu, V, data & (1 << 6));
+        }
         break;
 
     /* Branch on Result Minus: () */
     case BMI:
         if (get_flag(cpu, N) == 1) {
-            set_pc(cpu, operand);
+            set_pc(cpu, addr);
             cycle++;
         }
         break;
@@ -416,9 +421,9 @@ static void execute(struct CPU *cpu)
     /* Branch on Result Not Zero: () */
     case BNE:
         if (0)
-            branch_taken = branch_on(cpu, operand, get_flag(cpu, Z) == 0);
+            branch_taken = branch_on(cpu, addr, get_flag(cpu, Z) == 0);
         if (get_flag(cpu, Z) == 0) {
-            set_pc(cpu, operand);
+            set_pc(cpu, addr);
             cycle++;
         }
         break;
@@ -426,7 +431,7 @@ static void execute(struct CPU *cpu)
     /* Branch on Result Minus: () */
     case BPL:
         if (get_flag(cpu, N) == 0) {
-            set_pc(cpu, operand);
+            set_pc(cpu, addr);
             cycle++;
         }
         break;
@@ -437,7 +442,7 @@ static void execute(struct CPU *cpu)
     /* Branch on Overflow Clear: () */
     case BVC:
         if (get_flag(cpu, V) == 0) {
-            set_pc(cpu, operand);
+            set_pc(cpu, addr);
             cycle++;
         }
         break;
@@ -445,7 +450,7 @@ static void execute(struct CPU *cpu)
     /* Branch on Overflow Set: () */
     case BVS:
         if (get_flag(cpu, V) == 1) {
-            set_pc(cpu, operand);
+            set_pc(cpu, addr);
             cycle++;
         }
         break;
@@ -472,17 +477,17 @@ static void execute(struct CPU *cpu)
 
     /* Compare Memory and Accumulator: A - M (N, Z, C) */
     case CMP:
-        compare(cpu, cpu->reg.a, operand);
+        compare(cpu, cpu->reg.a, read_byte(cpu, addr));
         break;
 
     /* Compare Index Register X to Memory: X - M (N, Z, C) */
     case CPX:
-        compare(cpu, cpu->reg.x, operand);
+        compare(cpu, cpu->reg.x, read_byte(cpu, addr));
         break;
 
     /* Compare Index Register Y to Memory: Y - M (N, Z, C) */
     case CPY:
-        compare(cpu, cpu->reg.y, operand);
+        compare(cpu, cpu->reg.y, read_byte(cpu, addr));
         break;
 
     /* XXX doesn't exist */
@@ -501,7 +506,7 @@ static void execute(struct CPU *cpu)
 
     /* Exclusive OR Memory with Accumulator: A ^ M -> A (N, Z) */
     case EOR:
-        set_a(cpu, cpu->reg.a ^ operand);
+        set_a(cpu, cpu->reg.a ^ read_byte(cpu, addr));
         break;
 
     case INC: break;
@@ -521,7 +526,7 @@ static void execute(struct CPU *cpu)
 
     /* Jump Indirect: PC = {[PC+1],[PC+2]} () */
     case JMP:
-        set_pc(cpu, operand);
+        set_pc(cpu, addr);
         break;
 
     case JSR: break;
@@ -532,17 +537,17 @@ static void execute(struct CPU *cpu)
 
     /* A =  M (N, Z) */
     case LDA:
-        set_a(cpu, operand);
+        set_a(cpu, read_byte(cpu, addr));
         break;
 
     /* X =  M (N, Z) */
     case LDX:
-        set_x(cpu, operand);
+        set_x(cpu, read_byte(cpu, addr));
         break;
 
     /* Y =  M (N, Z) */
     case LDY:
-        set_y(cpu, operand);
+        set_y(cpu, read_byte(cpu, addr));
         break;
 
     case LSR: break;
@@ -553,7 +558,7 @@ static void execute(struct CPU *cpu)
 
     /* OR Memory with Accumulator: A | M -> A (N, Z) */
     case ORA:
-        set_a(cpu, cpu->reg.a | operand);
+        set_a(cpu, cpu->reg.a | read_byte(cpu, addr));
         break;
 
     /* Push Accumulator on Stack: M = A () */
@@ -616,7 +621,7 @@ static void execute(struct CPU *cpu)
 
     /* Store Accumulator in Memory: M = A () */
     case STA:
-        write_byte(operand, cpu->reg.a);
+        write_byte(addr, cpu->reg.a);
         break;
 
     /* XXX doesn't exist */
@@ -624,12 +629,12 @@ static void execute(struct CPU *cpu)
 
     /* Store Index Register X in Memory: M = X () */
     case STX:
-        write_byte(operand, cpu->reg.x);
+        write_byte(addr, cpu->reg.x);
         break;
 
     /* Store Index Register Y in Memory: M = Y () */
     case STY:
-        write_byte(operand, cpu->reg.y);
+        write_byte(addr, cpu->reg.y);
         break;
 
     /* XXX doesn't exist */
@@ -675,7 +680,7 @@ static void execute(struct CPU *cpu)
     cpu->cycle = cycle;
 
     if (0)
-        print_code(addr, code, mode, operand);
+        print_code(inst_addr, code, mode, addr);
 }
 
 void reset(struct CPU *cpu)
