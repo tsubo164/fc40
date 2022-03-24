@@ -321,6 +321,15 @@ static uint8_t pop(struct CPU *cpu)
     return read_byte(cpu, 0x0100 | cpu->reg.s);
 }
 
+static void compare(struct CPU *cpu, uint8_t a, uint8_t b)
+{
+    const uint8_t diff = a - b;
+
+    set_flag(cpu, C, diff >= 0x00);
+    set_flag(cpu, Z, diff == 0x00);
+    set_flag(cpu, N, diff & 0x80);
+}
+
 static int branch_on(struct CPU *cpu, uint16_t addr, int test)
 {
     if (!test)
@@ -452,9 +461,21 @@ static void execute(struct CPU *cpu)
         set_flag(cpu, V, 0);
         break;
 
-    case CMP: break;
-    case CPX: break;
-    case CPY: break;
+    /* Compare Memory and Accumulator: A - M (N, Z, C) */
+    case CMP:
+        compare(cpu, cpu->reg.a, operand);
+        break;
+
+    /* Compare Index Register X to Memory: X - M (N, Z, C) */
+    case CPX:
+        compare(cpu, cpu->reg.x, operand);
+        break;
+
+    /* Compare Index Register Y to Memory: Y - M (N, Z, C) */
+    case CPY:
+        compare(cpu, cpu->reg.y, operand);
+        break;
+
     /* XXX doesn't exist */
     case DCP: break;
     case DEC: break;
