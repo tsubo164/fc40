@@ -327,6 +327,20 @@ static uint8_t pop(struct CPU *cpu)
     return read_byte(cpu, 0x0100 | cpu->reg.s);
 }
 
+static void push_word(struct CPU *cpu, uint16_t val)
+{
+    push(cpu, val >> 8);
+    push(cpu, val);
+}
+
+static uint16_t pop_word(struct CPU *cpu)
+{
+    const uint16_t lo = pop(cpu);
+    const uint16_t hi = pop(cpu);
+
+    return (hi << 8) | lo;
+}
+
 static void compare(struct CPU *cpu, uint8_t a, uint8_t b)
 {
     const uint8_t diff = a - b;
@@ -453,7 +467,15 @@ static void execute(struct CPU *cpu)
         }
         break;
 
+    /* Break Command: push(PC + 2), [FFFE] -> PCL, [FFFF] ->PCH (I) */
     case BRK:
+        /* an extra byte of spacing for a break mark */
+        set_pc(cpu, cpu->reg.pc + 1);
+        push_word(cpu, cpu->reg.pc);
+        push(cpu, cpu->reg.p | B);
+
+        set_flag(cpu, I, 1);
+        set_pc(cpu, read_word(cpu, 0xFFFE));
         break;
 
     /* Branch on Overflow Clear: () */
@@ -541,12 +563,19 @@ static void execute(struct CPU *cpu)
     /* XXX doesn't exist */
     case ISC: break;
 
-    /* Jump Indirect: PC = {[PC+1],[PC+2]} () */
+    /* Jump Indirect: [PC + 1] -> PCL, [PC + 2] -> PCH () */
     case JMP:
         set_pc(cpu, addr);
         break;
 
-    case JSR: break;
+    /* Jump to Subroutine: push(PC + 2), [PC + 1] -> PCL, [PC + 2] -> PCH () */
+    case JSR:
+        /* the last byte of the jump instruction */
+        set_pc(cpu, cpu->reg.pc - 1);
+        push_word(cpu, cpu->reg.pc);
+        set_pc(cpu, addr);
+        break;
+
     /* XXX doesn't exist */
     case LAS: break;
     /* XXX doesn't exist */
@@ -610,6 +639,7 @@ static void execute(struct CPU *cpu)
     /* Pull Processor Status from Stack: (N, V, D, I, Z, C) */
     case PLP:
         set_p(cpu, pop(cpu));
+        set_flag(cpu, B, 0);
         break;
 
     /* XXX doesn't exist */
@@ -653,8 +683,20 @@ static void execute(struct CPU *cpu)
 
     /* XXX doesn't exist */
     case RRA: break;
-    case RTI: break;
-    case RTS: break;
+
+    /* Return from Interrupt: pop(P) pop(PC) (N, V, D, I, Z, C) */
+    case RTI:
+        set_p(cpu, pop(cpu));
+        set_flag(cpu, B, 0);
+        set_pc(cpu, pop_word(cpu));
+        break;
+
+    /* Return from Subroutine: pop(PC), PC + 1 -> PC () */
+    case RTS:
+        set_pc(cpu, pop_word(cpu));
+        set_pc(cpu, cpu->reg.pc + 1);
+        break;
+
     /* XXX doesn't exist */
     case SAX: break;
     case SBC: break;
