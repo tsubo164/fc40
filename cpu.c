@@ -531,7 +531,17 @@ static void execute(struct CPU *cpu)
 
     /* XXX doesn't exist */
     case DCP: break;
-    case DEC: break;
+
+    /* Increment Memory by One: M + 1 -> M (N, Z) */
+    case DEC:
+        {
+            uint8_t data = read_byte(cpu, addr);
+            data--;
+            set_flag(cpu, Z, data == 0x00);
+            set_flag(cpu, N, data & 0x00);
+            write_byte(addr, data);
+        }
+        break;
 
     /* Decrement Index Register X by One: X - 1 -> X (N, Z) */
     case DEX:
@@ -548,7 +558,16 @@ static void execute(struct CPU *cpu)
         set_a(cpu, cpu->reg.a ^ read_byte(cpu, addr));
         break;
 
-    case INC: break;
+    /* Increment Memory by One: M + 1 -> M (N, Z) */
+    case INC:
+        {
+            uint8_t data = read_byte(cpu, addr);
+            data++;
+            set_flag(cpu, Z, data == 0x00);
+            set_flag(cpu, N, data & 0x00);
+            write_byte(addr, data);
+        }
+        break;
 
     /* Increment Index Register X by One: X + 1 -> X (N, Z) */
     case INX:
