@@ -54,17 +54,17 @@ static uint8_t is_page_crossing(uint16_t addr, uint8_t addend)
     return (addr & 0x00FF) + (addend & 0x00FF) > 0x00FF;
 }
 
-enum addr_mode {ABS, ABX, ABY, IMM, IMP, IND, IZX, IZY, REL, ZPG, ZPX, ZPY};
+enum addr_mode {ABS, ABX, ABY, ACC, IMM, IMP, IND, IZX, IZY, REL, ZPG, ZPX, ZPY};
 
 static const uint8_t addr_mode_table[] = {
 /*       +00  +01  +02  +03  +04  +05  +06  +07  +08  +09  +0A  +0B  +0C  +0D  +0E  +0F */
-/*0x00*/ IMP, IZX, IMP, IZX, ZPG, ZPG, ZPG, ZPG, IMP, IMM, IMP, IMM, ABS, ABS, ABS, ABS,
+/*0x00*/ IMP, IZX, IMP, IZX, ZPG, ZPG, ZPG, ZPG, IMP, IMM, ACC, IMM, ABS, ABS, ABS, ABS,
 /*0x10*/ REL, IZY, IMP, IZY, ZPX, ZPX, ZPX, ZPX, IMP, ABY, IMP, ABY, ABX, ABX, ABX, ABX,
-/*0x20*/ ABS, IZX, IMP, IZX, ZPG, ZPG, ZPG, ZPG, IMP, IMM, IMP, IMM, ABS, ABS, ABS, ABS,
+/*0x20*/ ABS, IZX, IMP, IZX, ZPG, ZPG, ZPG, ZPG, IMP, IMM, ACC, IMM, ABS, ABS, ABS, ABS,
 /*0x30*/ REL, IZY, IMP, IZY, ZPX, ZPX, ZPX, ZPX, IMP, ABY, IMP, ABY, ABX, ABX, ABX, ABX,
-/*0x40*/ IMP, IZX, IMP, IZX, ZPG, ZPG, ZPG, ZPG, IMP, IMM, IMP, IMM, ABS, ABS, ABS, ABS,
+/*0x40*/ IMP, IZX, IMP, IZX, ZPG, ZPG, ZPG, ZPG, IMP, IMM, ACC, IMM, ABS, ABS, ABS, ABS,
 /*0x50*/ REL, IZY, IMP, IZY, ZPX, ZPX, ZPX, ZPX, IMP, ABY, IMP, ABY, ABX, ABX, ABX, ABX,
-/*0x60*/ IMP, IZX, IMP, IZX, ZPG, ZPG, ZPG, ZPG, IMP, IMM, IMP, IMM, IND, ABS, ABS, ABS,
+/*0x60*/ IMP, IZX, IMP, IZX, ZPG, ZPG, ZPG, ZPG, IMP, IMM, ACC, IMM, IND, ABS, ABS, ABS,
 /*0x70*/ REL, IZY, IMP, IZY, ZPX, ZPX, ZPX, ZPX, IMP, ABY, IMP, ABY, ABX, ABX, ABX, ABX,
 /*0x80*/ IMM, IZX, IMM, IZX, ZPG, ZPG, ZPG, ZPG, IMP, IMM, IMP, IMM, ABS, ABS, ABS, ABS,
 /*0x90*/ REL, IZY, IMP, IZY, ZPX, ZPX, ZPY, ZPY, IMP, ABY, IMP, ABY, ABX, ABX, ABY, ABY,
@@ -102,6 +102,10 @@ static uint16_t fetch_address(struct CPU *cpu, int mode, int *page_crossed)
                 *page_crossed = 1;
             return addr + cpu->reg.y;
         }
+
+    case ACC:
+        /* no address for register */
+        return 0;
 
     case IMM:
         /* address where the immediate value is stored */
@@ -370,8 +374,21 @@ static void execute(struct CPU *cpu)
     /* XXX doesn't exist */
     case ARR: break;
 
-    /* Arithmetic Shift Left: C <- /M7...M0/ <- 0 (N, Z) */
-    case ASL: break;
+    /* Arithmetic Shift Left: C <- /M7...M0/ <- 0 (N, Z, C) */
+    case ASL:
+        if (mode == ACC) {
+            const uint8_t data = cpu->reg.a;
+            set_flag(cpu, C, data & 0x80);
+            set_a(cpu, data << 1);
+        } else {
+            uint8_t data = read_byte(cpu, addr);
+            set_flag(cpu, C, data & 0x80);
+            data <<= 1;
+            set_flag(cpu, Z, data == 0x00);
+            set_flag(cpu, N, data & 0x80);
+            write_byte(addr, data);
+        }
+        break;
 
     /* XXX doesn't exist */
     case AXS: break;
@@ -550,7 +567,21 @@ static void execute(struct CPU *cpu)
         set_y(cpu, read_byte(cpu, addr));
         break;
 
-    case LSR: break;
+    /* Logical Shift Right: 0 -> /M7...M0/ -> C (N, Z, C) */
+    case LSR:
+        if (mode == ACC) {
+            const uint8_t data = cpu->reg.a;
+            set_flag(cpu, C, data & 0x01);
+            set_a(cpu, data >> 1);
+        } else {
+            uint8_t data = read_byte(cpu, addr);
+            set_flag(cpu, C, data & 0x01);
+            data >>= 1;
+            set_flag(cpu, Z, data == 0x00);
+            set_flag(cpu, N, 0x00);
+            write_byte(addr, data);
+        }
+        break;
 
     /* No Operation: () */
     case NOP:
@@ -583,8 +614,43 @@ static void execute(struct CPU *cpu)
 
     /* XXX doesn't exist */
     case RLA: break;
-    case ROL: break;
-    case ROR: break;
+
+    /* Rotate Left: C <- /M7...M0/ <- C (N, Z, C) */
+    case ROL:
+        if (mode == ACC) {
+            const uint8_t carry = get_flag(cpu, C);
+            const uint8_t data = cpu->reg.a;
+            set_flag(cpu, C, data & 0x80);
+            set_a(cpu, (data << 1) | carry);
+        } else {
+            const uint8_t carry = get_flag(cpu, C);
+            uint8_t data = read_byte(cpu, addr);
+            set_flag(cpu, C, data & 0x80);
+            data = (data << 1) | carry;
+            set_flag(cpu, Z, data == 0x00);
+            set_flag(cpu, N, data & 0x80);
+            write_byte(addr, data);
+        }
+        break;
+
+    /* Rotate Right: C -> /M7...M0/ -> C (N, Z, C) */
+    case ROR:
+        if (mode == ACC) {
+            const uint8_t carry = get_flag(cpu, C);
+            const uint8_t data = cpu->reg.a;
+            set_flag(cpu, C, data & 0x01);
+            set_a(cpu, (data >> 1) | (carry << 7));
+        } else {
+            const uint8_t carry = get_flag(cpu, C);
+            uint8_t data = read_byte(cpu, addr);
+            set_flag(cpu, C, data & 0x01);
+            data = (data >> 1) | (carry << 7);
+            set_flag(cpu, Z, data == 0x00);
+            set_flag(cpu, N, data & 0x80);
+            write_byte(addr, data);
+        }
+        break;
+
     /* XXX doesn't exist */
     case RRA: break;
     case RTI: break;
