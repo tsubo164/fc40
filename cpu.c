@@ -168,15 +168,21 @@ enum opecode {
     ADC, SBC, CMP, CPX, CPY,
     /* load and store */
     LDA, LDX, LDY, STA, STX, STY,
+    /* transfer */
+    TAX, TAY, TSX, TXA, TXS, TYA,
+    /* stack */
+    PHA, PHP, PLA, PLP,
+    /* shift */
+    ASL, LSR, ROL, ROR,
 
-    AND, ASL, BCC, BCS, BEQ, BIT, BMI, BNE, BPL, BRK,
+    AND,
+    BCC, BCS, BEQ, BIT, BMI, BNE, BPL, BRK,
     BVC, BVS, CLC, CLD, CLI, CLV,
     DEC, DEX, DEY, EOR, INC, INX,
     INY, JMP, JSR,
-    LSR, NOP, ORA, PHA, PHP, PLA, PLP,
-    ROL, ROR, RTI, RTS,
+    NOP, ORA,
+    RTI, RTS,
     SEC, SED, SEI,
-    TAX, TAY, TSX, TXA, TXS, TYA,
     /* undocumented */
     u__
 };
@@ -466,9 +472,55 @@ static void execute(struct CPU *cpu)
         write_byte(addr, cpu->reg.y);
         break;
 
-    /* AND Memory with Accumulator: A & M -> A (N, Z) */
-    case AND:
-        set_a(cpu, cpu->reg.a & read_byte(cpu, addr));
+    /* Transfer Accumulator to Index X: A -> X (N, Z) */
+    case TAX:
+        set_x(cpu, cpu->reg.a);
+        break;
+
+    /* Transfer Accumulator to Index Y: A -> Y (N, Z) */
+    case TAY:
+        set_y(cpu, cpu->reg.a);
+        break;
+
+    /* Transfer Stack Pointer to Index X: S -> X (N, Z) */
+    case TSX:
+        set_x(cpu, cpu->reg.s);
+        break;
+
+    /* Transfer Index X to Accumulator: X -> A (N, Z) */
+    case TXA:
+        set_a(cpu, cpu->reg.x);
+        break;
+
+    /* Transfer Index X to Stack Pointer: X -> S () */
+    case TXS:
+        set_s(cpu, cpu->reg.x);
+        break;
+
+    /* Transfer Index Y to Accumulator: Y -> A (N, Z) */
+    case TYA:
+        set_a(cpu, cpu->reg.y);
+        break;
+
+    /* Push Accumulator on Stack: () */
+    case PHA:
+        push(cpu, cpu->reg.a);
+        break;
+
+    /* Push Processor Status on Stack: () */
+    case PHP:
+        push(cpu, cpu->reg.p);
+        break;
+
+    /* Pull Accumulator from Stack: (N, Z) */
+    case PLA:
+        set_a(cpu, pop(cpu));
+        break;
+
+    /* Pull Processor Status from Stack: (N, V, D, I, Z, C) */
+    case PLP:
+        set_p(cpu, pop(cpu));
+        set_flag(cpu, B, 0);
         break;
 
     /* Arithmetic Shift Left: C <- /M7...M0/ <- 0 (N, Z, C) */
@@ -485,6 +537,63 @@ static void execute(struct CPU *cpu)
             set_flag(cpu, N, data & 0x80);
             write_byte(addr, data);
         }
+        break;
+
+    /* Logical Shift Right: 0 -> /M7...M0/ -> C (N, Z, C) */
+    case LSR:
+        if (mode == ACC) {
+            const uint8_t data = cpu->reg.a;
+            set_flag(cpu, C, data & 0x01);
+            set_a(cpu, data >> 1);
+        } else {
+            uint8_t data = read_byte(cpu, addr);
+            set_flag(cpu, C, data & 0x01);
+            data >>= 1;
+            set_flag(cpu, Z, data == 0x00);
+            set_flag(cpu, N, 0x00);
+            write_byte(addr, data);
+        }
+        break;
+
+    /* Rotate Left: C <- /M7...M0/ <- C (N, Z, C) */
+    case ROL:
+        if (mode == ACC) {
+            const uint8_t carry = get_flag(cpu, C);
+            const uint8_t data = cpu->reg.a;
+            set_flag(cpu, C, data & 0x80);
+            set_a(cpu, (data << 1) | carry);
+        } else {
+            const uint8_t carry = get_flag(cpu, C);
+            uint8_t data = read_byte(cpu, addr);
+            set_flag(cpu, C, data & 0x80);
+            data = (data << 1) | carry;
+            set_flag(cpu, Z, data == 0x00);
+            set_flag(cpu, N, data & 0x80);
+            write_byte(addr, data);
+        }
+        break;
+
+    /* Rotate Right: C -> /M7...M0/ -> C (N, Z, C) */
+    case ROR:
+        if (mode == ACC) {
+            const uint8_t carry = get_flag(cpu, C);
+            const uint8_t data = cpu->reg.a;
+            set_flag(cpu, C, data & 0x01);
+            set_a(cpu, (data >> 1) | (carry << 7));
+        } else {
+            const uint8_t carry = get_flag(cpu, C);
+            uint8_t data = read_byte(cpu, addr);
+            set_flag(cpu, C, data & 0x01);
+            data = (data >> 1) | (carry << 7);
+            set_flag(cpu, Z, data == 0x00);
+            set_flag(cpu, N, data & 0x80);
+            write_byte(addr, data);
+        }
+        break;
+
+    /* AND Memory with Accumulator: A & M -> A (N, Z) */
+    case AND:
+        set_a(cpu, cpu->reg.a & read_byte(cpu, addr));
         break;
 
     /* Branch on Carry Clear: () */
@@ -654,22 +763,6 @@ static void execute(struct CPU *cpu)
         set_pc(cpu, addr);
         break;
 
-    /* Logical Shift Right: 0 -> /M7...M0/ -> C (N, Z, C) */
-    case LSR:
-        if (mode == ACC) {
-            const uint8_t data = cpu->reg.a;
-            set_flag(cpu, C, data & 0x01);
-            set_a(cpu, data >> 1);
-        } else {
-            uint8_t data = read_byte(cpu, addr);
-            set_flag(cpu, C, data & 0x01);
-            data >>= 1;
-            set_flag(cpu, Z, data == 0x00);
-            set_flag(cpu, N, 0x00);
-            write_byte(addr, data);
-        }
-        break;
-
     /* No Operation: () */
     case NOP:
         break;
@@ -677,63 +770,6 @@ static void execute(struct CPU *cpu)
     /* OR Memory with Accumulator: A | M -> A (N, Z) */
     case ORA:
         set_a(cpu, cpu->reg.a | read_byte(cpu, addr));
-        break;
-
-    /* Push Accumulator on Stack: () */
-    case PHA:
-        push(cpu, cpu->reg.a);
-        break;
-
-    /* Push Processor Status on Stack: () */
-    case PHP:
-        push(cpu, cpu->reg.p);
-        break;
-
-    /* Pull Accumulator from Stack: (N, Z) */
-    case PLA:
-        set_a(cpu, pop(cpu));
-        break;
-
-    /* Pull Processor Status from Stack: (N, V, D, I, Z, C) */
-    case PLP:
-        set_p(cpu, pop(cpu));
-        set_flag(cpu, B, 0);
-        break;
-
-    /* Rotate Left: C <- /M7...M0/ <- C (N, Z, C) */
-    case ROL:
-        if (mode == ACC) {
-            const uint8_t carry = get_flag(cpu, C);
-            const uint8_t data = cpu->reg.a;
-            set_flag(cpu, C, data & 0x80);
-            set_a(cpu, (data << 1) | carry);
-        } else {
-            const uint8_t carry = get_flag(cpu, C);
-            uint8_t data = read_byte(cpu, addr);
-            set_flag(cpu, C, data & 0x80);
-            data = (data << 1) | carry;
-            set_flag(cpu, Z, data == 0x00);
-            set_flag(cpu, N, data & 0x80);
-            write_byte(addr, data);
-        }
-        break;
-
-    /* Rotate Right: C -> /M7...M0/ -> C (N, Z, C) */
-    case ROR:
-        if (mode == ACC) {
-            const uint8_t carry = get_flag(cpu, C);
-            const uint8_t data = cpu->reg.a;
-            set_flag(cpu, C, data & 0x01);
-            set_a(cpu, (data >> 1) | (carry << 7));
-        } else {
-            const uint8_t carry = get_flag(cpu, C);
-            uint8_t data = read_byte(cpu, addr);
-            set_flag(cpu, C, data & 0x01);
-            data = (data >> 1) | (carry << 7);
-            set_flag(cpu, Z, data == 0x00);
-            set_flag(cpu, N, data & 0x80);
-            write_byte(addr, data);
-        }
         break;
 
     /* Return from Interrupt: pop(P) pop(PC) (N, V, D, I, Z, C) */
@@ -762,36 +798,6 @@ static void execute(struct CPU *cpu)
     /* Set Interrupt Disable: 1 -> I (I) */
     case SEI:
         set_flag(cpu, I, 1);
-        break;
-
-    /* Transfer Accumulator to Index X: A -> X (N, Z) */
-    case TAX:
-        set_x(cpu, cpu->reg.a);
-        break;
-
-    /* Transfer Accumulator to Index Y: A -> Y (N, Z) */
-    case TAY:
-        set_y(cpu, cpu->reg.a);
-        break;
-
-    /* Transfer Stack Pointer to Index X: S -> X (N, Z) */
-    case TSX:
-        set_x(cpu, cpu->reg.s);
-        break;
-
-    /* Transfer Index X to Accumulator: X -> A (N, Z) */
-    case TXA:
-        set_a(cpu, cpu->reg.x);
-        break;
-
-    /* Transfer Index X to Stack Pointer: X -> S () */
-    case TXS:
-        set_s(cpu, cpu->reg.x);
-        break;
-
-    /* Transfer Index Y to Accumulator: Y -> A (N, Z) */
-    case TYA:
-        set_a(cpu, cpu->reg.y);
         break;
 
     default:
