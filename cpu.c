@@ -164,8 +164,6 @@ static uint16_t fetch_address(struct CPU *cpu, int mode, int *page_crossed)
 }
 
 enum opecode {
-    /* arithmetic */
-    ADC, SBC, CMP, CPX, CPY,
     /* load and store */
     LDA, LDX, LDY, STA, STX, STY,
     /* transfer */
@@ -174,15 +172,20 @@ enum opecode {
     PHA, PHP, PLA, PLP,
     /* shift */
     ASL, LSR, ROL, ROR,
+    /* logic */
+    AND, EOR, ORA, BIT,
+    /* arithmetic */
+    ADC, SBC, CMP, CPX, CPY,
+    /* increment and decrement */
+    INC, INX, INY, DEC, DEX, DEY,
+    /* control */
+    JMP, JSR, BRK, RTI, RTS,
 
-    AND,
-    BCC, BCS, BEQ, BIT, BMI, BNE, BPL, BRK,
+    BCC, BCS, BEQ,
+    BMI, BNE, BPL,
     BVC, BVS, CLC, CLD, CLI, CLV,
-    DEC, DEX, DEY, EOR, INC, INX,
-    INY, JMP, JSR,
-    NOP, ORA,
-    RTI, RTS,
     SEC, SED, SEI,
+    NOP,
     /* undocumented */
     u__
 };
@@ -389,59 +392,6 @@ static void execute(struct CPU *cpu)
 
     switch (opecode) {
 
-    /* Add Memory to Accumulator with Carry: A + M + C -> A, C (N, V, Z, C) */
-    case ADC:
-        {
-            const uint16_t m = read_byte(cpu, addr);
-            const uint16_t a = cpu->reg.a;
-            const uint16_t c = get_flag(cpu, C);
-            const uint16_t r = a + m + c;
-            const int A = !(a & 0x80);
-            const int M = !(m & 0x80);
-            const int R = !(r & 0x80);
-
-            set_flag(cpu, C, r > 0xFF);
-            set_flag(cpu, V, (A && M && !R) | (!A && !M && R));
-            set_a(cpu, r);
-        }
-        break;
-
-    /* Subtract Memory to Accumulator with Carry: A - M - ~C -> A (N, V, Z, C) */
-    case SBC:
-        {
-            /* A - M - (1 - C) = A + (-M) - (1 - C)
-             *                 = A + (-M) - 1 + C
-             *                 = A + (~M + 1) - 1 + C
-             *                 = A + (~M) + C */
-            const uint16_t m = ~read_byte(cpu, addr);
-            const uint16_t a = cpu->reg.a;
-            const uint16_t c = get_flag(cpu, C);
-            const uint16_t r = a + m + c;
-            const int A = !(a & 0x80);
-            const int M = !(m & 0x80);
-            const int R = !(r & 0x80);
-
-            set_flag(cpu, C, r > 0xFF);
-            set_flag(cpu, V, (A && M && !R) | (!A && !M && R));
-            set_a(cpu, r);
-        }
-        break;
-
-    /* Compare Memory and Accumulator: A - M (N, Z, C) */
-    case CMP:
-        compare(cpu, cpu->reg.a, read_byte(cpu, addr));
-        break;
-
-    /* Compare Index Register X to Memory: X - M (N, Z, C) */
-    case CPX:
-        compare(cpu, cpu->reg.x, read_byte(cpu, addr));
-        break;
-
-    /* Compare Index Register Y to Memory: Y - M (N, Z, C) */
-    case CPY:
-        compare(cpu, cpu->reg.y, read_byte(cpu, addr));
-        break;
-
     /* Load Accumulator with Memory: M -> A (N, Z) */
     case LDA:
         set_a(cpu, read_byte(cpu, addr));
@@ -596,6 +546,158 @@ static void execute(struct CPU *cpu)
         set_a(cpu, cpu->reg.a & read_byte(cpu, addr));
         break;
 
+    /* Exclusive OR Memory with Accumulator: A ^ M -> A (N, Z) */
+    case EOR:
+        set_a(cpu, cpu->reg.a ^ read_byte(cpu, addr));
+        break;
+
+    /* OR Memory with Accumulator: A | M -> A (N, Z) */
+    case ORA:
+        set_a(cpu, cpu->reg.a | read_byte(cpu, addr));
+        break;
+
+    /* Test Bits in Memory with Accumulator: A & M (N, V, Z) */
+    case BIT:
+        {
+            const uint8_t data = read_byte(cpu, addr);
+            set_flag(cpu, Z, (cpu->reg.a & data) == 0x00);
+            set_flag(cpu, N, data & (1 << 7));
+            set_flag(cpu, V, data & (1 << 6));
+        }
+        break;
+
+    /* Add Memory to Accumulator with Carry: A + M + C -> A, C (N, V, Z, C) */
+    case ADC:
+        {
+            const uint16_t m = read_byte(cpu, addr);
+            const uint16_t a = cpu->reg.a;
+            const uint16_t c = get_flag(cpu, C);
+            const uint16_t r = a + m + c;
+            const int A = !(a & 0x80);
+            const int M = !(m & 0x80);
+            const int R = !(r & 0x80);
+
+            set_flag(cpu, C, r > 0xFF);
+            set_flag(cpu, V, (A && M && !R) | (!A && !M && R));
+            set_a(cpu, r);
+        }
+        break;
+
+    /* Subtract Memory to Accumulator with Carry: A - M - ~C -> A (N, V, Z, C) */
+    case SBC:
+        {
+            /* A - M - (1 - C) = A + (-M) - (1 - C)
+             *                 = A + (-M) - 1 + C
+             *                 = A + (~M + 1) - 1 + C
+             *                 = A + (~M) + C */
+            const uint16_t m = ~read_byte(cpu, addr);
+            const uint16_t a = cpu->reg.a;
+            const uint16_t c = get_flag(cpu, C);
+            const uint16_t r = a + m + c;
+            const int A = !(a & 0x80);
+            const int M = !(m & 0x80);
+            const int R = !(r & 0x80);
+
+            set_flag(cpu, C, r > 0xFF);
+            set_flag(cpu, V, (A && M && !R) | (!A && !M && R));
+            set_a(cpu, r);
+        }
+        break;
+
+    /* Compare Memory and Accumulator: A - M (N, Z, C) */
+    case CMP:
+        compare(cpu, cpu->reg.a, read_byte(cpu, addr));
+        break;
+
+    /* Compare Index Register X to Memory: X - M (N, Z, C) */
+    case CPX:
+        compare(cpu, cpu->reg.x, read_byte(cpu, addr));
+        break;
+
+    /* Compare Index Register Y to Memory: Y - M (N, Z, C) */
+    case CPY:
+        compare(cpu, cpu->reg.y, read_byte(cpu, addr));
+        break;
+
+    /* Increment Memory by One: M + 1 -> M (N, Z) */
+    case INC:
+        {
+            uint8_t data = read_byte(cpu, addr);
+            data++;
+            set_flag(cpu, Z, data == 0x00);
+            set_flag(cpu, N, data & 0x00);
+            write_byte(addr, data);
+        }
+        break;
+
+    /* Increment Index Register X by One: X + 1 -> X (N, Z) */
+    case INX:
+        set_x(cpu, cpu->reg.x + 1);
+        break;
+
+    /* Increment Index Register Y by One: Y + 1 -> Y (N, Z) */
+    case INY:
+        set_y(cpu, cpu->reg.y + 1);
+        break;
+
+    /* Increment Memory by One: M + 1 -> M (N, Z) */
+    case DEC:
+        {
+            uint8_t data = read_byte(cpu, addr);
+            data--;
+            set_flag(cpu, Z, data == 0x00);
+            set_flag(cpu, N, data & 0x00);
+            write_byte(addr, data);
+        }
+        break;
+
+    /* Decrement Index Register X by One: X - 1 -> X (N, Z) */
+    case DEX:
+        set_x(cpu, cpu->reg.x - 1);
+        break;
+
+    /* Decrement Index Register Y by One: Y - 1 -> Y (N, Z) */
+    case DEY:
+        set_y(cpu, cpu->reg.y - 1);
+        break;
+
+    /* Jump Indirect: [PC + 1] -> PCL, [PC + 2] -> PCH () */
+    case JMP:
+        set_pc(cpu, addr);
+        break;
+
+    /* Jump to Subroutine: push(PC + 2), [PC + 1] -> PCL, [PC + 2] -> PCH () */
+    case JSR:
+        /* the last byte of the jump instruction */
+        set_pc(cpu, cpu->reg.pc - 1);
+        push_word(cpu, cpu->reg.pc);
+        set_pc(cpu, addr);
+        break;
+
+    /* Break Command: push(PC + 2), [FFFE] -> PCL, [FFFF] ->PCH (I) */
+    case BRK:
+        /* an extra byte of spacing for a break mark */
+        set_pc(cpu, cpu->reg.pc + 1);
+        push_word(cpu, cpu->reg.pc);
+        push(cpu, cpu->reg.p | B);
+
+        set_flag(cpu, I, 1);
+        set_pc(cpu, read_word(cpu, 0xFFFE));
+        break;
+
+    /* Return from Interrupt: pop(P) pop(PC) (N, V, D, I, Z, C) */
+    case RTI:
+        set_p(cpu, pop(cpu));
+        set_flag(cpu, B, 0);
+        set_pc(cpu, pop_word(cpu));
+        break;
+
+    /* Return from Subroutine: pop(PC), PC + 1 -> PC () */
+    case RTS:
+        set_pc(cpu, pop_word(cpu));
+        set_pc(cpu, cpu->reg.pc + 1);
+        break;
+
     /* Branch on Carry Clear: () */
     case BCC:
         if (get_flag(cpu, C) == 0) {
@@ -617,16 +719,6 @@ static void execute(struct CPU *cpu)
         if (get_flag(cpu, Z) == 1) {
             set_pc(cpu, addr);
             cycle++;
-        }
-        break;
-
-    /* Test Bits in Memory with Accumulator: A & M (N, V, Z) */
-    case BIT:
-        {
-            const uint8_t data = read_byte(cpu, addr);
-            set_flag(cpu, Z, (cpu->reg.a & data) == 0x00);
-            set_flag(cpu, N, data & (1 << 7));
-            set_flag(cpu, V, data & (1 << 6));
         }
         break;
 
@@ -654,17 +746,6 @@ static void execute(struct CPU *cpu)
             set_pc(cpu, addr);
             cycle++;
         }
-        break;
-
-    /* Break Command: push(PC + 2), [FFFE] -> PCL, [FFFF] ->PCH (I) */
-    case BRK:
-        /* an extra byte of spacing for a break mark */
-        set_pc(cpu, cpu->reg.pc + 1);
-        push_word(cpu, cpu->reg.pc);
-        push(cpu, cpu->reg.p | B);
-
-        set_flag(cpu, I, 1);
-        set_pc(cpu, read_word(cpu, 0xFFFE));
         break;
 
     /* Branch on Overflow Clear: () */
@@ -703,86 +784,8 @@ static void execute(struct CPU *cpu)
         set_flag(cpu, V, 0);
         break;
 
-    /* Increment Memory by One: M + 1 -> M (N, Z) */
-    case DEC:
-        {
-            uint8_t data = read_byte(cpu, addr);
-            data--;
-            set_flag(cpu, Z, data == 0x00);
-            set_flag(cpu, N, data & 0x00);
-            write_byte(addr, data);
-        }
-        break;
-
-    /* Decrement Index Register X by One: X - 1 -> X (N, Z) */
-    case DEX:
-        set_x(cpu, cpu->reg.x - 1);
-        break;
-
-    /* Decrement Index Register Y by One: Y - 1 -> Y (N, Z) */
-    case DEY:
-        set_y(cpu, cpu->reg.y - 1);
-        break;
-
-    /* Exclusive OR Memory with Accumulator: A ^ M -> A (N, Z) */
-    case EOR:
-        set_a(cpu, cpu->reg.a ^ read_byte(cpu, addr));
-        break;
-
-    /* Increment Memory by One: M + 1 -> M (N, Z) */
-    case INC:
-        {
-            uint8_t data = read_byte(cpu, addr);
-            data++;
-            set_flag(cpu, Z, data == 0x00);
-            set_flag(cpu, N, data & 0x00);
-            write_byte(addr, data);
-        }
-        break;
-
-    /* Increment Index Register X by One: X + 1 -> X (N, Z) */
-    case INX:
-        set_x(cpu, cpu->reg.x + 1);
-        break;
-
-    /* Increment Index Register Y by One: Y + 1 -> Y (N, Z) */
-    case INY:
-        set_y(cpu, cpu->reg.y + 1);
-        break;
-
-    /* Jump Indirect: [PC + 1] -> PCL, [PC + 2] -> PCH () */
-    case JMP:
-        set_pc(cpu, addr);
-        break;
-
-    /* Jump to Subroutine: push(PC + 2), [PC + 1] -> PCL, [PC + 2] -> PCH () */
-    case JSR:
-        /* the last byte of the jump instruction */
-        set_pc(cpu, cpu->reg.pc - 1);
-        push_word(cpu, cpu->reg.pc);
-        set_pc(cpu, addr);
-        break;
-
     /* No Operation: () */
     case NOP:
-        break;
-
-    /* OR Memory with Accumulator: A | M -> A (N, Z) */
-    case ORA:
-        set_a(cpu, cpu->reg.a | read_byte(cpu, addr));
-        break;
-
-    /* Return from Interrupt: pop(P) pop(PC) (N, V, D, I, Z, C) */
-    case RTI:
-        set_p(cpu, pop(cpu));
-        set_flag(cpu, B, 0);
-        set_pc(cpu, pop_word(cpu));
-        break;
-
-    /* Return from Subroutine: pop(PC), PC + 1 -> PC () */
-    case RTS:
-        set_pc(cpu, pop_word(cpu));
-        set_pc(cpu, cpu->reg.pc + 1);
         break;
 
     /* Set Carry Flag: 1 -> C (C) */
