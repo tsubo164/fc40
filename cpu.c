@@ -372,7 +372,24 @@ static void execute(struct CPU *cpu)
     int cycle = get_cycle(code, page_crossed);
 
     switch (opecode) {
-    case ADC: break;
+
+    /* Add Memory to Accumulator with Carry: A + M + C -> A, C (N, V, Z, C) */
+    case ADC:
+        {
+            const uint16_t m = read_byte(cpu, addr);
+            const uint16_t a = cpu->reg.a;
+            const uint16_t c = get_flag(cpu, C);
+            const uint16_t r = a + m + c;
+            const int A = !(a & 0x80);
+            const int M = !(m & 0x80);
+            const int R = !(r & 0x80);
+
+            set_flag(cpu, C, r > 0xFF);
+            set_flag(cpu, V, (A && M && !R) | (!A && !M && R));
+            set_a(cpu, r);
+        }
+        break;
+
     /* XXX doesn't exist */
     case AHX: break;
     /* XXX doesn't exist */
@@ -459,7 +476,7 @@ static void execute(struct CPU *cpu)
         }
         break;
 
-    /* Branch on Result Minus: () */
+    /* Branch on Result Plus: () */
     case BPL:
         if (get_flag(cpu, N) == 0) {
             set_pc(cpu, addr);
@@ -718,7 +735,27 @@ static void execute(struct CPU *cpu)
 
     /* XXX doesn't exist */
     case SAX: break;
-    case SBC: break;
+
+    /* Subtract Memory to Accumulator with Carry: A - M - ~C -> A (N, V, Z, C) */
+    case SBC:
+        {
+            /* A - M - (1 - C) = A + (-M) - (1 - C)
+             *                 = A + (-M) - 1 + C
+             *                 = A + (~M + 1) - 1 + C
+             *                 = A + (~M) + C */
+            const uint16_t m = ~read_byte(cpu, addr);
+            const uint16_t a = cpu->reg.a;
+            const uint16_t c = get_flag(cpu, C);
+            const uint16_t r = a + m + c;
+            const int A = !(a & 0x80);
+            const int M = !(m & 0x80);
+            const int R = !(r & 0x80);
+
+            set_flag(cpu, C, r > 0xFF);
+            set_flag(cpu, V, (A && M && !R) | (!A && !M && R));
+            set_a(cpu, r);
+        }
+        break;
 
     /* Set Carry Flag: 1 -> C (C) */
     case SEC:
