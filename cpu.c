@@ -164,6 +164,8 @@ static uint16_t fetch_address(struct CPU *cpu, int mode, int *page_crossed)
 }
 
 enum opecode {
+    /* undocumented */
+    UDC = 0,
     /* load and store */
     LDA, LDX, LDY, STA, STX, STY,
     /* transfer */
@@ -180,73 +182,71 @@ enum opecode {
     INC, INX, INY, DEC, DEX, DEY,
     /* control */
     JMP, JSR, BRK, RTI, RTS,
-
-    BCC, BCS, BEQ,
-    BMI, BNE, BPL,
-    BVC, BVS, CLC, CLD, CLI, CLV,
-    SEC, SED, SEI,
-    NOP,
-    /* undocumented */
-    u__
+    /* branch */
+    BCC, BCS, BEQ, BMI, BNE, BPL, BVC, BVS,
+    /* flag */
+    CLC, CLD, CLI, CLV, SEC, SED, SEI,
+    /* no op */
+    NOP
 };
 
 static const uint8_t opecode_table[] = {
-/*       +00  +01  +02  +03  +04  +05  +06  +07  +08  +09  +0A  +0B  +0C  +0D  +0E  +0F */
-/*0x00*/ BRK, ORA, u__, u__, NOP, ORA, ASL, u__, PHP, ORA, ASL, u__, NOP, ORA, ASL, u__,
-/*0x10*/ BPL, ORA, u__, u__, NOP, ORA, ASL, u__, CLC, ORA, NOP, u__, NOP, ORA, ASL, u__,
-/*0x20*/ JSR, AND, u__, u__, BIT, AND, ROL, u__, PLP, AND, ROL, u__, BIT, AND, ROL, u__,
-/*0x30*/ BMI, AND, u__, u__, NOP, AND, ROL, u__, SEC, AND, NOP, u__, NOP, AND, ROL, u__,
-/*0x40*/ RTI, EOR, u__, u__, NOP, EOR, LSR, u__, PHA, EOR, LSR, u__, JMP, EOR, LSR, u__,
-/*0x50*/ BVC, EOR, u__, u__, NOP, EOR, LSR, u__, CLI, EOR, NOP, u__, NOP, EOR, LSR, u__,
-/*0x60*/ RTS, ADC, u__, u__, NOP, ADC, ROR, u__, PLA, ADC, ROR, u__, JMP, ADC, ROR, u__,
-/*0x70*/ BVS, ADC, u__, u__, NOP, ADC, ROR, u__, SEI, ADC, NOP, u__, NOP, ADC, ROR, u__,
-/*0x80*/ NOP, STA, NOP, u__, STY, STA, STX, u__, DEY, NOP, TXA, u__, STY, STA, STX, u__,
-/*0x90*/ BCC, STA, u__, u__, STY, STA, STX, u__, TYA, STA, TXS, u__, u__, STA, u__, u__,
-/*0xA0*/ LDY, LDA, LDX, u__, LDY, LDA, LDX, u__, TAY, LDA, TAX, u__, LDY, LDA, LDX, u__,
-/*0xB0*/ BCS, LDA, u__, u__, LDY, LDA, LDX, u__, CLV, LDA, TSX, u__, LDY, LDA, LDX, u__,
-/*0xC0*/ CPY, CMP, NOP, u__, CPY, CMP, DEC, u__, INY, CMP, DEX, u__, CPY, CMP, DEC, u__,
-/*0xD0*/ BNE, CMP, u__, u__, NOP, CMP, DEC, u__, CLD, CMP, NOP, u__, NOP, CMP, DEC, u__,
-/*0xE0*/ CPX, SBC, NOP, u__, CPX, SBC, INC, u__, INX, SBC, NOP, u__, CPX, SBC, INC, u__,
-/*0xF0*/ BEQ, SBC, u__, u__, NOP, SBC, INC, u__, SED, SBC, NOP, u__, NOP, SBC, INC, u__
+/*      00   01   02   03   04   05   06   07   08   09   0A   0B   0C   0D   0E   0F */
+/*00*/ BRK, ORA,   0,   0, NOP, ORA, ASL,   0, PHP, ORA, ASL,   0, NOP, ORA, ASL,   0,
+/*10*/ BPL, ORA,   0,   0, NOP, ORA, ASL,   0, CLC, ORA, NOP,   0, NOP, ORA, ASL,   0,
+/*20*/ JSR, AND,   0,   0, BIT, AND, ROL,   0, PLP, AND, ROL,   0, BIT, AND, ROL,   0,
+/*30*/ BMI, AND,   0,   0, NOP, AND, ROL,   0, SEC, AND, NOP,   0, NOP, AND, ROL,   0,
+/*40*/ RTI, EOR,   0,   0, NOP, EOR, LSR,   0, PHA, EOR, LSR,   0, JMP, EOR, LSR,   0,
+/*50*/ BVC, EOR,   0,   0, NOP, EOR, LSR,   0, CLI, EOR, NOP,   0, NOP, EOR, LSR,   0,
+/*60*/ RTS, ADC,   0,   0, NOP, ADC, ROR,   0, PLA, ADC, ROR,   0, JMP, ADC, ROR,   0,
+/*70*/ BVS, ADC,   0,   0, NOP, ADC, ROR,   0, SEI, ADC, NOP,   0, NOP, ADC, ROR,   0,
+/*80*/ NOP, STA, NOP,   0, STY, STA, STX,   0, DEY, NOP, TXA,   0, STY, STA, STX,   0,
+/*90*/ BCC, STA,   0,   0, STY, STA, STX,   0, TYA, STA, TXS,   0,   0, STA,   0,   0,
+/*A0*/ LDY, LDA, LDX,   0, LDY, LDA, LDX,   0, TAY, LDA, TAX,   0, LDY, LDA, LDX,   0,
+/*B0*/ BCS, LDA,   0,   0, LDY, LDA, LDX,   0, CLV, LDA, TSX,   0, LDY, LDA, LDX,   0,
+/*C0*/ CPY, CMP, NOP,   0, CPY, CMP, DEC,   0, INY, CMP, DEX,   0, CPY, CMP, DEC,   0,
+/*D0*/ BNE, CMP,   0,   0, NOP, CMP, DEC,   0, CLD, CMP, NOP,   0, NOP, CMP, DEC,   0,
+/*E0*/ CPX, SBC, NOP,   0, CPX, SBC, INC,   0, INX, SBC, NOP,   0, CPX, SBC, INC,   0,
+/*F0*/ BEQ, SBC,   0,   0, NOP, SBC, INC,   0, SED, SBC, NOP,   0, NOP, SBC, INC,   0
 };
 
 static const char opecode_name_table[][4] = {
-"BRK","ORA","???","???","NOP","ORA","ASL","???","PHP","ORA","ASL","???","NOP","ORA","ASL","???",
-"BPL","ORA","???","???","NOP","ORA","ASL","???","CLC","ORA","NOP","???","NOP","ORA","ASL","???",
-"JSR","AND","???","???","BIT","AND","ROL","???","PLP","AND","ROL","???","BIT","AND","ROL","???",
-"BMI","AND","???","???","NOP","AND","ROL","???","SEC","AND","NOP","???","NOP","AND","ROL","???",
-"RTI","EOR","???","???","NOP","EOR","LSR","???","PHA","EOR","LSR","???","JMP","EOR","LSR","???",
-"BVC","EOR","???","???","NOP","EOR","LSR","???","CLI","EOR","NOP","???","NOP","EOR","LSR","???",
-"RTS","ADC","???","???","NOP","ADC","ROR","???","PLA","ADC","ROR","???","JMP","ADC","ROR","???",
-"BVS","ADC","???","???","NOP","ADC","ROR","???","SEI","ADC","NOP","???","NOP","ADC","ROR","???",
-"NOP","STA","NOP","???","STY","STA","STX","???","DEY","NOP","TXA","???","STY","STA","STX","???",
-"BCC","STA","???","???","STY","STA","STX","???","TYA","STA","TXS","???","???","STA","???","???",
-"LDY","LDA","LDX","???","LDY","LDA","LDX","???","TAY","LDA","TAX","???","LDY","LDA","LDX","???",
-"BCS","LDA","???","???","LDY","LDA","LDX","???","CLV","LDA","TSX","???","LDY","LDA","LDX","???",
-"CPY","CMP","NOP","???","CPY","CMP","DEC","???","INY","CMP","DEX","???","CPY","CMP","DEC","???",
-"BNE","CMP","???","???","NOP","CMP","DEC","???","CLD","CMP","NOP","???","NOP","CMP","DEC","???",
-"CPX","SBC","NOP","???","CPX","SBC","INC","???","INX","SBC","NOP","???","CPX","SBC","INC","???",
-"BEQ","SBC","???","???","NOP","SBC","INC","???","SED","SBC","NOP","???","NOP","SBC","INC","???"
+"BRK","ORA",   "",   "","NOP","ORA","ASL",   "","PHP","ORA","ASL",   "","NOP","ORA","ASL",   "",
+"BPL","ORA",   "",   "","NOP","ORA","ASL",   "","CLC","ORA","NOP",   "","NOP","ORA","ASL",   "",
+"JSR","AND",   "",   "","BIT","AND","ROL",   "","PLP","AND","ROL",   "","BIT","AND","ROL",   "",
+"BMI","AND",   "",   "","NOP","AND","ROL",   "","SEC","AND","NOP",   "","NOP","AND","ROL",   "",
+"RTI","EOR",   "",   "","NOP","EOR","LSR",   "","PHA","EOR","LSR",   "","JMP","EOR","LSR",   "",
+"BVC","EOR",   "",   "","NOP","EOR","LSR",   "","CLI","EOR","NOP",   "","NOP","EOR","LSR",   "",
+"RTS","ADC",   "",   "","NOP","ADC","ROR",   "","PLA","ADC","ROR",   "","JMP","ADC","ROR",   "",
+"BVS","ADC",   "",   "","NOP","ADC","ROR",   "","SEI","ADC","NOP",   "","NOP","ADC","ROR",   "",
+"NOP","STA","NOP",   "","STY","STA","STX",   "","DEY","NOP","TXA",   "","STY","STA","STX",   "",
+"BCC","STA",   "",   "","STY","STA","STX",   "","TYA","STA","TXS",   "",   "","STA",   "",   "",
+"LDY","LDA","LDX",   "","LDY","LDA","LDX",   "","TAY","LDA","TAX",   "","LDY","LDA","LDX",   "",
+"BCS","LDA",   "",   "","LDY","LDA","LDX",   "","CLV","LDA","TSX",   "","LDY","LDA","LDX",   "",
+"CPY","CMP","NOP",   "","CPY","CMP","DEC",   "","INY","CMP","DEX",   "","CPY","CMP","DEC",   "",
+"BNE","CMP",   "",   "","NOP","CMP","DEC",   "","CLD","CMP","NOP",   "","NOP","CMP","DEC",   "",
+"CPX","SBC","NOP",   "","CPX","SBC","INC",   "","INX","SBC","NOP",   "","CPX","SBC","INC",   "",
+"BEQ","SBC",   "",   "","NOP","SBC","INC",   "","SED","SBC","NOP",   "","NOP","SBC","INC",   ""
 };
 
 static const int8_t cycle_table[] = {
-/*      +00 +01 +02 +03 +04 +05 +06 +07 +08 +09 +0A +0B +0C +0D +0E +0F */
-/*0x00*/  7,  6,  0,  8,  3,  3,  5,  5,  3,  2,  2,  2,  4,  4,  6,  6,
-/*0x10*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7,
-/*0x20*/  6,  6,  0,  8,  3,  3,  5,  5,  4,  2,  2,  2,  4,  4,  6,  6,
-/*0x30*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7,
-/*0x40*/  6,  6,  0,  8,  3,  3,  5,  5,  3,  2,  2,  2,  3,  4,  6,  6,
-/*0x50*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7,
-/*0x60*/  6,  6,  0,  8,  3,  3,  5,  5,  4,  2,  2,  2,  5,  4,  6,  6,
-/*0x70*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7,
-/*0x80*/  2,  6,  2,  6,  3,  3,  3,  3,  2,  2,  2,  2,  4,  4,  4,  4,
-/*0x90*/ -2,  6,  0,  6,  4,  4,  4,  4,  2,  5,  2,  5,  5,  5,  5,  5,
-/*0xA0*/  2,  6,  2,  6,  3,  3,  3,  3,  2,  2,  2,  2,  4,  4,  4,  4,
-/*0xB0*/ -2, -5,  0, -5,  4,  4,  4,  4,  2, -4,  2, -4, -4, -4, -4, -4,
-/*0xC0*/  2,  6,  2,  8,  3,  3,  5,  5,  2,  2,  2,  2,  4,  4,  6,  6,
-/*0xD0*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7,
-/*0xE0*/  2,  6,  2,  8,  3,  3,  5,  5,  2,  2,  2,  2,  4,  4,  6,  6,
-/*0xF0*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7
+/*     00  01  02  03  04  05  06  07  08  09  0A  0B  0C  0D  0E  0F */
+/*00*/  7,  6,  0,  8,  3,  3,  5,  5,  3,  2,  2,  2,  4,  4,  6,  6,
+/*10*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7,
+/*20*/  6,  6,  0,  8,  3,  3,  5,  5,  4,  2,  2,  2,  4,  4,  6,  6,
+/*30*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7,
+/*40*/  6,  6,  0,  8,  3,  3,  5,  5,  3,  2,  2,  2,  3,  4,  6,  6,
+/*50*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7,
+/*60*/  6,  6,  0,  8,  3,  3,  5,  5,  4,  2,  2,  2,  5,  4,  6,  6,
+/*70*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7,
+/*80*/  2,  6,  2,  6,  3,  3,  3,  3,  2,  2,  2,  2,  4,  4,  4,  4,
+/*90*/ -2,  6,  0,  6,  4,  4,  4,  4,  2,  5,  2,  5,  5,  5,  5,  5,
+/*A0*/  2,  6,  2,  6,  3,  3,  3,  3,  2,  2,  2,  2,  4,  4,  4,  4,
+/*B0*/ -2, -5,  0, -5,  4,  4,  4,  4,  2, -4,  2, -4, -4, -4, -4, -4,
+/*C0*/  2,  6,  2,  8,  3,  3,  5,  5,  2,  2,  2,  2,  4,  4,  6,  6,
+/*D0*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7,
+/*E0*/  2,  6,  2,  8,  3,  3,  5,  5,  2,  2,  2,  2,  4,  4,  6,  6,
+/*F0*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7
 };
 
 static int get_cycle(uint8_t code, int page_crossed)
@@ -784,10 +784,6 @@ static void execute(struct CPU *cpu)
         set_flag(cpu, V, 0);
         break;
 
-    /* No Operation: () */
-    case NOP:
-        break;
-
     /* Set Carry Flag: 1 -> C (C) */
     case SEC:
         set_flag(cpu, C, 1);
@@ -801,6 +797,10 @@ static void execute(struct CPU *cpu)
     /* Set Interrupt Disable: 1 -> I (I) */
     case SEI:
         set_flag(cpu, I, 1);
+        break;
+
+    /* No Operation: () */
+    case NOP:
         break;
 
     default:
