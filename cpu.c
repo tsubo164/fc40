@@ -164,50 +164,51 @@ static uint16_t fetch_address(struct CPU *cpu, int mode, int *page_crossed)
 }
 
 enum opecode {
-    ADC, AHX, ALR, ANC, AND, ARR, ASL, AXS, BCC, BCS, BEQ, BIT, BMI, BNE, BPL, BRK,
-    BVC, BVS, CLC, CLD, CLI, CLV, CMP, CPX, CPY, DCP, DEC, DEX, DEY, EOR, INC, INX,
-    INY, ISC, JMP, JSR, LAS, LAX, LDA, LDX, LDY, LSR, NOP, ORA, PHA, PHP, PLA, PLP,
-    RLA, ROL, ROR, RRA, RTI, RTS, SAX, SBC, SEC, SED, SEI, SHX, SHY, SLO, SRE, STA,
-    STP, STX, STY, TAS, TAX, TAY, TSX, TXA, TXS, TYA, XAA
+    ADC, AND, ASL, BCC, BCS, BEQ, BIT, BMI, BNE, BPL, BRK,
+    BVC, BVS, CLC, CLD, CLI, CLV, CMP, CPX, CPY, DEC, DEX, DEY, EOR, INC, INX,
+    INY, JMP, JSR, LDA, LDX, LDY, LSR, NOP, ORA, PHA, PHP, PLA, PLP,
+    ROL, ROR, RTI, RTS, SBC, SEC, SED, SEI, STA,
+    STX, STY, TAX, TAY, TSX, TXA, TXS, TYA,
+    ILL
 };
 
 static const uint8_t opecode_table[] = {
 /*       +00  +01  +02  +03  +04  +05  +06  +07  +08  +09  +0A  +0B  +0C  +0D  +0E  +0F */
-/*0x00*/ BRK, ORA, STP, SLO, NOP, ORA, ASL, SLO, PHP, ORA, ASL, ANC, NOP, ORA, ASL, SLO,
-/*0x10*/ BPL, ORA, STP, SLO, NOP, ORA, ASL, SLO, CLC, ORA, NOP, SLO, NOP, ORA, ASL, SLO,
-/*0x20*/ JSR, AND, STP, RLA, BIT, AND, ROL, RLA, PLP, AND, ROL, ANC, BIT, AND, ROL, RLA,
-/*0x30*/ BMI, AND, STP, RLA, NOP, AND, ROL, RLA, SEC, AND, NOP, RLA, NOP, AND, ROL, RLA,
-/*0x40*/ RTI, EOR, STP, SRE, NOP, EOR, LSR, SRE, PHA, EOR, LSR, ALR, JMP, EOR, LSR, SRE,
-/*0x50*/ BVC, EOR, STP, SRE, NOP, EOR, LSR, SRE, CLI, EOR, NOP, SRE, NOP, EOR, LSR, SRE,
-/*0x60*/ RTS, ADC, STP, RRA, NOP, ADC, ROR, RRA, PLA, ADC, ROR, ARR, JMP, ADC, ROR, RRA,
-/*0x70*/ BVS, ADC, STP, RRA, NOP, ADC, ROR, RRA, SEI, ADC, NOP, RRA, NOP, ADC, ROR, RRA,
-/*0x80*/ NOP, STA, NOP, SAX, STY, STA, STX, SAX, DEY, NOP, TXA, XAA, STY, STA, STX, SAX,
-/*0x90*/ BCC, STA, STP, AHX, STY, STA, STX, SAX, TYA, STA, TXS, TAS, SHY, STA, SHX, AHX,
-/*0xA0*/ LDY, LDA, LDX, LAX, LDY, LDA, LDX, LAX, TAY, LDA, TAX, LAX, LDY, LDA, LDX, LAX,
-/*0xB0*/ BCS, LDA, STP, LAX, LDY, LDA, LDX, LAX, CLV, LDA, TSX, LAS, LDY, LDA, LDX, LAX,
-/*0xC0*/ CPY, CMP, NOP, DCP, CPY, CMP, DEC, DCP, INY, CMP, DEX, AXS, CPY, CMP, DEC, DCP,
-/*0xD0*/ BNE, CMP, STP, DCP, NOP, CMP, DEC, DCP, CLD, CMP, NOP, DCP, NOP, CMP, DEC, DCP,
-/*0xE0*/ CPX, SBC, NOP, ISC, CPX, SBC, INC, ISC, INX, SBC, NOP, SBC, CPX, SBC, INC, ISC,
-/*0xF0*/ BEQ, SBC, STP, ISC, NOP, SBC, INC, ISC, SED, SBC, NOP, ISC, NOP, SBC, INC, ISC
+/*0x00*/ BRK, ORA, ILL, ILL, NOP, ORA, ASL, ILL, PHP, ORA, ASL, ILL, NOP, ORA, ASL, ILL,
+/*0x10*/ BPL, ORA, ILL, ILL, NOP, ORA, ASL, ILL, CLC, ORA, NOP, ILL, NOP, ORA, ASL, ILL,
+/*0x20*/ JSR, AND, ILL, ILL, BIT, AND, ROL, ILL, PLP, AND, ROL, ILL, BIT, AND, ROL, ILL,
+/*0x30*/ BMI, AND, ILL, ILL, NOP, AND, ROL, ILL, SEC, AND, NOP, ILL, NOP, AND, ROL, ILL,
+/*0x40*/ RTI, EOR, ILL, ILL, NOP, EOR, LSR, ILL, PHA, EOR, LSR, ILL, JMP, EOR, LSR, ILL,
+/*0x50*/ BVC, EOR, ILL, ILL, NOP, EOR, LSR, ILL, CLI, EOR, NOP, ILL, NOP, EOR, LSR, ILL,
+/*0x60*/ RTS, ADC, ILL, ILL, NOP, ADC, ROR, ILL, PLA, ADC, ROR, ILL, JMP, ADC, ROR, ILL,
+/*0x70*/ BVS, ADC, ILL, ILL, NOP, ADC, ROR, ILL, SEI, ADC, NOP, ILL, NOP, ADC, ROR, ILL,
+/*0x80*/ NOP, STA, NOP, ILL, STY, STA, STX, ILL, DEY, NOP, TXA, ILL, STY, STA, STX, ILL,
+/*0x90*/ BCC, STA, ILL, ILL, STY, STA, STX, ILL, TYA, STA, TXS, ILL, ILL, STA, ILL, ILL,
+/*0xA0*/ LDY, LDA, LDX, ILL, LDY, LDA, LDX, ILL, TAY, LDA, TAX, ILL, LDY, LDA, LDX, ILL,
+/*0xB0*/ BCS, LDA, ILL, ILL, LDY, LDA, LDX, ILL, CLV, LDA, TSX, ILL, LDY, LDA, LDX, ILL,
+/*0xC0*/ CPY, CMP, NOP, ILL, CPY, CMP, DEC, ILL, INY, CMP, DEX, ILL, CPY, CMP, DEC, ILL,
+/*0xD0*/ BNE, CMP, ILL, ILL, NOP, CMP, DEC, ILL, CLD, CMP, NOP, ILL, NOP, CMP, DEC, ILL,
+/*0xE0*/ CPX, SBC, NOP, ILL, CPX, SBC, INC, ILL, INX, SBC, NOP, SBC, CPX, SBC, INC, ILL,
+/*0xF0*/ BEQ, SBC, ILL, ILL, NOP, SBC, INC, ILL, SED, SBC, NOP, ILL, NOP, SBC, INC, ILL
 };
 
 static const char opecode_name_table[][4] = {
-"BRK","ORA","STP","SLO","NOP","ORA","ASL","SLO","PHP","ORA","ASL","ANC","NOP","ORA","ASL","SLO",
-"BPL","ORA","STP","SLO","NOP","ORA","ASL","SLO","CLC","ORA","NOP","SLO","NOP","ORA","ASL","SLO",
-"JSR","AND","STP","RLA","BIT","AND","ROL","RLA","PLP","AND","ROL","ANC","BIT","AND","ROL","RLA",
-"BMI","AND","STP","RLA","NOP","AND","ROL","RLA","SEC","AND","NOP","RLA","NOP","AND","ROL","RLA",
-"RTI","EOR","STP","SRE","NOP","EOR","LSR","SRE","PHA","EOR","LSR","ALR","JMP","EOR","LSR","SRE",
-"BVC","EOR","STP","SRE","NOP","EOR","LSR","SRE","CLI","EOR","NOP","SRE","NOP","EOR","LSR","SRE",
-"RTS","ADC","STP","RRA","NOP","ADC","ROR","RRA","PLA","ADC","ROR","ARR","JMP","ADC","ROR","RRA",
-"BVS","ADC","STP","RRA","NOP","ADC","ROR","RRA","SEI","ADC","NOP","RRA","NOP","ADC","ROR","RRA",
-"NOP","STA","NOP","SAX","STY","STA","STX","SAX","DEY","NOP","TXA","XAA","STY","STA","STX","SAX",
-"BCC","STA","STP","AHX","STY","STA","STX","SAX","TYA","STA","TXS","TAS","SHY","STA","SHX","AHX",
-"LDY","LDA","LDX","LAX","LDY","LDA","LDX","LAX","TAY","LDA","TAX","LAX","LDY","LDA","LDX","LAX",
-"BCS","LDA","STP","LAX","LDY","LDA","LDX","LAX","CLV","LDA","TSX","LAS","LDY","LDA","LDX","LAX",
-"CPY","CMP","NOP","DCP","CPY","CMP","DEC","DCP","INY","CMP","DEX","AXS","CPY","CMP","DEC","DCP",
-"BNE","CMP","STP","DCP","NOP","CMP","DEC","DCP","CLD","CMP","NOP","DCP","NOP","CMP","DEC","DCP",
-"CPX","SBC","NOP","ISC","CPX","SBC","INC","ISC","INX","SBC","NOP","SBC","CPX","SBC","INC","ISC",
-"BEQ","SBC","STP","ISC","NOP","SBC","INC","ISC","SED","SBC","NOP","ISC","NOP","SBC","INC","ISC"
+"BRK","ORA","ILL","ILL","NOP","ORA","ASL","ILL","PHP","ORA","ASL","ILL","NOP","ORA","ASL","ILL",
+"BPL","ORA","ILL","ILL","NOP","ORA","ASL","ILL","CLC","ORA","NOP","ILL","NOP","ORA","ASL","ILL",
+"JSR","AND","ILL","ILL","BIT","AND","ROL","ILL","PLP","AND","ROL","ILL","BIT","AND","ROL","ILL",
+"BMI","AND","ILL","ILL","NOP","AND","ROL","ILL","SEC","AND","NOP","ILL","NOP","AND","ROL","ILL",
+"RTI","EOR","ILL","ILL","NOP","EOR","LSR","ILL","PHA","EOR","LSR","ILL","JMP","EOR","LSR","ILL",
+"BVC","EOR","ILL","ILL","NOP","EOR","LSR","ILL","CLI","EOR","NOP","ILL","NOP","EOR","LSR","ILL",
+"RTS","ADC","ILL","ILL","NOP","ADC","ROR","ILL","PLA","ADC","ROR","ILL","JMP","ADC","ROR","ILL",
+"BVS","ADC","ILL","ILL","NOP","ADC","ROR","ILL","SEI","ADC","NOP","ILL","NOP","ADC","ROR","ILL",
+"NOP","STA","NOP","ILL","STY","STA","STX","ILL","DEY","NOP","TXA","ILL","STY","STA","STX","ILL",
+"BCC","STA","ILL","ILL","STY","STA","STX","ILL","TYA","STA","TXS","ILL","ILL","STA","ILL","ILL",
+"LDY","LDA","LDX","ILL","LDY","LDA","LDX","ILL","TAY","LDA","TAX","ILL","LDY","LDA","LDX","ILL",
+"BCS","LDA","ILL","ILL","LDY","LDA","LDX","ILL","CLV","LDA","TSX","ILL","LDY","LDA","LDX","ILL",
+"CPY","CMP","NOP","ILL","CPY","CMP","DEC","ILL","INY","CMP","DEX","ILL","CPY","CMP","DEC","ILL",
+"BNE","CMP","ILL","ILL","NOP","CMP","DEC","ILL","CLD","CMP","NOP","ILL","NOP","CMP","DEC","ILL",
+"CPX","SBC","NOP","ILL","CPX","SBC","INC","ILL","INX","SBC","NOP","SBC","CPX","SBC","INC","ILL",
+"BEQ","SBC","ILL","ILL","NOP","SBC","INC","ILL","SED","SBC","NOP","ILL","NOP","SBC","INC","ILL"
 };
 
 static const int8_t cycle_table[] = {
@@ -390,20 +391,10 @@ static void execute(struct CPU *cpu)
         }
         break;
 
-    /* XXX doesn't exist */
-    case AHX: break;
-    /* XXX doesn't exist */
-    case ALR: break;
-    /* XXX doesn't exist */
-    case ANC: break;
-
     /* AND Memory with Accumulator: A & M -> A (N, Z) */
     case AND:
         set_a(cpu, cpu->reg.a & read_byte(cpu, addr));
         break;
-
-    /* XXX doesn't exist */
-    case ARR: break;
 
     /* Arithmetic Shift Left: C <- /M7...M0/ <- 0 (N, Z, C) */
     case ASL:
@@ -420,9 +411,6 @@ static void execute(struct CPU *cpu)
             write_byte(addr, data);
         }
         break;
-
-    /* XXX doesn't exist */
-    case AXS: break;
 
     /* Branch on Carry Clear: () */
     case BCC:
@@ -546,9 +534,6 @@ static void execute(struct CPU *cpu)
         compare(cpu, cpu->reg.y, read_byte(cpu, addr));
         break;
 
-    /* XXX doesn't exist */
-    case DCP: break;
-
     /* Increment Memory by One: M + 1 -> M (N, Z) */
     case DEC:
         {
@@ -596,9 +581,6 @@ static void execute(struct CPU *cpu)
         set_y(cpu, cpu->reg.y + 1);
         break;
 
-    /* XXX doesn't exist */
-    case ISC: break;
-
     /* Jump Indirect: [PC + 1] -> PCL, [PC + 2] -> PCH () */
     case JMP:
         set_pc(cpu, addr);
@@ -611,11 +593,6 @@ static void execute(struct CPU *cpu)
         push_word(cpu, cpu->reg.pc);
         set_pc(cpu, addr);
         break;
-
-    /* XXX doesn't exist */
-    case LAS: break;
-    /* XXX doesn't exist */
-    case LAX: break;
 
     /* Load Accumulator with Memory: M -> A (N, Z) */
     case LDA:
@@ -678,9 +655,6 @@ static void execute(struct CPU *cpu)
         set_flag(cpu, B, 0);
         break;
 
-    /* XXX doesn't exist */
-    case RLA: break;
-
     /* Rotate Left: C <- /M7...M0/ <- C (N, Z, C) */
     case ROL:
         if (mode == ACC) {
@@ -717,9 +691,6 @@ static void execute(struct CPU *cpu)
         }
         break;
 
-    /* XXX doesn't exist */
-    case RRA: break;
-
     /* Return from Interrupt: pop(P) pop(PC) (N, V, D, I, Z, C) */
     case RTI:
         set_p(cpu, pop(cpu));
@@ -732,9 +703,6 @@ static void execute(struct CPU *cpu)
         set_pc(cpu, pop_word(cpu));
         set_pc(cpu, cpu->reg.pc + 1);
         break;
-
-    /* XXX doesn't exist */
-    case SAX: break;
 
     /* Subtract Memory to Accumulator with Carry: A - M - ~C -> A (N, V, Z, C) */
     case SBC:
@@ -772,24 +740,10 @@ static void execute(struct CPU *cpu)
         set_flag(cpu, I, 1);
         break;
 
-    /* XXX doesn't exist */
-    case SHX: break;
-    /* XXX doesn't exist */
-    case SHY: break;
-
-    /* XXX doesn't exist */
-    case SLO: break;
-
-    /* XXX doesn't exist */
-    case SRE: break;
-
     /* Store Accumulator in Memory: A -> M () */
     case STA:
         write_byte(addr, cpu->reg.a);
         break;
-
-    /* XXX doesn't exist */
-    case STP: break;
 
     /* Store Index Register X in Memory: X -> M () */
     case STX:
@@ -800,9 +754,6 @@ static void execute(struct CPU *cpu)
     case STY:
         write_byte(addr, cpu->reg.y);
         break;
-
-    /* XXX doesn't exist */
-    case TAS: break;
 
     /* Transfer Accumulator to Index X: A -> X (N, Z) */
     case TAX:
@@ -833,9 +784,6 @@ static void execute(struct CPU *cpu)
     case TYA:
         set_a(cpu, cpu->reg.y);
         break;
-
-    /* XXX doesn't exist */
-    case XAA: break;
 
     default:
         break;
