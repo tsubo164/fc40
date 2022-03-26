@@ -232,34 +232,30 @@ static const char opecode_name_table[][4] = {
 static const int8_t cycle_table[] = {
 /*     00  01  02  03  04  05  06  07  08  09  0A  0B  0C  0D  0E  0F */
 /*00*/  7,  6,  0,  8,  3,  3,  5,  5,  3,  2,  2,  2,  4,  4,  6,  6,
-/*10*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7,
+/*10*/  2,  5,  0,  8,  4,  4,  6,  6,  2,  4,  2,  7,  4,  4,  7,  7,
 /*20*/  6,  6,  0,  8,  3,  3,  5,  5,  4,  2,  2,  2,  4,  4,  6,  6,
-/*30*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7,
+/*30*/  2,  5,  0,  8,  4,  4,  6,  6,  2,  4,  2,  7,  4,  4,  7,  7,
 /*40*/  6,  6,  0,  8,  3,  3,  5,  5,  3,  2,  2,  2,  3,  4,  6,  6,
-/*50*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7,
+/*50*/  2,  5,  0,  8,  4,  4,  6,  6,  2,  4,  2,  7,  4,  4,  7,  7,
 /*60*/  6,  6,  0,  8,  3,  3,  5,  5,  4,  2,  2,  2,  5,  4,  6,  6,
-/*70*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7,
+/*70*/  2,  5,  0,  8,  4,  4,  6,  6,  2,  4,  2,  7,  4,  4,  7,  7,
 /*80*/  2,  6,  2,  6,  3,  3,  3,  3,  2,  2,  2,  2,  4,  4,  4,  4,
-/*90*/ -2,  6,  0,  6,  4,  4,  4,  4,  2,  5,  2,  5,  5,  5,  5,  5,
+/*90*/  2,  6,  0,  6,  4,  4,  4,  4,  2,  5,  2,  5,  5,  5,  5,  5,
 /*A0*/  2,  6,  2,  6,  3,  3,  3,  3,  2,  2,  2,  2,  4,  4,  4,  4,
-/*B0*/ -2, -5,  0, -5,  4,  4,  4,  4,  2, -4,  2, -4, -4, -4, -4, -4,
+/*B0*/  2,  5,  0,  5,  4,  4,  4,  4,  2,  4,  2,  4,  4,  4,  4,  4,
 /*C0*/  2,  6,  2,  8,  3,  3,  5,  5,  2,  2,  2,  2,  4,  4,  6,  6,
-/*D0*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7,
+/*D0*/  2,  5,  0,  8,  4,  4,  6,  6,  2,  4,  2,  7,  4,  4,  7,  7,
 /*E0*/  2,  6,  2,  8,  3,  3,  5,  5,  2,  2,  2,  2,  4,  4,  6,  6,
-/*F0*/ -2, -5,  0,  8,  4,  4,  6,  6,  2, -4,  2,  7, -4, -4,  7,  7
+/*F0*/  2,  5,  0,  8,  4,  4,  6,  6,  2,  4,  2,  7,  4,  4,  7,  7
 };
 
-static int get_cycle(uint8_t code, int page_crossed)
+static int get_cycle(uint8_t code)
 {
     const int cyc = cycle_table[code];
 
     if (cyc == 0)
         /* illegal op */
         return 0;
-
-    if (cyc < 0)
-        /* add 1 cycle if page boundary is crossed */
-        return -1 * cyc + page_crossed;
 
     return cyc;
 }
@@ -378,6 +374,23 @@ static int branch_on(struct CPU *cpu, uint16_t addr, int test)
     return 1;
 }
 
+struct instruction {
+    uint8_t opecode;
+    uint8_t addr_mode;
+    uint8_t cycles;
+};
+
+static struct instruction decode(struct CPU *cpu, uint8_t code)
+{
+    struct instruction i;
+
+    i.opecode   = opecode_table[code];
+    i.addr_mode = addr_mode_table[code];
+    i.cycles    = cycle_table[code];
+
+    return i;
+}
+
 static void execute(struct CPU *cpu)
 {
     const uint16_t inst_addr = cpu->reg.pc;
@@ -388,7 +401,7 @@ static void execute(struct CPU *cpu)
     int page_crossed = 0;
     int branch_taken = 0;
     const uint16_t addr = fetch_address(cpu, mode, &page_crossed);;
-    int cycle = get_cycle(code, page_crossed);
+    int cycle = get_cycle(code);
 
     switch (opecode) {
 
@@ -807,7 +820,7 @@ static void execute(struct CPU *cpu)
         break;
     }
 
-    cpu->cycle = cycle;
+    cpu->cycle = cycle + page_crossed;
 
     if (0)
         print_code(inst_addr, code, mode, addr);
