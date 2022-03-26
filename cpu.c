@@ -164,51 +164,57 @@ static uint16_t fetch_address(struct CPU *cpu, int mode, int *page_crossed)
 }
 
 enum opecode {
-    ADC, AND, ASL, BCC, BCS, BEQ, BIT, BMI, BNE, BPL, BRK,
-    BVC, BVS, CLC, CLD, CLI, CLV, CMP, CPX, CPY, DEC, DEX, DEY, EOR, INC, INX,
+    /* arithmetic */
+    ADC, SBC, CMP, CPX, CPY,
+
+    AND, ASL, BCC, BCS, BEQ, BIT, BMI, BNE, BPL, BRK,
+    BVC, BVS, CLC, CLD, CLI, CLV,
+    DEC, DEX, DEY, EOR, INC, INX,
     INY, JMP, JSR, LDA, LDX, LDY, LSR, NOP, ORA, PHA, PHP, PLA, PLP,
-    ROL, ROR, RTI, RTS, SBC, SEC, SED, SEI, STA,
+    ROL, ROR, RTI, RTS,
+    SEC, SED, SEI, STA,
     STX, STY, TAX, TAY, TSX, TXA, TXS, TYA,
-    ILL
+    /* undocumented */
+    u__
 };
 
 static const uint8_t opecode_table[] = {
 /*       +00  +01  +02  +03  +04  +05  +06  +07  +08  +09  +0A  +0B  +0C  +0D  +0E  +0F */
-/*0x00*/ BRK, ORA, ILL, ILL, NOP, ORA, ASL, ILL, PHP, ORA, ASL, ILL, NOP, ORA, ASL, ILL,
-/*0x10*/ BPL, ORA, ILL, ILL, NOP, ORA, ASL, ILL, CLC, ORA, NOP, ILL, NOP, ORA, ASL, ILL,
-/*0x20*/ JSR, AND, ILL, ILL, BIT, AND, ROL, ILL, PLP, AND, ROL, ILL, BIT, AND, ROL, ILL,
-/*0x30*/ BMI, AND, ILL, ILL, NOP, AND, ROL, ILL, SEC, AND, NOP, ILL, NOP, AND, ROL, ILL,
-/*0x40*/ RTI, EOR, ILL, ILL, NOP, EOR, LSR, ILL, PHA, EOR, LSR, ILL, JMP, EOR, LSR, ILL,
-/*0x50*/ BVC, EOR, ILL, ILL, NOP, EOR, LSR, ILL, CLI, EOR, NOP, ILL, NOP, EOR, LSR, ILL,
-/*0x60*/ RTS, ADC, ILL, ILL, NOP, ADC, ROR, ILL, PLA, ADC, ROR, ILL, JMP, ADC, ROR, ILL,
-/*0x70*/ BVS, ADC, ILL, ILL, NOP, ADC, ROR, ILL, SEI, ADC, NOP, ILL, NOP, ADC, ROR, ILL,
-/*0x80*/ NOP, STA, NOP, ILL, STY, STA, STX, ILL, DEY, NOP, TXA, ILL, STY, STA, STX, ILL,
-/*0x90*/ BCC, STA, ILL, ILL, STY, STA, STX, ILL, TYA, STA, TXS, ILL, ILL, STA, ILL, ILL,
-/*0xA0*/ LDY, LDA, LDX, ILL, LDY, LDA, LDX, ILL, TAY, LDA, TAX, ILL, LDY, LDA, LDX, ILL,
-/*0xB0*/ BCS, LDA, ILL, ILL, LDY, LDA, LDX, ILL, CLV, LDA, TSX, ILL, LDY, LDA, LDX, ILL,
-/*0xC0*/ CPY, CMP, NOP, ILL, CPY, CMP, DEC, ILL, INY, CMP, DEX, ILL, CPY, CMP, DEC, ILL,
-/*0xD0*/ BNE, CMP, ILL, ILL, NOP, CMP, DEC, ILL, CLD, CMP, NOP, ILL, NOP, CMP, DEC, ILL,
-/*0xE0*/ CPX, SBC, NOP, ILL, CPX, SBC, INC, ILL, INX, SBC, NOP, SBC, CPX, SBC, INC, ILL,
-/*0xF0*/ BEQ, SBC, ILL, ILL, NOP, SBC, INC, ILL, SED, SBC, NOP, ILL, NOP, SBC, INC, ILL
+/*0x00*/ BRK, ORA, u__, u__, NOP, ORA, ASL, u__, PHP, ORA, ASL, u__, NOP, ORA, ASL, u__,
+/*0x10*/ BPL, ORA, u__, u__, NOP, ORA, ASL, u__, CLC, ORA, NOP, u__, NOP, ORA, ASL, u__,
+/*0x20*/ JSR, AND, u__, u__, BIT, AND, ROL, u__, PLP, AND, ROL, u__, BIT, AND, ROL, u__,
+/*0x30*/ BMI, AND, u__, u__, NOP, AND, ROL, u__, SEC, AND, NOP, u__, NOP, AND, ROL, u__,
+/*0x40*/ RTI, EOR, u__, u__, NOP, EOR, LSR, u__, PHA, EOR, LSR, u__, JMP, EOR, LSR, u__,
+/*0x50*/ BVC, EOR, u__, u__, NOP, EOR, LSR, u__, CLI, EOR, NOP, u__, NOP, EOR, LSR, u__,
+/*0x60*/ RTS, ADC, u__, u__, NOP, ADC, ROR, u__, PLA, ADC, ROR, u__, JMP, ADC, ROR, u__,
+/*0x70*/ BVS, ADC, u__, u__, NOP, ADC, ROR, u__, SEI, ADC, NOP, u__, NOP, ADC, ROR, u__,
+/*0x80*/ NOP, STA, NOP, u__, STY, STA, STX, u__, DEY, NOP, TXA, u__, STY, STA, STX, u__,
+/*0x90*/ BCC, STA, u__, u__, STY, STA, STX, u__, TYA, STA, TXS, u__, u__, STA, u__, u__,
+/*0xA0*/ LDY, LDA, LDX, u__, LDY, LDA, LDX, u__, TAY, LDA, TAX, u__, LDY, LDA, LDX, u__,
+/*0xB0*/ BCS, LDA, u__, u__, LDY, LDA, LDX, u__, CLV, LDA, TSX, u__, LDY, LDA, LDX, u__,
+/*0xC0*/ CPY, CMP, NOP, u__, CPY, CMP, DEC, u__, INY, CMP, DEX, u__, CPY, CMP, DEC, u__,
+/*0xD0*/ BNE, CMP, u__, u__, NOP, CMP, DEC, u__, CLD, CMP, NOP, u__, NOP, CMP, DEC, u__,
+/*0xE0*/ CPX, SBC, NOP, u__, CPX, SBC, INC, u__, INX, SBC, NOP, SBC, CPX, SBC, INC, u__,
+/*0xF0*/ BEQ, SBC, u__, u__, NOP, SBC, INC, u__, SED, SBC, NOP, u__, NOP, SBC, INC, u__
 };
 
 static const char opecode_name_table[][4] = {
-"BRK","ORA","ILL","ILL","NOP","ORA","ASL","ILL","PHP","ORA","ASL","ILL","NOP","ORA","ASL","ILL",
-"BPL","ORA","ILL","ILL","NOP","ORA","ASL","ILL","CLC","ORA","NOP","ILL","NOP","ORA","ASL","ILL",
-"JSR","AND","ILL","ILL","BIT","AND","ROL","ILL","PLP","AND","ROL","ILL","BIT","AND","ROL","ILL",
-"BMI","AND","ILL","ILL","NOP","AND","ROL","ILL","SEC","AND","NOP","ILL","NOP","AND","ROL","ILL",
-"RTI","EOR","ILL","ILL","NOP","EOR","LSR","ILL","PHA","EOR","LSR","ILL","JMP","EOR","LSR","ILL",
-"BVC","EOR","ILL","ILL","NOP","EOR","LSR","ILL","CLI","EOR","NOP","ILL","NOP","EOR","LSR","ILL",
-"RTS","ADC","ILL","ILL","NOP","ADC","ROR","ILL","PLA","ADC","ROR","ILL","JMP","ADC","ROR","ILL",
-"BVS","ADC","ILL","ILL","NOP","ADC","ROR","ILL","SEI","ADC","NOP","ILL","NOP","ADC","ROR","ILL",
-"NOP","STA","NOP","ILL","STY","STA","STX","ILL","DEY","NOP","TXA","ILL","STY","STA","STX","ILL",
-"BCC","STA","ILL","ILL","STY","STA","STX","ILL","TYA","STA","TXS","ILL","ILL","STA","ILL","ILL",
-"LDY","LDA","LDX","ILL","LDY","LDA","LDX","ILL","TAY","LDA","TAX","ILL","LDY","LDA","LDX","ILL",
-"BCS","LDA","ILL","ILL","LDY","LDA","LDX","ILL","CLV","LDA","TSX","ILL","LDY","LDA","LDX","ILL",
-"CPY","CMP","NOP","ILL","CPY","CMP","DEC","ILL","INY","CMP","DEX","ILL","CPY","CMP","DEC","ILL",
-"BNE","CMP","ILL","ILL","NOP","CMP","DEC","ILL","CLD","CMP","NOP","ILL","NOP","CMP","DEC","ILL",
-"CPX","SBC","NOP","ILL","CPX","SBC","INC","ILL","INX","SBC","NOP","SBC","CPX","SBC","INC","ILL",
-"BEQ","SBC","ILL","ILL","NOP","SBC","INC","ILL","SED","SBC","NOP","ILL","NOP","SBC","INC","ILL"
+"BRK","ORA","???","???","NOP","ORA","ASL","???","PHP","ORA","ASL","???","NOP","ORA","ASL","???",
+"BPL","ORA","???","???","NOP","ORA","ASL","???","CLC","ORA","NOP","???","NOP","ORA","ASL","???",
+"JSR","AND","???","???","BIT","AND","ROL","???","PLP","AND","ROL","???","BIT","AND","ROL","???",
+"BMI","AND","???","???","NOP","AND","ROL","???","SEC","AND","NOP","???","NOP","AND","ROL","???",
+"RTI","EOR","???","???","NOP","EOR","LSR","???","PHA","EOR","LSR","???","JMP","EOR","LSR","???",
+"BVC","EOR","???","???","NOP","EOR","LSR","???","CLI","EOR","NOP","???","NOP","EOR","LSR","???",
+"RTS","ADC","???","???","NOP","ADC","ROR","???","PLA","ADC","ROR","???","JMP","ADC","ROR","???",
+"BVS","ADC","???","???","NOP","ADC","ROR","???","SEI","ADC","NOP","???","NOP","ADC","ROR","???",
+"NOP","STA","NOP","???","STY","STA","STX","???","DEY","NOP","TXA","???","STY","STA","STX","???",
+"BCC","STA","???","???","STY","STA","STX","???","TYA","STA","TXS","???","???","STA","???","???",
+"LDY","LDA","LDX","???","LDY","LDA","LDX","???","TAY","LDA","TAX","???","LDY","LDA","LDX","???",
+"BCS","LDA","???","???","LDY","LDA","LDX","???","CLV","LDA","TSX","???","LDY","LDA","LDX","???",
+"CPY","CMP","NOP","???","CPY","CMP","DEC","???","INY","CMP","DEX","???","CPY","CMP","DEC","???",
+"BNE","CMP","???","???","NOP","CMP","DEC","???","CLD","CMP","NOP","???","NOP","CMP","DEC","???",
+"CPX","SBC","NOP","???","CPX","SBC","INC","???","INX","SBC","NOP","SBC","CPX","SBC","INC","???",
+"BEQ","SBC","???","???","NOP","SBC","INC","???","SED","SBC","NOP","???","NOP","SBC","INC","???"
 };
 
 static const int8_t cycle_table[] = {
@@ -378,6 +384,27 @@ static void execute(struct CPU *cpu)
     case ADC:
         {
             const uint16_t m = read_byte(cpu, addr);
+            const uint16_t a = cpu->reg.a;
+            const uint16_t c = get_flag(cpu, C);
+            const uint16_t r = a + m + c;
+            const int A = !(a & 0x80);
+            const int M = !(m & 0x80);
+            const int R = !(r & 0x80);
+
+            set_flag(cpu, C, r > 0xFF);
+            set_flag(cpu, V, (A && M && !R) | (!A && !M && R));
+            set_a(cpu, r);
+        }
+        break;
+
+    /* Subtract Memory to Accumulator with Carry: A - M - ~C -> A (N, V, Z, C) */
+    case SBC:
+        {
+            /* A - M - (1 - C) = A + (-M) - (1 - C)
+             *                 = A + (-M) - 1 + C
+             *                 = A + (~M + 1) - 1 + C
+             *                 = A + (~M) + C */
+            const uint16_t m = ~read_byte(cpu, addr);
             const uint16_t a = cpu->reg.a;
             const uint16_t c = get_flag(cpu, C);
             const uint16_t r = a + m + c;
@@ -702,27 +729,6 @@ static void execute(struct CPU *cpu)
     case RTS:
         set_pc(cpu, pop_word(cpu));
         set_pc(cpu, cpu->reg.pc + 1);
-        break;
-
-    /* Subtract Memory to Accumulator with Carry: A - M - ~C -> A (N, V, Z, C) */
-    case SBC:
-        {
-            /* A - M - (1 - C) = A + (-M) - (1 - C)
-             *                 = A + (-M) - 1 + C
-             *                 = A + (~M + 1) - 1 + C
-             *                 = A + (~M) + C */
-            const uint16_t m = ~read_byte(cpu, addr);
-            const uint16_t a = cpu->reg.a;
-            const uint16_t c = get_flag(cpu, C);
-            const uint16_t r = a + m + c;
-            const int A = !(a & 0x80);
-            const int M = !(m & 0x80);
-            const int R = !(r & 0x80);
-
-            set_flag(cpu, C, r > 0xFF);
-            set_flag(cpu, V, (A && M && !R) | (!A && !M && R));
-            set_a(cpu, r);
-        }
         break;
 
     /* Set Carry Flag: 1 -> C (C) */
