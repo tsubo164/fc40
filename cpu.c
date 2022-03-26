@@ -166,14 +166,17 @@ static uint16_t fetch_address(struct CPU *cpu, int mode, int *page_crossed)
 enum opecode {
     /* arithmetic */
     ADC, SBC, CMP, CPX, CPY,
+    /* load and store */
+    LDA, LDX, LDY, STA, STX, STY,
 
     AND, ASL, BCC, BCS, BEQ, BIT, BMI, BNE, BPL, BRK,
     BVC, BVS, CLC, CLD, CLI, CLV,
     DEC, DEX, DEY, EOR, INC, INX,
-    INY, JMP, JSR, LDA, LDX, LDY, LSR, NOP, ORA, PHA, PHP, PLA, PLP,
+    INY, JMP, JSR,
+    LSR, NOP, ORA, PHA, PHP, PLA, PLP,
     ROL, ROR, RTI, RTS,
-    SEC, SED, SEI, STA,
-    STX, STY, TAX, TAY, TSX, TXA, TXS, TYA,
+    SEC, SED, SEI,
+    TAX, TAY, TSX, TXA, TXS, TYA,
     /* undocumented */
     u__
 };
@@ -194,7 +197,7 @@ static const uint8_t opecode_table[] = {
 /*0xB0*/ BCS, LDA, u__, u__, LDY, LDA, LDX, u__, CLV, LDA, TSX, u__, LDY, LDA, LDX, u__,
 /*0xC0*/ CPY, CMP, NOP, u__, CPY, CMP, DEC, u__, INY, CMP, DEX, u__, CPY, CMP, DEC, u__,
 /*0xD0*/ BNE, CMP, u__, u__, NOP, CMP, DEC, u__, CLD, CMP, NOP, u__, NOP, CMP, DEC, u__,
-/*0xE0*/ CPX, SBC, NOP, u__, CPX, SBC, INC, u__, INX, SBC, NOP, SBC, CPX, SBC, INC, u__,
+/*0xE0*/ CPX, SBC, NOP, u__, CPX, SBC, INC, u__, INX, SBC, NOP, u__, CPX, SBC, INC, u__,
 /*0xF0*/ BEQ, SBC, u__, u__, NOP, SBC, INC, u__, SED, SBC, NOP, u__, NOP, SBC, INC, u__
 };
 
@@ -213,7 +216,7 @@ static const char opecode_name_table[][4] = {
 "BCS","LDA","???","???","LDY","LDA","LDX","???","CLV","LDA","TSX","???","LDY","LDA","LDX","???",
 "CPY","CMP","NOP","???","CPY","CMP","DEC","???","INY","CMP","DEX","???","CPY","CMP","DEC","???",
 "BNE","CMP","???","???","NOP","CMP","DEC","???","CLD","CMP","NOP","???","NOP","CMP","DEC","???",
-"CPX","SBC","NOP","???","CPX","SBC","INC","???","INX","SBC","NOP","SBC","CPX","SBC","INC","???",
+"CPX","SBC","NOP","???","CPX","SBC","INC","???","INX","SBC","NOP","???","CPX","SBC","INC","???",
 "BEQ","SBC","???","???","NOP","SBC","INC","???","SED","SBC","NOP","???","NOP","SBC","INC","???"
 };
 
@@ -418,6 +421,51 @@ static void execute(struct CPU *cpu)
         }
         break;
 
+    /* Compare Memory and Accumulator: A - M (N, Z, C) */
+    case CMP:
+        compare(cpu, cpu->reg.a, read_byte(cpu, addr));
+        break;
+
+    /* Compare Index Register X to Memory: X - M (N, Z, C) */
+    case CPX:
+        compare(cpu, cpu->reg.x, read_byte(cpu, addr));
+        break;
+
+    /* Compare Index Register Y to Memory: Y - M (N, Z, C) */
+    case CPY:
+        compare(cpu, cpu->reg.y, read_byte(cpu, addr));
+        break;
+
+    /* Load Accumulator with Memory: M -> A (N, Z) */
+    case LDA:
+        set_a(cpu, read_byte(cpu, addr));
+        break;
+
+    /* Load Index Register X from Memory: M -> X (N, Z) */
+    case LDX:
+        set_x(cpu, read_byte(cpu, addr));
+        break;
+
+    /* Load Index Register Y from Memory: M -> Y (N, Z) */
+    case LDY:
+        set_y(cpu, read_byte(cpu, addr));
+        break;
+
+    /* Store Accumulator in Memory: A -> M () */
+    case STA:
+        write_byte(addr, cpu->reg.a);
+        break;
+
+    /* Store Index Register X in Memory: X -> M () */
+    case STX:
+        write_byte(addr, cpu->reg.x);
+        break;
+
+    /* Store Index Register Y in Memory: Y -> M () */
+    case STY:
+        write_byte(addr, cpu->reg.y);
+        break;
+
     /* AND Memory with Accumulator: A & M -> A (N, Z) */
     case AND:
         set_a(cpu, cpu->reg.a & read_byte(cpu, addr));
@@ -546,21 +594,6 @@ static void execute(struct CPU *cpu)
         set_flag(cpu, V, 0);
         break;
 
-    /* Compare Memory and Accumulator: A - M (N, Z, C) */
-    case CMP:
-        compare(cpu, cpu->reg.a, read_byte(cpu, addr));
-        break;
-
-    /* Compare Index Register X to Memory: X - M (N, Z, C) */
-    case CPX:
-        compare(cpu, cpu->reg.x, read_byte(cpu, addr));
-        break;
-
-    /* Compare Index Register Y to Memory: Y - M (N, Z, C) */
-    case CPY:
-        compare(cpu, cpu->reg.y, read_byte(cpu, addr));
-        break;
-
     /* Increment Memory by One: M + 1 -> M (N, Z) */
     case DEC:
         {
@@ -619,21 +652,6 @@ static void execute(struct CPU *cpu)
         set_pc(cpu, cpu->reg.pc - 1);
         push_word(cpu, cpu->reg.pc);
         set_pc(cpu, addr);
-        break;
-
-    /* Load Accumulator with Memory: M -> A (N, Z) */
-    case LDA:
-        set_a(cpu, read_byte(cpu, addr));
-        break;
-
-    /* Load Index Register X from Memory: M -> X (N, Z) */
-    case LDX:
-        set_x(cpu, read_byte(cpu, addr));
-        break;
-
-    /* Load Index Register Y from Memory: M -> Y (N, Z) */
-    case LDY:
-        set_y(cpu, read_byte(cpu, addr));
         break;
 
     /* Logical Shift Right: 0 -> /M7...M0/ -> C (N, Z, C) */
@@ -744,21 +762,6 @@ static void execute(struct CPU *cpu)
     /* Set Interrupt Disable: 1 -> I (I) */
     case SEI:
         set_flag(cpu, I, 1);
-        break;
-
-    /* Store Accumulator in Memory: A -> M () */
-    case STA:
-        write_byte(addr, cpu->reg.a);
-        break;
-
-    /* Store Index Register X in Memory: X -> M () */
-    case STX:
-        write_byte(addr, cpu->reg.x);
-        break;
-
-    /* Store Index Register Y in Memory: Y -> M () */
-    case STY:
-        write_byte(addr, cpu->reg.y);
         break;
 
     /* Transfer Accumulator to Index X: A -> X (N, Z) */
