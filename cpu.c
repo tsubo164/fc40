@@ -4,8 +4,7 @@
 
 static void write_byte(struct CPU *cpu, uint16_t addr, uint8_t data)
 {
-    if (addr <= 0x1FFF) {
-        /* WRAM */
+    if (addr >= 0x0000 && addr <= 0x1FFF) {
         cpu->wram[addr & 0x07FF] = data;
     }
     else if (addr == 0x2000) {
@@ -23,7 +22,19 @@ static void write_byte(struct CPU *cpu, uint16_t addr, uint8_t data)
 
 static uint8_t read_byte(const struct CPU *cpu, uint16_t addr)
 {
-    return cpu->prog[addr - 0x8000];
+    if (addr >= 0x0000 && addr <= 0x1FFF) {
+        return cpu->wram[addr & 0x07FF];
+    }
+    else if (addr == 0x2000) {
+    }
+    else if (addr == 0x2006) {
+    }
+    else if (addr == 0x2007) {
+    }
+    else if (addr >= 0x8000 && addr <= 0xFFFF) {
+        return cpu->prog[addr - 0x8000];
+    }
+    return 0;
 }
 
 static uint16_t read_word(const struct CPU *cpu, uint16_t addr)
@@ -247,27 +258,6 @@ static const int8_t cycle_table[] = {
 /*F0*/  2,  5,  0,  8,  4,  4,  6,  6,  2,  4,  2,  7,  4,  4,  7,  7
 };
 
-static void print_code(uint16_t addr, uint8_t code, uint8_t mode, uint16_t operand)
-{
-    printf("[0x%04X] %s", addr, opcode_name_table[code]);
-    switch (mode) {
-    case ABS: printf(" $%04X", operand); break;
-    case ABX: printf(" $%02X", operand); break;
-    case ABY: break;
-    case IMM: printf(" #$%02X", operand); break;
-    case IMP: break;
-    case IND: break;
-    case IZX: break;
-    case IZY: break;
-    case REL: printf(" $%02X", operand); break;
-    case ZPG: break;
-    case ZPX: break;
-    case ZPY: break;
-    default: break;
-    }
-    printf("\n");
-}
-
 static void set_pc(struct CPU *cpu, uint16_t addr)
 {
     cpu->reg.pc = addr;
@@ -386,6 +376,7 @@ struct instruction {
     uint8_t opcode;
     uint8_t addr_mode;
     uint8_t cycles;
+    uint8_t code;
 };
 
 static struct instruction decode(uint8_t code)
@@ -395,6 +386,7 @@ static struct instruction decode(uint8_t code)
     inst.opcode    = opcode_table[code];
     inst.addr_mode = addr_mode_table[code];
     inst.cycles    = cycle_table[code];
+    inst.code      = code;
 
     return inst;
 }
@@ -768,6 +760,30 @@ static int execute(struct CPU *cpu, struct instruction inst)
     return inst.cycles + page_crossed + branch_taken;
 }
 
+static void print_code(uint16_t addr, struct instruction inst)
+{
+        /*
+    printf("[0x%04X] %s", addr, opcode_name_table[inst.code]);
+
+    switch (mode) {
+    case ABS: printf(" $%04X", operand); break;
+    case ABX: printf(" $%02X", operand); break;
+    case ABY: break;
+    case IMM: printf(" #$%02X", operand); break;
+    case IMP: break;
+    case IND: break;
+    case IZX: break;
+    case IZY: break;
+    case REL: printf(" $%02X", operand); break;
+    case ZPG: break;
+    case ZPX: break;
+    case ZPY: break;
+    default: break;
+    }
+        */
+    printf("\n");
+}
+
 void reset(struct CPU *cpu)
 {
     const uint16_t addr = read_word(cpu, 0xFFFC);
@@ -798,7 +814,7 @@ void clock_cpu(struct CPU *cpu)
         cpu->cycles = cycs;
 
         if (0)
-            print_code(inst_addr, code, inst.addr_mode, inst.opcode);
+            print_code(inst_addr, inst);
     }
 
     cpu->cycles--;
