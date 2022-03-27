@@ -288,25 +288,29 @@ static uint8_t get_flag(const struct CPU *cpu, uint8_t flag)
     return (cpu->reg.p & flag) > 0;
 }
 
+static uint8_t update_zn(struct CPU *cpu, uint8_t val)
+{
+    set_flag(cpu, Z, val == 0x00);
+    set_flag(cpu, N, val & 0x80);
+    return val;
+}
+
 static void set_a(struct CPU *cpu, uint8_t val)
 {
     cpu->reg.a = val;
-    set_flag(cpu, Z, cpu->reg.a == 0x00);
-    set_flag(cpu, N, cpu->reg.a & 0x80);
+    update_zn(cpu, cpu->reg.a);
 }
 
 static void set_x(struct CPU *cpu, uint8_t val)
 {
     cpu->reg.x = val;
-    set_flag(cpu, Z, cpu->reg.x == 0x00);
-    set_flag(cpu, N, cpu->reg.x & 0x80);
+    update_zn(cpu, cpu->reg.x);
 }
 
 static void set_y(struct CPU *cpu, uint8_t val)
 {
     cpu->reg.y = val;
-    set_flag(cpu, Z, cpu->reg.y == 0x00);
-    set_flag(cpu, N, cpu->reg.y & 0x80);
+    update_zn(cpu, cpu->reg.y);
 }
 
 static void set_s(struct CPU *cpu, uint8_t val)
@@ -347,11 +351,8 @@ static uint16_t pop_word(struct CPU *cpu)
 
 static void compare(struct CPU *cpu, uint8_t a, uint8_t b)
 {
-    const uint8_t diff = a - b;
-
-    set_flag(cpu, C, diff >= 0x00);
-    set_flag(cpu, Z, diff == 0x00);
-    set_flag(cpu, N, diff & 0x80);
+    set_flag(cpu, C, a >= b);
+    update_zn(cpu, a - b);
 }
 
 static int branch_if(struct CPU *cpu, uint16_t addr, int cond)
@@ -361,6 +362,26 @@ static int branch_if(struct CPU *cpu, uint16_t addr, int cond)
 
     set_pc(cpu, addr);
     return 1;
+}
+
+static int is_positive(uint8_t val)
+{
+    return !(val & 0x80);
+}
+
+static void add_a_m(struct CPU *cpu, uint16_t addr)
+{
+    const uint16_t m = read_byte(cpu, addr);
+    const uint16_t a = cpu->reg.a;
+    const uint16_t c = get_flag(cpu, C);
+    const uint16_t r = a + m + c;
+    const int A = is_positive(a);
+    const int M = is_positive(m);
+    const int R = is_positive(r);
+
+    set_flag(cpu, C, r > 0xFF);
+    set_flag(cpu, V, (A && M && !R) | (!A && !M && R));
+    set_a(cpu, r);
 }
 
 struct instruction {
@@ -480,8 +501,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
             uint8_t data = read_byte(cpu, addr);
             set_flag(cpu, C, data & 0x80);
             data <<= 1;
-            set_flag(cpu, Z, data == 0x00);
-            set_flag(cpu, N, data & 0x80);
+            update_zn(cpu, data);
             write_byte(addr, data);
         }
         break;
@@ -496,8 +516,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
             uint8_t data = read_byte(cpu, addr);
             set_flag(cpu, C, data & 0x01);
             data >>= 1;
-            set_flag(cpu, Z, data == 0x00);
-            set_flag(cpu, N, 0x00);
+            update_zn(cpu, data);
             write_byte(addr, data);
         }
         break;
@@ -514,8 +533,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
             uint8_t data = read_byte(cpu, addr);
             set_flag(cpu, C, data & 0x80);
             data = (data << 1) | carry;
-            set_flag(cpu, Z, data == 0x00);
-            set_flag(cpu, N, data & 0x80);
+            update_zn(cpu, data);
             write_byte(addr, data);
         }
         break;
@@ -532,8 +550,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
             uint8_t data = read_byte(cpu, addr);
             set_flag(cpu, C, data & 0x01);
             data = (data >> 1) | (carry << 7);
-            set_flag(cpu, Z, data == 0x00);
-            set_flag(cpu, N, data & 0x80);
+            update_zn(cpu, data);
             write_byte(addr, data);
         }
         break;
@@ -558,47 +575,23 @@ static int execute(struct CPU *cpu, struct instruction inst)
         {
             const uint8_t data = read_byte(cpu, addr);
             set_flag(cpu, Z, (cpu->reg.a & data) == 0x00);
-            set_flag(cpu, N, data & (1 << 7));
-            set_flag(cpu, V, data & (1 << 6));
+            set_flag(cpu, N, data & N);
+            set_flag(cpu, V, data & V);
         }
         break;
 
     /* Add Memory to Accumulator with Carry: A + M + C -> A, C (N, V, Z, C) */
     case ADC:
-        {
-            const uint16_t m = read_byte(cpu, addr);
-            const uint16_t a = cpu->reg.a;
-            const uint16_t c = get_flag(cpu, C);
-            const uint16_t r = a + m + c;
-            const int A = !(a & 0x80);
-            const int M = !(m & 0x80);
-            const int R = !(r & 0x80);
-
-            set_flag(cpu, C, r > 0xFF);
-            set_flag(cpu, V, (A && M && !R) | (!A && !M && R));
-            set_a(cpu, r);
-        }
+        add_a_m(cpu, read_byte(cpu, addr));
         break;
 
     /* Subtract Memory to Accumulator with Carry: A - M - ~C -> A (N, V, Z, C) */
     case SBC:
-        {
-            /* A - M - ~C = A + (-M) - (1 - C)
-             *            = A + (-M) - 1 + C
-             *            = A + (~M + 1) - 1 + C
-             *            = A + (~M) + C */
-            const uint16_t m = ~read_byte(cpu, addr);
-            const uint16_t a = cpu->reg.a;
-            const uint16_t c = get_flag(cpu, C);
-            const uint16_t r = a + m + c;
-            const int A = !(a & 0x80);
-            const int M = !(m & 0x80);
-            const int R = !(r & 0x80);
-
-            set_flag(cpu, C, r > 0xFF);
-            set_flag(cpu, V, (A && M && !R) | (!A && !M && R));
-            set_a(cpu, r);
-        }
+        /* A - M - ~C = A + (-M) - (1 - C)
+         *            = A + (-M) - 1 + C
+         *            = A + (~M + 1) - 1 + C
+         *            = A + (~M) + C */
+        add_a_m(cpu, ~read_byte(cpu, addr));
         break;
 
     /* Compare Memory and Accumulator: A - M (N, Z, C) */
@@ -619,10 +612,8 @@ static int execute(struct CPU *cpu, struct instruction inst)
     /* Increment Memory by One: M + 1 -> M (N, Z) */
     case INC:
         {
-            uint8_t data = read_byte(cpu, addr);
-            data++;
-            set_flag(cpu, Z, data == 0x00);
-            set_flag(cpu, N, data & 0x00);
+            const uint8_t data = read_byte(cpu, addr) + 1;
+            update_zn(cpu, data);
             write_byte(addr, data);
         }
         break;
@@ -637,13 +628,11 @@ static int execute(struct CPU *cpu, struct instruction inst)
         set_y(cpu, cpu->reg.y + 1);
         break;
 
-    /* Increment Memory by One: M + 1 -> M (N, Z) */
+    /* Decrement Memory by One: M - 1 -> M (N, Z) */
     case DEC:
         {
-            uint8_t data = read_byte(cpu, addr);
-            data--;
-            set_flag(cpu, Z, data == 0x00);
-            set_flag(cpu, N, data & 0x00);
+            const uint8_t data = read_byte(cpu, addr) - 1;
+            update_zn(cpu, data);
             write_byte(addr, data);
         }
         break;
@@ -783,9 +772,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
 
 void reset(struct CPU *cpu)
 {
-    uint16_t addr;
-
-    addr = read_word(cpu, 0xFFFC);
+    const uint16_t addr = read_word(cpu, 0xFFFC);
     set_pc(cpu, addr);
 
     /* registers */
