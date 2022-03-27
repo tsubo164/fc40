@@ -354,9 +354,9 @@ static void compare(struct CPU *cpu, uint8_t a, uint8_t b)
     set_flag(cpu, N, diff & 0x80);
 }
 
-static int branch_on(struct CPU *cpu, uint16_t addr, int test)
+static int branch_if(struct CPU *cpu, uint16_t addr, int cond)
 {
-    if (!test)
+    if (!cond)
         return 0;
 
     set_pc(cpu, addr);
@@ -583,10 +583,10 @@ static int execute(struct CPU *cpu, struct instruction inst)
     /* Subtract Memory to Accumulator with Carry: A - M - ~C -> A (N, V, Z, C) */
     case SBC:
         {
-            /* A - M - (1 - C) = A + (-M) - (1 - C)
-             *                 = A + (-M) - 1 + C
-             *                 = A + (~M + 1) - 1 + C
-             *                 = A + (~M) + C */
+            /* A - M - ~C = A + (-M) - (1 - C)
+             *            = A + (-M) - 1 + C
+             *            = A + (~M + 1) - 1 + C
+             *            = A + (~M) + C */
             const uint16_t m = ~read_byte(cpu, addr);
             const uint16_t a = cpu->reg.a;
             const uint16_t c = get_flag(cpu, C);
@@ -697,68 +697,42 @@ static int execute(struct CPU *cpu, struct instruction inst)
 
     /* Branch on Carry Clear: () */
     case BCC:
-        if (get_flag(cpu, C) == 0) {
-            set_pc(cpu, addr);
-            branch_taken = 1;
-        }
+        branch_taken = branch_if(cpu, addr, get_flag(cpu, C) == 0);
         break;
 
     /* Branch on Carry Set: () */
     case BCS:
-        if (get_flag(cpu, C) == 1) {
-            set_pc(cpu, addr);
-            branch_taken = 1;
-        }
+        branch_taken = branch_if(cpu, addr, get_flag(cpu, C) == 1);
         break;
 
     /* Branch on Result Zero: () */
     case BEQ:
-        if (get_flag(cpu, Z) == 1) {
-            set_pc(cpu, addr);
-            branch_taken = 1;
-        }
+        branch_taken = branch_if(cpu, addr, get_flag(cpu, Z) == 1);
         break;
 
     /* Branch on Result Minus: () */
     case BMI:
-        if (get_flag(cpu, N) == 1) {
-            set_pc(cpu, addr);
-            branch_taken = 1;
-        }
+        branch_taken = branch_if(cpu, addr, get_flag(cpu, N) == 1);
         break;
 
     /* Branch on Result Not Zero: () */
     case BNE:
-        if (0)
-            branch_taken = branch_on(cpu, addr, get_flag(cpu, Z) == 0);
-        if (get_flag(cpu, Z) == 0) {
-            set_pc(cpu, addr);
-            branch_taken = 1;
-        }
+        branch_taken = branch_if(cpu, addr, get_flag(cpu, Z) == 0);
         break;
 
     /* Branch on Result Plus: () */
     case BPL:
-        if (get_flag(cpu, N) == 0) {
-            set_pc(cpu, addr);
-            branch_taken = 1;
-        }
+        branch_taken = branch_if(cpu, addr, get_flag(cpu, N) == 0);
         break;
 
     /* Branch on Overflow Clear: () */
     case BVC:
-        if (get_flag(cpu, V) == 0) {
-            set_pc(cpu, addr);
-            branch_taken = 1;
-        }
+        branch_taken = branch_if(cpu, addr, get_flag(cpu, V) == 0);
         break;
 
     /* Branch on Overflow Set: () */
     case BVS:
-        if (get_flag(cpu, V) == 1) {
-            set_pc(cpu, addr);
-            branch_taken = 1;
-        }
+        branch_taken = branch_if(cpu, addr, get_flag(cpu, V) == 1);
         break;
 
     /* Clear Carry Flag: 0 -> C (C) */
