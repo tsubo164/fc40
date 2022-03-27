@@ -28,6 +28,8 @@ struct CPU {
     uint8_t *prog;
     size_t prog_size;
 
+    /* 4 2KB ram. 3 of them are mirroring */
+    uint8_t wram[2048];
     struct registers reg;
     int cycles;
 };

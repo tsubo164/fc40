@@ -2,13 +2,11 @@
 #include "cpu.h"
 #include "ppu.h"
 
-static void write_byte(uint16_t addr, uint8_t data)
+static void write_byte(struct CPU *cpu, uint16_t addr, uint8_t data)
 {
-    if (addr <= 0x07FF) {
+    if (addr <= 0x1FFF) {
         /* WRAM */
-    }
-    else if (addr <= 0x1FFF) {
-        /* WRAM mirror */
+        cpu->wram[addr & 0x07FF] = data;
     }
     else if (addr == 0x2000) {
     }
@@ -325,7 +323,7 @@ static void set_p(struct CPU *cpu, uint8_t val)
 
 static void push(struct CPU *cpu, uint8_t val)
 {
-    write_byte(0x0100 | cpu->reg.s, val);
+    write_byte(cpu, 0x0100 | cpu->reg.s, val);
     set_s(cpu, cpu->reg.s - 1);
 }
 
@@ -427,17 +425,17 @@ static int execute(struct CPU *cpu, struct instruction inst)
 
     /* Store Accumulator in Memory: A -> M () */
     case STA:
-        write_byte(addr, cpu->reg.a);
+        write_byte(cpu, addr, cpu->reg.a);
         break;
 
     /* Store Index Register X in Memory: X -> M () */
     case STX:
-        write_byte(addr, cpu->reg.x);
+        write_byte(cpu, addr, cpu->reg.x);
         break;
 
     /* Store Index Register Y in Memory: Y -> M () */
     case STY:
-        write_byte(addr, cpu->reg.y);
+        write_byte(cpu, addr, cpu->reg.y);
         break;
 
     /* Transfer Accumulator to Index X: A -> X (N, Z) */
@@ -502,7 +500,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
             set_flag(cpu, C, data & 0x80);
             data <<= 1;
             update_zn(cpu, data);
-            write_byte(addr, data);
+            write_byte(cpu, addr, data);
         }
         break;
 
@@ -517,7 +515,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
             set_flag(cpu, C, data & 0x01);
             data >>= 1;
             update_zn(cpu, data);
-            write_byte(addr, data);
+            write_byte(cpu, addr, data);
         }
         break;
 
@@ -534,7 +532,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
             set_flag(cpu, C, data & 0x80);
             data = (data << 1) | carry;
             update_zn(cpu, data);
-            write_byte(addr, data);
+            write_byte(cpu, addr, data);
         }
         break;
 
@@ -551,7 +549,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
             set_flag(cpu, C, data & 0x01);
             data = (data >> 1) | (carry << 7);
             update_zn(cpu, data);
-            write_byte(addr, data);
+            write_byte(cpu, addr, data);
         }
         break;
 
@@ -614,7 +612,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
         {
             const uint8_t data = read_byte(cpu, addr) + 1;
             update_zn(cpu, data);
-            write_byte(addr, data);
+            write_byte(cpu, addr, data);
         }
         break;
 
@@ -633,7 +631,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
         {
             const uint8_t data = read_byte(cpu, addr) - 1;
             update_zn(cpu, data);
-            write_byte(addr, data);
+            write_byte(cpu, addr, data);
         }
         break;
 
@@ -779,7 +777,7 @@ void reset(struct CPU *cpu)
     set_a(cpu, 0x00);
     set_x(cpu, 0x00);
     set_y(cpu, 0x00);
-    set_s(cpu, 0xFD);
+    set_s(cpu, 0xFF);
     set_p(cpu, 0x00);
 
     /* takes cycles */
