@@ -163,7 +163,7 @@ static uint16_t fetch_address(struct CPU *cpu, int mode, int *page_crossed)
     }
 }
 
-enum opecode {
+enum opcode {
     /* undocumented */
     UDC = 0,
     /* load and store */
@@ -190,7 +190,7 @@ enum opecode {
     NOP
 };
 
-static const uint8_t opecode_table[] = {
+static const uint8_t opcode_table[] = {
 /*      00   01   02   03   04   05   06   07   08   09   0A   0B   0C   0D   0E   0F */
 /*00*/ BRK, ORA,   0,   0, NOP, ORA, ASL,   0, PHP, ORA, ASL,   0, NOP, ORA, ASL,   0,
 /*10*/ BPL, ORA,   0,   0, NOP, ORA, ASL,   0, CLC, ORA, NOP,   0, NOP, ORA, ASL,   0,
@@ -210,7 +210,7 @@ static const uint8_t opecode_table[] = {
 /*F0*/ BEQ, SBC,   0,   0, NOP, SBC, INC,   0, SED, SBC, NOP,   0, NOP, SBC, INC,   0
 };
 
-static const char opecode_name_table[][4] = {
+static const char opcode_name_table[][4] = {
 "BRK","ORA",   "",   "","NOP","ORA","ASL",   "","PHP","ORA","ASL",   "","NOP","ORA","ASL",   "",
 "BPL","ORA",   "",   "","NOP","ORA","ASL",   "","CLC","ORA","NOP",   "","NOP","ORA","ASL",   "",
 "JSR","AND",   "",   "","BIT","AND","ROL",   "","PLP","AND","ROL",   "","BIT","AND","ROL",   "",
@@ -249,20 +249,9 @@ static const int8_t cycle_table[] = {
 /*F0*/  2,  5,  0,  8,  4,  4,  6,  6,  2,  4,  2,  7,  4,  4,  7,  7
 };
 
-static int get_cycle(uint8_t code)
-{
-    const int cyc = cycle_table[code];
-
-    if (cyc == 0)
-        /* illegal op */
-        return 0;
-
-    return cyc;
-}
-
 static void print_code(uint16_t addr, uint8_t code, uint8_t mode, uint16_t operand)
 {
-    printf("[0x%04X] %s", addr, opecode_name_table[code]);
+    printf("[0x%04X] %s", addr, opcode_name_table[code]);
     switch (mode) {
     case ABS: printf(" $%04X", operand); break;
     case ABX: printf(" $%02X", operand); break;
@@ -375,35 +364,30 @@ static int branch_on(struct CPU *cpu, uint16_t addr, int test)
 }
 
 struct instruction {
-    uint8_t opecode;
+    uint8_t opcode;
     uint8_t addr_mode;
     uint8_t cycles;
 };
 
-static struct instruction decode(struct CPU *cpu, uint8_t code)
+static struct instruction decode(uint8_t code)
 {
-    struct instruction i;
+    struct instruction inst;
 
-    i.opecode   = opecode_table[code];
-    i.addr_mode = addr_mode_table[code];
-    i.cycles    = cycle_table[code];
+    inst.opcode    = opcode_table[code];
+    inst.addr_mode = addr_mode_table[code];
+    inst.cycles    = cycle_table[code];
 
-    return i;
+    return inst;
 }
 
-static void execute(struct CPU *cpu)
+static int execute(struct CPU *cpu, struct instruction inst)
 {
-    const uint16_t inst_addr = cpu->reg.pc;
-    const uint8_t code = fetch(cpu);
-
-    const uint8_t mode = addr_mode_table[code];
-    const uint8_t opecode = opecode_table[code];
     int page_crossed = 0;
     int branch_taken = 0;
-    const uint16_t addr = fetch_address(cpu, mode, &page_crossed);;
-    int cycle = get_cycle(code);
+    const uint8_t mode = inst.addr_mode;
+    const uint16_t addr = fetch_address(cpu, mode, &page_crossed);
 
-    switch (opecode) {
+    switch (inst.opcode) {
 
     /* Load Accumulator with Memory: M -> A (N, Z) */
     case LDA:
@@ -715,7 +699,7 @@ static void execute(struct CPU *cpu)
     case BCC:
         if (get_flag(cpu, C) == 0) {
             set_pc(cpu, addr);
-            cycle++;
+            branch_taken = 1;
         }
         break;
 
@@ -723,7 +707,7 @@ static void execute(struct CPU *cpu)
     case BCS:
         if (get_flag(cpu, C) == 1) {
             set_pc(cpu, addr);
-            cycle++;
+            branch_taken = 1;
         }
         break;
 
@@ -731,7 +715,7 @@ static void execute(struct CPU *cpu)
     case BEQ:
         if (get_flag(cpu, Z) == 1) {
             set_pc(cpu, addr);
-            cycle++;
+            branch_taken = 1;
         }
         break;
 
@@ -739,7 +723,7 @@ static void execute(struct CPU *cpu)
     case BMI:
         if (get_flag(cpu, N) == 1) {
             set_pc(cpu, addr);
-            cycle++;
+            branch_taken = 1;
         }
         break;
 
@@ -749,7 +733,7 @@ static void execute(struct CPU *cpu)
             branch_taken = branch_on(cpu, addr, get_flag(cpu, Z) == 0);
         if (get_flag(cpu, Z) == 0) {
             set_pc(cpu, addr);
-            cycle++;
+            branch_taken = 1;
         }
         break;
 
@@ -757,7 +741,7 @@ static void execute(struct CPU *cpu)
     case BPL:
         if (get_flag(cpu, N) == 0) {
             set_pc(cpu, addr);
-            cycle++;
+            branch_taken = 1;
         }
         break;
 
@@ -765,7 +749,7 @@ static void execute(struct CPU *cpu)
     case BVC:
         if (get_flag(cpu, V) == 0) {
             set_pc(cpu, addr);
-            cycle++;
+            branch_taken = 1;
         }
         break;
 
@@ -773,7 +757,7 @@ static void execute(struct CPU *cpu)
     case BVS:
         if (get_flag(cpu, V) == 1) {
             set_pc(cpu, addr);
-            cycle++;
+            branch_taken = 1;
         }
         break;
 
@@ -820,10 +804,7 @@ static void execute(struct CPU *cpu)
         break;
     }
 
-    cpu->cycle = cycle + page_crossed;
-
-    if (0)
-        print_code(inst_addr, code, mode, addr);
+    return inst.cycles + page_crossed + branch_taken;
 }
 
 void reset(struct CPU *cpu)
@@ -841,13 +822,25 @@ void reset(struct CPU *cpu)
     set_p(cpu, 0x00);
 
     /* takes cycles */
-    cpu->cycle = 8;
+    cpu->cycles = 8;
 }
 
 void clock_cpu(struct CPU *cpu)
 {
-    if (cpu->cycle == 0)
-        execute(cpu);
+    if (cpu->cycles == 0) {
+        const uint16_t inst_addr = cpu->reg.pc;
+        uint8_t code, cycs;
+        struct instruction inst;
 
-    cpu->cycle--;
+        code = fetch(cpu);
+        inst = decode(code);
+        cycs = execute(cpu, inst);
+
+        cpu->cycles = cycs;
+
+        if (0)
+            print_code(inst_addr, code, inst.addr_mode, inst.opcode);
+    }
+
+    cpu->cycles--;
 }

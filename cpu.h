@@ -29,7 +29,7 @@ struct CPU {
     size_t prog_size;
 
     struct registers reg;
-    int cycle;
+    int cycles;
 };
 
 extern void reset(struct CPU *cpu);
