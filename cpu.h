@@ -24,9 +24,10 @@ struct registers {
     uint16_t pc;
 };
 
+struct cartridge;
+
 struct CPU {
-    uint8_t *prog;
-    size_t prog_size;
+    struct cartridge *cart;
 
     /* 4 2KB ram. 3 of them are mirroring */
     uint8_t wram[2048];

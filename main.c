@@ -30,8 +30,7 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    cpu.prog = cart->prog_rom;
-    cpu.prog_size = cart->prog_size;
+    cpu.cart = cart;
     ppu.char_rom = cart->char_rom;
     ppu.char_size = cart->char_size;
     fbuf = new_framebuffer(RESX, RESY);

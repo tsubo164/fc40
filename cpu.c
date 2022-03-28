@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "cpu.h"
 #include "ppu.h"
+#include "cartridge.h"
 
 static void write_byte(struct CPU *cpu, uint16_t addr, uint8_t data)
 {
@@ -32,7 +33,7 @@ static uint8_t read_byte(const struct CPU *cpu, uint16_t addr)
     else if (addr == 0x2007) {
     }
     else if (addr >= 0x8000 && addr <= 0xFFFF) {
-        return cpu->prog[addr - 0x8000];
+        return rom_read(cpu->cart, addr);
     }
     return 0;
 }
@@ -762,8 +763,12 @@ static int execute(struct CPU *cpu, struct instruction inst)
 
 static void print_code(uint16_t addr, struct instruction inst)
 {
+    static uint64_t cnt = 0;
+    if (cnt++ >= 128)
+        return;
+
+    printf("%04X  %02X %s", addr, inst.code, opcode_name_table[inst.code]);
         /*
-    printf("[0x%04X] %s", addr, opcode_name_table[inst.code]);
 
     switch (mode) {
     case ABS: printf(" $%04X", operand); break;

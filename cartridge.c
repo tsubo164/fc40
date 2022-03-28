@@ -38,6 +38,8 @@ struct cartridge *open_cartridge(const char *filename)
 
     cart->prog_size = header[4] * 16 * 1024;
     cart->char_size = header[5] * 8 * 1024;
+    cart->mapper = header[6] >> 4;
+    cart->nbanks = header[4] == 1 ? 1 : 2;
     cart->prog_rom = read_program(fp, cart->prog_size);
     cart->char_rom = read_character(fp, cart->char_size);
 
@@ -52,4 +54,20 @@ void close_cartridge(struct cartridge *cart)
     free(cart->prog_rom);
     free(cart->char_rom);
     free(cart);
+}
+
+uint8_t rom_read(const struct cartridge *cart, uint16_t addr)
+{
+    if (addr >= 0x8000 && addr <= 0xFFFF) {
+        uint16_t mapped;
+
+        if (cart->mapper == 0)
+            mapped = addr & (cart->nbanks == 1 ? 0x3FFF : 0x7FFF);
+        else
+            mapped = addr;
+
+        return cart->prog_rom[mapped];
+    }
+
+    return 0;
 }
