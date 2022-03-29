@@ -50,7 +50,7 @@ int main(int argc, char **argv)
     if (cpu.log_mode) {
         int i;
         cpu.reg.pc = 0xC000;
-        for (i = 0; i < 128; i++)
+        for (i = 0; i < 128 * 2; i++)
             clock_cpu(&cpu);
     }
     else {

@@ -7,7 +7,7 @@ test: cpu_test
 
 cpu_test: ../nes
 	../nes --log-mode ./nestest.nes > test.log
-	head -48 nestest.log | diff - test.log
+	head -128 nestest.log | cut -b -73 | diff - test.log
 
 clean:
 	$(RM) test.log

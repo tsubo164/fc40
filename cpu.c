@@ -761,31 +761,88 @@ static int execute(struct CPU *cpu, struct instruction inst)
     return inst.cycles + page_crossed + branch_taken;
 }
 
-static void print_code(uint16_t addr, struct instruction inst)
+static void print_code(const struct CPU *cpu)
 {
-    static uint64_t cnt = 0;
-    if (cnt++ >= 128)
-        return;
+    const uint16_t pc = cpu->reg.pc;
+    uint8_t code, hi, lo;
+    struct instruction inst;
+    const char *name = "???";
+    int N = 48, n = 0;
 
-    printf("%04X  %02X %s", addr, inst.code, opcode_name_table[inst.code]);
+    code = read_byte(cpu, cpu->reg.pc);
+    inst = decode(code);
+    name = opcode_name_table[code];
+
+    printf("%04X  %02X %n", pc, code, &n);
+    N -= n;
+
+    switch (inst.addr_mode) {
+
+    case ABS:
+    case IND:
+        lo = read_byte(cpu, pc + 1);
+        hi = read_byte(cpu, pc + 2);
+        printf("%02X %02X  %s $%04X%n", lo, hi, name, (hi << 8) | lo, &n);
+        N -= n;
+        break;
+
+    case ABX:
+        lo = read_byte(cpu, pc + 1);
+        hi = read_byte(cpu, pc + 2);
+        printf("%02X %02X  %s $%04X,X @ %04X = %02X%n",
+                lo, hi, name, (hi << 8) | lo,
+                ((hi << 8) | lo) + cpu->reg.x,
+                read_byte(cpu, ((hi << 8) | lo) + cpu->reg.x), &n);
+        N -= n;
+        break;
+
+    case ABY:
+        lo = read_byte(cpu, pc + 1);
+        hi = read_byte(cpu, pc + 2);
+        printf("%02X %02X  %s $%04X,X @ %04X = %02X%n",
+                lo, hi, name, (hi << 8) | lo,
+                ((hi << 8) | lo) + cpu->reg.y,
+                read_byte(cpu, ((hi << 8) | lo) + cpu->reg.y), &n);
+        N -= n;
+        break;
+
+    case REL:
+        lo = read_byte(cpu, pc + 1);
+        printf("%02X     %s $%04X%n", lo, name, (pc + 2) + (int8_t)lo, &n);
+        N -= n;
+        break;
+
+    case IMM:
+        lo = read_byte(cpu, pc + 1);
+        printf("%02X     %s #$%02X%n", lo, name, lo, &n);
+        N -= n;
+        break;
+
+    case ZPG:
+        lo = read_byte(cpu, pc + 1);
+        printf("%02X     %s $%02X = %02X %n", lo, name, lo, read_byte(cpu, lo), &n);
+        N -= n;
+        break;
+
+    case IMP:
+        printf("       %s%n", name, &n);
+        N -= n;
+        break;
+
         /*
-
-    switch (mode) {
-    case ABS: printf(" $%04X", operand); break;
-    case ABX: printf(" $%02X", operand); break;
-    case ABY: break;
-    case IMM: printf(" #$%02X", operand); break;
-    case IMP: break;
-    case IND: break;
-    case IZX: break;
-    case IZY: break;
-    case REL: printf(" $%02X", operand); break;
-    case ZPG: break;
+    case ABY:
+    case IZX:
+    case IZY:
     case ZPX: break;
     case ZPY: break;
+        */
     default: break;
     }
-        */
+
+    printf("%*s", N, " ");
+    printf("A:%02X X:%02X Y:%02X P:%02X SP:%02X",
+            cpu->reg.a, cpu->reg.x, cpu->reg.y, cpu->reg.p, cpu->reg.s);
+
     printf("\n");
 }
 
@@ -798,8 +855,8 @@ void reset(struct CPU *cpu)
     set_a(cpu, 0x00);
     set_x(cpu, 0x00);
     set_y(cpu, 0x00);
-    set_s(cpu, 0xFF);
-    set_p(cpu, 0x00);
+    set_s(cpu, 0xFD);
+    set_p(cpu, 0x00 | I);
 
     /* takes cycles */
     cpu->cycles = 8;
@@ -808,18 +865,17 @@ void reset(struct CPU *cpu)
 void clock_cpu(struct CPU *cpu)
 {
     if (cpu->cycles == 0) {
-        const uint16_t inst_addr = cpu->reg.pc;
         uint8_t code, cycs;
         struct instruction inst;
+
+        if (cpu->log_mode)
+            print_code(cpu);
 
         code = fetch(cpu);
         inst = decode(code);
         cycs = execute(cpu, inst);
 
         cpu->cycles = cycs;
-
-        if (cpu->log_mode)
-            print_code(inst_addr, inst);
     }
 
     cpu->cycles--;
