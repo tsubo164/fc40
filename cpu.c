@@ -139,8 +139,7 @@ static uint16_t fetch_address(struct CPU *cpu, int mode, int *page_crossed)
     case IZX:
         {
             /* addr = {[arg + X], [arg + X + 1]} */
-            const uint16_t addr = read_word(cpu, fetch(cpu) + cpu->reg.x);
-            return read_word(cpu, addr);
+            return read_word(cpu, fetch(cpu) + cpu->reg.x);
         }
 
     case IZY:
@@ -358,9 +357,9 @@ static int is_positive(uint8_t val)
     return !(val & 0x80);
 }
 
-static void add_a_m(struct CPU *cpu, uint16_t addr)
+static void add_a_m(struct CPU *cpu, uint8_t data)
 {
-    const uint16_t m = read_byte(cpu, addr);
+    const uint16_t m = data;
     const uint16_t a = cpu->reg.a;
     const uint16_t c = get_flag(cpu, C);
     const uint16_t r = a + m + c;
@@ -369,7 +368,7 @@ static void add_a_m(struct CPU *cpu, uint16_t addr)
     const int R = is_positive(r);
 
     set_flag(cpu, C, r > 0xFF);
-    set_flag(cpu, V, (A && M && !R) | (!A && !M && R));
+    set_flag(cpu, V, (A && M && !R) || (!A && !M && R));
     set_a(cpu, r);
 }
 
@@ -377,7 +376,6 @@ struct instruction {
     uint8_t opcode;
     uint8_t addr_mode;
     uint8_t cycles;
-    uint8_t code;
 };
 
 static struct instruction decode(uint8_t code)
@@ -387,7 +385,6 @@ static struct instruction decode(uint8_t code)
     inst.opcode    = opcode_table[code];
     inst.addr_mode = addr_mode_table[code];
     inst.cycles    = cycle_table[code];
-    inst.code      = code;
 
     return inst;
 }
@@ -468,7 +465,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
 
     /* Push Processor Status on Stack: () */
     case PHP:
-        push(cpu, cpu->reg.p);
+        push(cpu, cpu->reg.p | B);
         break;
 
     /* Pull Accumulator from Stack: (N, Z) */
@@ -784,6 +781,13 @@ static void print_code(const struct CPU *cpu)
         hi = read_byte(cpu, pc + 2);
         printf("%02X %02X  %s $%04X%n", lo, hi, name, (hi << 8) | lo, &n);
         N -= n;
+        if (inst.opcode == STA ||
+            inst.opcode == STX ||
+            inst.opcode == LDX ||
+            inst.opcode == LDA) {
+            printf(" = %02X%n", read_byte(cpu, (hi << 8) | lo), &n);
+            N -= n;
+        }
         break;
 
     case ABX:
@@ -806,6 +810,15 @@ static void print_code(const struct CPU *cpu)
         N -= n;
         break;
 
+    case IZX:
+        lo = read_byte(cpu, pc + 1);
+        printf("%02X     %s ($%02X,X) @ %02X = %04X = %02X%n",
+                lo, name, lo, lo + cpu->reg.x,
+                read_word(cpu, lo + cpu->reg.x),
+                read_byte(cpu, read_word(cpu, lo + cpu->reg.x)), &n);
+        N -= n;
+        break;
+
     case REL:
         lo = read_byte(cpu, pc + 1);
         printf("%02X     %s $%04X%n", lo, name, (pc + 2) + (int8_t)lo, &n);
@@ -824,6 +837,12 @@ static void print_code(const struct CPU *cpu)
         N -= n;
         break;
 
+    case ACC:
+        lo = read_byte(cpu, pc + 1);
+        printf("       %s A%n", name, &n);
+        N -= n;
+        break;
+
     case IMP:
         printf("       %s%n", name, &n);
         N -= n;
@@ -831,7 +850,6 @@ static void print_code(const struct CPU *cpu)
 
         /*
     case ABY:
-    case IZX:
     case IZY:
     case ZPX: break;
     case ZPY: break;
@@ -868,8 +886,10 @@ void clock_cpu(struct CPU *cpu)
         uint8_t code, cycs;
         struct instruction inst;
 
-        if (cpu->log_mode)
+        if (cpu->log_mode) {
             print_code(cpu);
+            cpu->log_line++;
+        }
 
         code = fetch(cpu);
         inst = decode(code);

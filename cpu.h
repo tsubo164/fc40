@@ -35,6 +35,7 @@ struct CPU {
     int cycles;
 
     uint8_t log_mode;
+    uint16_t log_line;
 };
 
 extern void reset(struct CPU *cpu);
