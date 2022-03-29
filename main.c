@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 
 #include "framebuffer.h"
 #include "cartridge.h"
@@ -18,13 +19,21 @@ int main(int argc, char **argv)
     const int RESY = 240;
     struct framebuffer *fbuf = NULL;
     struct cartridge *cart = NULL;
+    const char *filename = NULL;
 
-    if (argc != 2) {
+    if (argc == 3 && !strcmp(argv[1], "--log-mode")) {
+        cpu.log_mode = 1;
+        filename = argv[2];
+    }
+    else if (argc ==2) {
+        filename = argv[1];
+    }
+    else {
         fprintf(stderr, "missing file name\n");
         return -1;
     }
 
-    cart = open_cartridge(argv[1]);
+    cart = open_cartridge(filename);
     if (!cart) {
         fprintf(stderr, "not a *.nes file\n");
         return -1;
@@ -38,7 +47,15 @@ int main(int argc, char **argv)
 
     reset(&cpu);
 
-    open_display(fbuf, update_frame);
+    if (cpu.log_mode) {
+        int i;
+        cpu.reg.pc = 0xC000;
+        for (i = 0; i < 128; i++)
+            clock_cpu(&cpu);
+    }
+    else {
+        open_display(fbuf, update_frame);
+    }
 
     free_framebuffer(fbuf);
     close_cartridge(cart);

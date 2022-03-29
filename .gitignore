@@ -2,3 +2,4 @@ nes
 *.o
 *.d
 *.swp
+tests/test.log

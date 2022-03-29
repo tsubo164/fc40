@@ -7,7 +7,7 @@ RM      = rm -f
 
 SRCS    := cartridge cpu display framebuffer main ppu
 
-.PHONY: clean run
+.PHONY: clean run test
 
 NES  := nes
 OBJS := $(addsuffix .o, $(SRCS))
@@ -23,9 +23,13 @@ $(NES): $(OBJS)
 
 clean:
 	$(RM) $(NES) *.o *.d
+	$(MAKE) -C tests $@
 
 run: $(NES)
 	./$(NES) sample1.nes
+
+test: $(NES)
+	$(MAKE) -C tests $@
 
 $(DEPS): %.d: %.c
 	$(CC) -I$(incdir) -c -MM $< > $@

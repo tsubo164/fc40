@@ -818,7 +818,7 @@ void clock_cpu(struct CPU *cpu)
 
         cpu->cycles = cycs;
 
-        if (0)
+        if (cpu->log_mode)
             print_code(inst_addr, inst);
     }
 

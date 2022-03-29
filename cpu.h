@@ -33,6 +33,8 @@ struct CPU {
     uint8_t wram[2048];
     struct registers reg;
     int cycles;
+
+    uint8_t log_mode;
 };
 
 extern void reset(struct CPU *cpu);
