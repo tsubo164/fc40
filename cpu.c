@@ -786,9 +786,22 @@ static void print_code(const struct CPU *cpu)
     case IND:
         lo = read_byte(cpu, pc + 1);
         hi = read_byte(cpu, pc + 2);
-        printf("%02X %02X  %s ($%04X) = %04X%n",
-                lo, hi, name, (hi << 8) | lo, read_word(cpu, (hi << 8) | lo), &n);
-        N -= n;
+
+        {
+            const uint16_t addr = (hi << 8) | lo;
+            uint16_t eff_addr;
+
+            if ((addr & 0x00FF) == 0x00FF)
+                /* emulate page boundary hardware bug */
+                eff_addr = (read_byte(cpu, addr & 0xFF00) << 8) | read_byte(cpu, addr);
+            else
+                /* normal behavior */
+                eff_addr = read_word(cpu, addr);
+
+            printf("%02X %02X  %s ($%04X) = %04X%n",
+                    lo, hi, name, addr, eff_addr, &n);
+            N -= n;
+        }
         break;
 
     case ABS:
@@ -817,7 +830,7 @@ static void print_code(const struct CPU *cpu)
         hi = read_byte(cpu, pc + 2);
         printf("%02X %02X  %s $%04X,Y @ %04X = %02X%n",
                 lo, hi, name, (hi << 8) | lo,
-                ((hi << 8) | lo) + y,
+                (((hi << 8) | lo) + y) & 0xFFFF,
                 read_byte(cpu, ((hi << 8) | lo) + y), &n);
         N -= n;
         break;
@@ -850,6 +863,22 @@ static void print_code(const struct CPU *cpu)
         N -= n;
         break;
 
+    case ZPX:
+        lo = read_byte(cpu, pc + 1);
+        printf("%02X     %s $%02X,X @ %02X = %02X%n",
+                lo, name, lo, (lo + x) & 0xFF,
+                read_byte(cpu, (lo + x) & 0xFF), &n);
+        N -= n;
+        break;
+
+    case ZPY:
+        lo = read_byte(cpu, pc + 1);
+        printf("%02X     %s $%02X,Y @ %02X = %02X%n",
+                lo, name, lo, (lo + y) & 0xFF,
+                read_byte(cpu, (lo + x) & 0xFF), &n);
+        N -= n;
+        break;
+
     case REL:
         lo = read_byte(cpu, pc + 1);
         printf("%02X     %s $%04X%n", lo, name, (pc + 2) + (int8_t)lo, &n);
@@ -879,11 +908,8 @@ static void print_code(const struct CPU *cpu)
         N -= n;
         break;
 
-        /*
-    case ZPX: break;
-    case ZPY: break;
-        */
-    default: break;
+    default:
+        break;
     }
 
     printf("%*s", N, " ");
