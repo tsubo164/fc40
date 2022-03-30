@@ -875,7 +875,7 @@ static void print_code(const struct CPU *cpu)
         lo = read_byte(cpu, pc + 1);
         printf("%02X     %s $%02X,Y @ %02X = %02X%n",
                 lo, name, lo, (lo + y) & 0xFF,
-                read_byte(cpu, (lo + x) & 0xFF), &n);
+                read_byte(cpu, (lo + y) & 0xFF), &n);
         N -= n;
         break;
 
