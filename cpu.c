@@ -139,16 +139,22 @@ static uint16_t fetch_address(struct CPU *cpu, int mode, int *page_crossed)
     case IZX:
         {
             /* addr = {[arg + X], [arg + X + 1]} */
-            return read_word(cpu, fetch(cpu) + cpu->reg.x);
+            const uint16_t za = fetch(cpu) + cpu->reg.x;
+            const uint16_t lo = read_byte(cpu, za & 0xFF);
+            const uint16_t hi = read_byte(cpu, (za + 1) & 0xFF);
+            return (hi << 8) | lo;
         }
 
     case IZY:
         {
             /* addr = {[arg], [arg + 1]} + Y */
-            const uint16_t addr = read_word(cpu, fetch(cpu));
+            const uint16_t za  = fetch(cpu);
+            const uint16_t lo = read_byte(cpu, za & 0xFF);
+            const uint16_t hi = read_byte(cpu, (za + 1) & 0xFF);
+            const uint16_t addr = (hi << 8) | lo;
             if (is_page_crossing(addr, cpu->reg.y))
                 *page_crossed = 1;
-            return read_word(cpu, addr + cpu->reg.y);
+            return addr + cpu->reg.y;
         }
 
     case REL:
@@ -761,6 +767,8 @@ static int execute(struct CPU *cpu, struct instruction inst)
 static void print_code(const struct CPU *cpu)
 {
     const uint16_t pc = cpu->reg.pc;
+    const uint8_t x = cpu->reg.x;
+    const uint8_t y = cpu->reg.y;
     uint8_t code, hi, lo;
     struct instruction inst;
     const char *name = "???";
@@ -775,16 +783,20 @@ static void print_code(const struct CPU *cpu)
 
     switch (inst.addr_mode) {
 
-    case ABS:
     case IND:
+        lo = read_byte(cpu, pc + 1);
+        hi = read_byte(cpu, pc + 2);
+        printf("%02X %02X  %s ($%04X) = %04X%n",
+                lo, hi, name, (hi << 8) | lo, read_word(cpu, (hi << 8) | lo), &n);
+        N -= n;
+        break;
+
+    case ABS:
         lo = read_byte(cpu, pc + 1);
         hi = read_byte(cpu, pc + 2);
         printf("%02X %02X  %s $%04X%n", lo, hi, name, (hi << 8) | lo, &n);
         N -= n;
-        if (inst.opcode == STA ||
-            inst.opcode == STX ||
-            inst.opcode == LDX ||
-            inst.opcode == LDA) {
+        if (inst.opcode != JMP && inst.opcode != JSR) {
             printf(" = %02X%n", read_byte(cpu, (hi << 8) | lo), &n);
             N -= n;
         }
@@ -795,27 +807,46 @@ static void print_code(const struct CPU *cpu)
         hi = read_byte(cpu, pc + 2);
         printf("%02X %02X  %s $%04X,X @ %04X = %02X%n",
                 lo, hi, name, (hi << 8) | lo,
-                ((hi << 8) | lo) + cpu->reg.x,
-                read_byte(cpu, ((hi << 8) | lo) + cpu->reg.x), &n);
+                ((hi << 8) | lo) + x,
+                read_byte(cpu, ((hi << 8) | lo) + x), &n);
         N -= n;
         break;
 
     case ABY:
         lo = read_byte(cpu, pc + 1);
         hi = read_byte(cpu, pc + 2);
-        printf("%02X %02X  %s $%04X,X @ %04X = %02X%n",
+        printf("%02X %02X  %s $%04X,Y @ %04X = %02X%n",
                 lo, hi, name, (hi << 8) | lo,
-                ((hi << 8) | lo) + cpu->reg.y,
-                read_byte(cpu, ((hi << 8) | lo) + cpu->reg.y), &n);
+                ((hi << 8) | lo) + y,
+                read_byte(cpu, ((hi << 8) | lo) + y), &n);
         N -= n;
         break;
 
     case IZX:
         lo = read_byte(cpu, pc + 1);
-        printf("%02X     %s ($%02X,X) @ %02X = %04X = %02X%n",
-                lo, name, lo, lo + cpu->reg.x,
-                read_word(cpu, lo + cpu->reg.x),
-                read_byte(cpu, read_word(cpu, lo + cpu->reg.x)), &n);
+        {
+            const uint16_t l = read_byte(cpu, (lo + x) & 0xFF);
+            const uint16_t h = read_byte(cpu, (lo + x + 1) & 0xFF);
+            printf("%02X     %s ($%02X,X) @ %02X = %04X = %02X%n",
+                    lo, name, lo,
+                    (lo + x) & 0xFF,
+                    (h << 8) | l,
+                    read_byte(cpu, (h << 8) | l), &n);
+        }
+        N -= n;
+        break;
+
+    case IZY:
+        lo = read_byte(cpu, pc + 1);
+        {
+            const uint16_t l = read_byte(cpu, (lo) & 0xFF);
+            const uint16_t h = read_byte(cpu, (lo + 1) & 0xFF);
+            const uint16_t w = ((h << 8) | l) + y;
+            printf("%02X     %s ($%02X),Y = %04X @ %04X = %02X%n",
+                    lo, name, lo,
+                    (h << 8) | l, w,
+                    read_byte(cpu, w), &n);
+        }
         N -= n;
         break;
 
@@ -849,8 +880,6 @@ static void print_code(const struct CPU *cpu)
         break;
 
         /*
-    case ABY:
-    case IZY:
     case ZPX: break;
     case ZPY: break;
         */
