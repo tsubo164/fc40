@@ -59,11 +59,6 @@ static uint16_t fetch_word(struct CPU *cpu)
     return (hi << 8) | lo;
 }
 
-static uint8_t is_page_crossing(uint16_t addr, uint8_t addend)
-{
-    return (addr & 0x00FF) + (addend & 0x00FF) > 0x00FF;
-}
-
 enum addr_mode {ABS, ABX, ABY, ACC, IMM, IMP, IND, IZX, IZY, REL, ZPG, ZPX, ZPY};
 
 static const uint8_t addr_mode_table[] = {
@@ -86,6 +81,35 @@ static const uint8_t addr_mode_table[] = {
 /*0xF0*/ REL, IZY, IMP, IZY, ZPX, ZPX, ZPX, ZPX, IMP, ABY, IMP, ABY, ABX, ABX, ABX, ABX
 };
 
+static uint8_t is_page_crossing(uint16_t addr, uint8_t addend)
+{
+    return (addr & 0x00FF) + (addend & 0x00FF) > 0x00FF;
+}
+
+static uint16_t abs_index(uint16_t abs, uint8_t idx, int *page_crossed)
+{
+    *page_crossed = is_page_crossing(abs, idx);
+    return abs + idx;
+}
+
+static uint16_t abs_indirect(const struct CPU *cpu, uint16_t abs)
+{
+    if ((abs & 0x00FF) == 0x00FF)
+        /* emulate page boundary hardware bug */
+        return (read_byte(cpu, abs & 0xFF00) << 8) | read_byte(cpu, abs);
+    else
+        /* normal behavior */
+        return read_word(cpu, abs);
+}
+
+static uint16_t zp_indirect(struct CPU *cpu, uint8_t zp)
+{
+    const uint16_t lo = read_byte(cpu, zp & 0xFF);
+    const uint16_t hi = read_byte(cpu, (zp + 1) & 0xFF);
+
+    return (hi << 8) | lo;
+}
+
 static uint16_t fetch_address(struct CPU *cpu, int mode, int *page_crossed)
 {
     *page_crossed = 0;
@@ -96,22 +120,10 @@ static uint16_t fetch_address(struct CPU *cpu, int mode, int *page_crossed)
         return fetch_word(cpu);
 
     case ABX:
-        {
-            /* addr = arg + X */
-            const uint16_t addr = fetch_word(cpu);
-            if (is_page_crossing(addr, cpu->reg.x))
-                *page_crossed = 1;
-            return addr + cpu->reg.x;
-        }
+        return abs_index(fetch_word(cpu), cpu->reg.x, page_crossed);
 
     case ABY:
-        {
-            /* addr = arg + Y */
-            const uint16_t addr = fetch_word(cpu);
-            if (is_page_crossing(addr, cpu->reg.y))
-                *page_crossed = 1;
-            return addr + cpu->reg.y;
-        }
+        return abs_index(fetch_word(cpu), cpu->reg.y, page_crossed);
 
     case ACC:
         /* no address for register */
@@ -126,32 +138,18 @@ static uint16_t fetch_address(struct CPU *cpu, int mode, int *page_crossed)
         return 0;
 
     case IND:
-        {
-            const uint16_t addr = fetch_word(cpu);
-            if ((addr & 0x00FF) == 0x00FF)
-                /* emulate page boundary hardware bug */
-                return (read_byte(cpu, addr & 0xFF00) << 8) | read_byte(cpu, addr);
-            else
-                /* normal behavior */
-                return read_word(cpu, addr);
-        }
+        return abs_indirect(cpu, fetch_word(cpu));
 
     case IZX:
         {
             /* addr = {[arg + X], [arg + X + 1]} */
-            const uint16_t za = fetch(cpu) + cpu->reg.x;
-            const uint16_t lo = read_byte(cpu, za & 0xFF);
-            const uint16_t hi = read_byte(cpu, (za + 1) & 0xFF);
-            return (hi << 8) | lo;
+            return zp_indirect(cpu, fetch(cpu) + cpu->reg.x);
         }
 
     case IZY:
         {
             /* addr = {[arg], [arg + 1]} + Y */
-            const uint16_t za  = fetch(cpu);
-            const uint16_t lo = read_byte(cpu, za & 0xFF);
-            const uint16_t hi = read_byte(cpu, (za + 1) & 0xFF);
-            const uint16_t addr = (hi << 8) | lo;
+            const uint16_t addr = zp_indirect(cpu, fetch(cpu));
             if (is_page_crossing(addr, cpu->reg.y))
                 *page_crossed = 1;
             return addr + cpu->reg.y;
