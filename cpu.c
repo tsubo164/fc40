@@ -102,7 +102,7 @@ static uint16_t abs_indirect(const struct CPU *cpu, uint16_t abs)
         return read_word(cpu, abs);
 }
 
-static uint16_t zp_indirect(struct CPU *cpu, uint8_t zp)
+static uint16_t zp_indirect(const struct CPU *cpu, uint8_t zp)
 {
     const uint16_t lo = read_byte(cpu, zp & 0xFF);
     const uint16_t hi = read_byte(cpu, (zp + 1) & 0xFF);
@@ -765,155 +765,109 @@ static int execute(struct CPU *cpu, struct instruction inst)
 static void print_code(const struct CPU *cpu)
 {
     const uint16_t pc = cpu->reg.pc;
-    const uint8_t x = cpu->reg.x;
-    const uint8_t y = cpu->reg.y;
-    uint8_t code, hi, lo;
-    struct instruction inst;
-    const char *name = "???";
-    int N = 48, n = 0;
+    const uint8_t  x = cpu->reg.x;
+    const uint8_t  y = cpu->reg.y;
+    const uint8_t  lo = read_byte(cpu, pc + 1);
+    const uint8_t  hi = read_byte(cpu, pc + 2);
+    const uint16_t wd = (hi << 8) | lo;
 
-    code = read_byte(cpu, cpu->reg.pc);
-    inst = decode(code);
-    name = opcode_name_table[code];
+    const uint8_t code            = read_byte(cpu, cpu->reg.pc);
+    const struct instruction inst = decode(code);
+    const char *name              = opcode_name_table[code];
+
+    uint16_t addr;
+    int N = 0, n = 0;
 
     printf("%04X  %02X %n", pc, code, &n);
-    N -= n;
+    N += n;
 
     switch (inst.addr_mode) {
 
     case IND:
-        lo = read_byte(cpu, pc + 1);
-        hi = read_byte(cpu, pc + 2);
-
-        {
-            const uint16_t addr = (hi << 8) | lo;
-            uint16_t eff_addr;
-
-            if ((addr & 0x00FF) == 0x00FF)
-                /* emulate page boundary hardware bug */
-                eff_addr = (read_byte(cpu, addr & 0xFF00) << 8) | read_byte(cpu, addr);
-            else
-                /* normal behavior */
-                eff_addr = read_word(cpu, addr);
-
-            printf("%02X %02X  %s ($%04X) = %04X%n",
-                    lo, hi, name, addr, eff_addr, &n);
-            N -= n;
-        }
+        printf("%02X %02X  %s ($%04X) = %04X%n",
+                lo, hi, name, wd, abs_indirect(cpu, wd), &n);
+        N += n;
         break;
 
     case ABS:
-        lo = read_byte(cpu, pc + 1);
-        hi = read_byte(cpu, pc + 2);
-        printf("%02X %02X  %s $%04X%n", lo, hi, name, (hi << 8) | lo, &n);
-        N -= n;
+        printf("%02X %02X  %s $%04X%n", lo, hi, name, wd, &n);
+        N += n;
         if (inst.opcode != JMP && inst.opcode != JSR) {
-            printf(" = %02X%n", read_byte(cpu, (hi << 8) | lo), &n);
-            N -= n;
+            printf(" = %02X%n", read_byte(cpu, wd), &n);
+            N += n;
         }
         break;
 
     case ABX:
-        lo = read_byte(cpu, pc + 1);
-        hi = read_byte(cpu, pc + 2);
         printf("%02X %02X  %s $%04X,X @ %04X = %02X%n",
-                lo, hi, name, (hi << 8) | lo,
-                ((hi << 8) | lo) + x,
-                read_byte(cpu, ((hi << 8) | lo) + x), &n);
-        N -= n;
+                lo, hi, name, wd, wd + x, read_byte(cpu, wd + x), &n);
+        N += n;
         break;
 
     case ABY:
-        lo = read_byte(cpu, pc + 1);
-        hi = read_byte(cpu, pc + 2);
         printf("%02X %02X  %s $%04X,Y @ %04X = %02X%n",
-                lo, hi, name, (hi << 8) | lo,
-                (((hi << 8) | lo) + y) & 0xFFFF,
-                read_byte(cpu, ((hi << 8) | lo) + y), &n);
-        N -= n;
+                lo, hi, name, wd, (wd + y) & 0xFFFF,
+                read_byte(cpu, (wd + y) & 0xFFFF), &n);
+        N += n;
         break;
 
     case IZX:
-        lo = read_byte(cpu, pc + 1);
-        {
-            const uint16_t l = read_byte(cpu, (lo + x) & 0xFF);
-            const uint16_t h = read_byte(cpu, (lo + x + 1) & 0xFF);
-            printf("%02X     %s ($%02X,X) @ %02X = %04X = %02X%n",
-                    lo, name, lo,
-                    (lo + x) & 0xFF,
-                    (h << 8) | l,
-                    read_byte(cpu, (h << 8) | l), &n);
-        }
-        N -= n;
+        addr = zp_indirect(cpu, lo + x);
+        printf("%02X     %s ($%02X,X) @ %02X = %04X = %02X%n",
+                lo, name, lo, (lo + x) & 0xFF, addr, read_byte(cpu, addr), &n);
+        N += n;
         break;
 
     case IZY:
-        lo = read_byte(cpu, pc + 1);
-        {
-            const uint16_t l = read_byte(cpu, (lo) & 0xFF);
-            const uint16_t h = read_byte(cpu, (lo + 1) & 0xFF);
-            const uint16_t w = ((h << 8) | l) + y;
-            printf("%02X     %s ($%02X),Y = %04X @ %04X = %02X%n",
-                    lo, name, lo,
-                    (h << 8) | l, w,
-                    read_byte(cpu, w), &n);
-        }
-        N -= n;
+        addr = zp_indirect(cpu, lo);
+        printf("%02X     %s ($%02X),Y = %04X @ %04X = %02X%n",
+                lo, name, lo, addr, (addr + y) & 0xFFFF, read_byte(cpu, addr + y), &n);
+        N += n;
         break;
 
     case ZPX:
-        lo = read_byte(cpu, pc + 1);
         printf("%02X     %s $%02X,X @ %02X = %02X%n",
-                lo, name, lo, (lo + x) & 0xFF,
-                read_byte(cpu, (lo + x) & 0xFF), &n);
-        N -= n;
+                lo, name, lo, (lo + x) & 0xFF, read_byte(cpu, (lo + x) & 0xFF), &n);
+        N += n;
         break;
 
     case ZPY:
-        lo = read_byte(cpu, pc + 1);
         printf("%02X     %s $%02X,Y @ %02X = %02X%n",
-                lo, name, lo, (lo + y) & 0xFF,
-                read_byte(cpu, (lo + y) & 0xFF), &n);
-        N -= n;
+                lo, name, lo, (lo + y) & 0xFF, read_byte(cpu, (lo + y) & 0xFF), &n);
+        N += n;
         break;
 
     case REL:
-        lo = read_byte(cpu, pc + 1);
         printf("%02X     %s $%04X%n", lo, name, (pc + 2) + (int8_t)lo, &n);
-        N -= n;
+        N += n;
         break;
 
     case IMM:
-        lo = read_byte(cpu, pc + 1);
         printf("%02X     %s #$%02X%n", lo, name, lo, &n);
-        N -= n;
+        N += n;
         break;
 
     case ZPG:
-        lo = read_byte(cpu, pc + 1);
         printf("%02X     %s $%02X = %02X %n", lo, name, lo, read_byte(cpu, lo), &n);
-        N -= n;
+        N += n;
         break;
 
     case ACC:
-        lo = read_byte(cpu, pc + 1);
         printf("       %s A%n", name, &n);
-        N -= n;
+        N += n;
         break;
 
     case IMP:
         printf("       %s%n", name, &n);
-        N -= n;
+        N += n;
         break;
 
     default:
         break;
     }
 
-    printf("%*s", N, " ");
-    printf("A:%02X X:%02X Y:%02X P:%02X SP:%02X",
-            cpu->reg.a, cpu->reg.x, cpu->reg.y, cpu->reg.p, cpu->reg.s);
-
+    printf("%*s", 48 - N, " ");
+    printf("A:%02X X:%02X Y:%02X P:%02X SP:%02X", cpu->reg.a, x, y, cpu->reg.p, cpu->reg.s);
     printf("\n");
 }
 
