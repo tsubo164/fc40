@@ -11,10 +11,10 @@ static void write_byte(struct CPU *cpu, uint16_t addr, uint8_t data)
     else if (addr == 0x2000) {
     }
     else if (addr == 0x2006) {
-        write_ppu_addr(data);
+        write_ppu_addr(cpu->ppu, data);
     }
     else if (addr == 0x2007) {
-        write_ppu_data(data);
+        write_ppu_data(cpu->ppu, data);
     }
     else if (addr <= 0x3FFF) {
         /* PPU registers mirror */
@@ -27,6 +27,12 @@ static uint8_t read_byte(const struct CPU *cpu, uint16_t addr)
         return cpu->wram[addr & 0x07FF];
     }
     else if (addr == 0x2000) {
+    }
+    else if (addr == 0x2002) {
+        return read_ppu_status(cpu->ppu);
+        /*
+        return ppu_read_register(cpu->ppu, PPUSTATUS);
+        */
     }
     else if (addr == 0x2006) {
     }

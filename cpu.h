@@ -25,9 +25,11 @@ struct registers {
 };
 
 struct cartridge;
+struct PPU;
 
 struct CPU {
     struct cartridge *cart;
+    struct PPU *ppu;
 
     /* 4 2KB ram. 3 of them are mirroring */
     uint8_t wram[2048];

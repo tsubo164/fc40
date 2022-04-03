@@ -2,10 +2,31 @@
 #include "ppu.h"
 #include "framebuffer.h"
 
-static uint16_t ppu_addr;
-static uint8_t ppu_data;
-static uint8_t bg_palette_table[16] = {0};
-static uint8_t name_table_0[0x03C0] = {0};
+enum ppu_status {
+    STAT_UNUSED          = 0x1F,
+    STAT_SPRITE_OVERFLOW = 1 << 5,
+    STAT_SPRITE_ZERO_HIT = 1 << 6,
+    STAT_VERTICAL_BLANK  = 1 << 7,
+};
+
+enum ppu_mask {
+    MASK_GREYSCALE        = 1 << 0,
+    MASK_SHOW_BG_LEFT     = 1 << 1,
+    MASK_SHOW_SPRITE_LEFT = 1 << 2,
+    MASK_SHOW_BG          = 1 << 3,
+    MASK_SHOW_SPRITE      = 1 << 4,
+    MASK_EMPHASIZE_R      = 1 << 5,
+    MASK_EMPHASIZE_G      = 1 << 6,
+    MASK_EMPHASIZE_B      = 1 << 7
+};
+
+static void set_stat(struct PPU *ppu, uint8_t flag, uint8_t val)
+{
+    if (val)
+        ppu->stat |= flag;
+    else
+        ppu->stat &= ~flag;
+}
 
 static const uint8_t palette_2C02[][3] = {
     /* 0x00 */
@@ -30,9 +51,9 @@ static const uint8_t palette_2C02[][3] = {
     {0xA0, 0xD6, 0xE4}, {0xA0, 0xA2, 0xA0}, {0x00, 0x00, 0x00}, {0x00, 0x00, 0x00}
 };
 
-static const uint8_t *get_bg_palette(int attr)
+static const uint8_t *get_bg_palette(const uint8_t *palette, int attr)
 {
-    return bg_palette_table + attr * 4;
+    return palette + attr * 4;
 }
 
 static const uint8_t *get_color(int index)
@@ -40,9 +61,13 @@ static const uint8_t *get_color(int index)
     return palette_2C02[index];
 }
 
-static void set_pixel_color(struct framebuffer *fb, const uint8_t *chr, int x, int y)
+static void set_pixel_color(struct PPU *ppu)
 {
-    uint8_t *table = name_table_0;
+    struct framebuffer *fb = ppu->fbuf;
+    const uint8_t *chr = ppu->char_rom;
+    const int x = ppu->cycle;
+    const int y = ppu->scanline;
+    const uint8_t *table = ppu->name_table_0;
 
     const int namex = x / 8;
     const int namey = y / 8;
@@ -66,7 +91,7 @@ static void set_pixel_color(struct framebuffer *fb, const uint8_t *chr, int x, i
         set_color(fb, x, y, color);
     }
     if (val || 1) {
-        const uint8_t *palette = get_bg_palette(0);
+        const uint8_t *palette = get_bg_palette(ppu->bg_palette_table, 0);
         const uint8_t index = palette[val];
         const uint8_t *color = get_color(index);
 
@@ -82,11 +107,11 @@ int is_frame_ready(const struct PPU *ppu)
 void clock_ppu(struct PPU *ppu)
 {
     if (ppu->cycle == 0 && ppu->scanline == 0)
-        ppu->stat.vblank = 0;
+        set_stat(ppu, STAT_VERTICAL_BLANK, 0);
 
     if ((ppu->cycle >= 0 && ppu->cycle < 256) &&
         (ppu->scanline >= 0 && ppu->scanline < 240))
-        set_pixel_color(ppu->fbuf, ppu->char_rom, ppu->cycle, ppu->scanline);
+        set_pixel_color(ppu);
 
     ppu->cycle++;
 
@@ -95,8 +120,8 @@ void clock_ppu(struct PPU *ppu)
         ppu->scanline++;
     }
 
-    if (ppu->scanline == 240) {
-        ppu->stat.vblank = 1;
+    if (ppu->cycle == 0 && ppu->scanline == 240) {
+        set_stat(ppu, STAT_VERTICAL_BLANK, 1);
     }
 
     if (ppu->scanline == 261) {
@@ -104,25 +129,66 @@ void clock_ppu(struct PPU *ppu)
     }
 }
 
-void write_ppu_addr(uint8_t hi_or_lo)
+void write_ppu_addr(struct PPU *ppu, uint8_t hi_or_lo)
 {
     static int is_high = 1;
     uint8_t data = hi_or_lo;
 
-    ppu_addr = is_high ? data << 8 : ppu_addr + data;
+    ppu->ppu_addr = is_high ? data << 8 : ppu->ppu_addr + data;
     is_high = !is_high;
 }
 
-void write_ppu_data(uint8_t data)
+void write_ppu_data(struct PPU *ppu, uint8_t data)
 {
-    ppu_data = data;
+    const uint16_t addr = ppu->ppu_addr++;
 
-    if (0x2000 <= ppu_addr && ppu_addr <= 0x23BF) {
-        name_table_0[ppu_addr - 0x2000] = data;
-        ppu_addr++;
+    ppu->ppu_data_buf = data;
+
+    if (0x2000 <= addr && addr <= 0x23BF) {
+        ppu->name_table_0[addr - 0x2000] = data;
+        //ppu->ppu_addr++;
     }
-    if (0x3F00 <= ppu_addr && ppu_addr <= 0x3F0F) {
-        bg_palette_table[ppu_addr - 0x3F00] = data;
-        ppu_addr++;
+    if (0x3F00 <= addr && addr <= 0x3F0F) {
+        ppu->bg_palette_table[addr - 0x3F00] = data;
+        //ppu->ppu_addr++;
     }
+}
+
+uint8_t ppu_read_register(struct PPU *ppu, int reg)
+{
+    uint8_t data = 0;
+
+    switch (reg) {
+    case PPUCTRL:
+        return 0;
+    case PPUMASK:
+        return 0;
+
+    case PPUSTATUS:
+        data = ppu->stat;
+        set_stat(ppu, STAT_VERTICAL_BLANK, 0);
+        return data;
+
+    case OAMADDR:
+        return 0;
+    case OAMDATA:
+        return 0;
+    case PPUSCROLL:
+        return 0;
+    case PPUADDR:
+        return 0;
+    case PPUDATA:
+        return 0;
+    case OAMDMA:
+        return 0;
+    default:
+        return 0;
+    }
+}
+
+uint8_t read_ppu_status(struct PPU *ppu)
+{
+    const uint8_t data = ppu->stat;
+    set_stat(ppu, STAT_VERTICAL_BLANK, 0);
+    return data;
 }
