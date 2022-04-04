@@ -9,6 +9,17 @@ enum ppu_status {
     STAT_VERTICAL_BLANK  = 1 << 7,
 };
 
+enum ppu_control {
+    CTRL_NAMETABLE_X     = 1 << 0,
+    CTRL_NAMETABLE_Y     = 1 << 1,
+    CTRL_INCREMENT_MODE  = 1 << 2,
+    CTRL_PATTERN_SPRITE  = 1 << 3,
+    CTRL_PATTERN_BG      = 1 << 4,
+    CTRL_SPRITE_SIZE     = 1 << 5,
+    CTRL_SLAVE_MODE      = 1 << 6,
+    CTRL_ENABLE_NMI      = 1 << 7
+};
+
 enum ppu_mask {
     MASK_GREYSCALE        = 1 << 0,
     MASK_SHOW_BG_LEFT     = 1 << 1,
@@ -26,6 +37,11 @@ static void set_stat(struct PPU *ppu, uint8_t flag, uint8_t val)
         ppu->stat |= flag;
     else
         ppu->stat &= ~flag;
+}
+
+static int get_ctrl(struct PPU *ppu, uint8_t flag)
+{
+    return (ppu->ctrl & flag) > 0;
 }
 
 static const uint8_t palette_2C02[][3] = {
@@ -99,6 +115,11 @@ static void set_pixel_color(struct PPU *ppu)
     }
 }
 
+int is_nmi_generated(const struct PPU *ppu)
+{
+    return ppu->nmi_generated;
+}
+
 int is_frame_ready(const struct PPU *ppu)
 {
     return ppu->cycle == 0 && ppu->scanline == 0;
@@ -122,6 +143,9 @@ void clock_ppu(struct PPU *ppu)
 
     if (ppu->cycle == 0 && ppu->scanline == 240) {
         set_stat(ppu, STAT_VERTICAL_BLANK, 1);
+
+        if (get_ctrl(ppu, CTRL_ENABLE_NMI))
+            ppu->nmi_generated = 1;
     }
 
     if (ppu->scanline == 261) {
@@ -129,7 +153,28 @@ void clock_ppu(struct PPU *ppu)
     }
 }
 
-void write_ppu_addr(struct PPU *ppu, uint8_t hi_or_lo)
+void write_ppu_control(struct PPU *ppu, uint8_t data)
+{
+    ppu->ctrl = data;
+}
+
+void write_ppu_mask(struct PPU *ppu, uint8_t data)
+{
+}
+
+void write_oam_address(struct PPU *ppu, uint8_t data)
+{
+}
+
+void write_oam_data(struct PPU *ppu, uint8_t data)
+{
+}
+
+void write_ppu_scroll(struct PPU *ppu, uint8_t data)
+{
+}
+
+void write_ppu_address(struct PPU *ppu, uint8_t hi_or_lo)
 {
     static int is_high = 1;
     uint8_t data = hi_or_lo;
@@ -146,43 +191,9 @@ void write_ppu_data(struct PPU *ppu, uint8_t data)
 
     if (0x2000 <= addr && addr <= 0x23BF) {
         ppu->name_table_0[addr - 0x2000] = data;
-        //ppu->ppu_addr++;
     }
     if (0x3F00 <= addr && addr <= 0x3F0F) {
         ppu->bg_palette_table[addr - 0x3F00] = data;
-        //ppu->ppu_addr++;
-    }
-}
-
-uint8_t ppu_read_register(struct PPU *ppu, int reg)
-{
-    uint8_t data = 0;
-
-    switch (reg) {
-    case PPUCTRL:
-        return 0;
-    case PPUMASK:
-        return 0;
-
-    case PPUSTATUS:
-        data = ppu->stat;
-        set_stat(ppu, STAT_VERTICAL_BLANK, 0);
-        return data;
-
-    case OAMADDR:
-        return 0;
-    case OAMDATA:
-        return 0;
-    case PPUSCROLL:
-        return 0;
-    case PPUADDR:
-        return 0;
-    case PPUDATA:
-        return 0;
-    case OAMDMA:
-        return 0;
-    default:
-        return 0;
     }
 }
 
@@ -191,4 +202,14 @@ uint8_t read_ppu_status(struct PPU *ppu)
     const uint8_t data = ppu->stat;
     set_stat(ppu, STAT_VERTICAL_BLANK, 0);
     return data;
+}
+
+uint8_t read_oam_data(struct PPU *ppu)
+{
+    return 0;
+}
+
+uint8_t read_ppu_data(struct PPU *ppu)
+{
+    return 0;
 }

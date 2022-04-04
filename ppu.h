@@ -5,21 +5,12 @@
 
 struct framebuffer;
 
-enum ppu_register {
-    PPUCTRL,
-    PPUMASK,
-    PPUSTATUS,
-    OAMADDR,
-    OAMDATA,
-    PPUSCROLL,
-    PPUADDR,
-    PPUDATA,
-    OAMDMA
-};
-
 struct PPU {
     const uint8_t *char_rom;
     size_t char_size;
+
+    uint8_t ctrl;
+    uint8_t mask;
     uint8_t stat;
 
     uint16_t ppu_addr;
@@ -30,16 +21,29 @@ struct PPU {
     int cycle;
     int scanline;
     struct framebuffer *fbuf;
+
+    char nmi_generated;
 };
 
+/* interruptions */
+extern int is_nmi_generated(const struct PPU *ppu);
 extern int is_frame_ready(const struct PPU *ppu);
+
+/* clock */
 extern void clock_ppu(struct PPU *ppu);
 
-extern void write_ppu_addr(struct PPU *ppu, uint8_t hi_or_lo);
+/* read registers */
+extern void write_ppu_control(struct PPU *ppu, uint8_t data);
+extern void write_ppu_mask(struct PPU *ppu, uint8_t data);
+extern void write_oam_address(struct PPU *ppu, uint8_t data);
+extern void write_oam_data(struct PPU *ppu, uint8_t data);
+extern void write_ppu_scroll(struct PPU *ppu, uint8_t data);
+extern void write_ppu_address(struct PPU *ppu, uint8_t hi_or_lo);
 extern void write_ppu_data(struct PPU *ppu, uint8_t data);
 
-extern uint8_t ppu_read_register(struct PPU *ppu, int reg);
-
+/* write registers */
 extern uint8_t read_ppu_status(struct PPU *ppu);
+extern uint8_t read_oam_data(struct PPU *ppu);
+extern uint8_t read_ppu_data(struct PPU *ppu);
 
 #endif /* _H */

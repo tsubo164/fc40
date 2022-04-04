@@ -4,16 +4,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-enum status_flag {
-    C = 1 << 0, /* carry */
-    Z = 1 << 1, /* zero */
-    I = 1 << 2, /* disable interrupts */
-    D = 1 << 3, /* decimal mode */
-    B = 1 << 4, /* break */
-    U = 1 << 5, /* unused */
-    V = 1 << 6, /* overflow */
-    N = 1 << 7  /* negative */
-};
+struct cartridge;
+struct PPU;
 
 struct registers {
     uint8_t a;
@@ -23,9 +15,6 @@ struct registers {
     uint8_t p; /* processor status */
     uint16_t pc;
 };
-
-struct cartridge;
-struct PPU;
 
 struct CPU {
     struct cartridge *cart;
@@ -41,6 +30,7 @@ struct CPU {
 };
 
 extern void reset(struct CPU *cpu);
+extern void nmi(struct CPU *cpu);
 extern void clock_cpu(struct CPU *cpu);
 
 #endif /* _H */

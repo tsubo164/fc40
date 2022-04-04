@@ -3,6 +3,17 @@
 #include "ppu.h"
 #include "cartridge.h"
 
+enum status_flag {
+    C = 1 << 0, /* carry */
+    Z = 1 << 1, /* zero */
+    I = 1 << 2, /* disable interrupts */
+    D = 1 << 3, /* decimal mode */
+    B = 1 << 4, /* break */
+    U = 1 << 5, /* unused */
+    V = 1 << 6, /* overflow */
+    N = 1 << 7  /* negative */
+};
+
 static void write_byte(struct CPU *cpu, uint16_t addr, uint8_t data)
 {
     if (addr >= 0x0000 && addr <= 0x1FFF) {
@@ -11,13 +22,14 @@ static void write_byte(struct CPU *cpu, uint16_t addr, uint8_t data)
     else if (addr == 0x2000) {
     }
     else if (addr == 0x2006) {
-        write_ppu_addr(cpu->ppu, data);
+        write_ppu_address(cpu->ppu, data);
     }
     else if (addr == 0x2007) {
         write_ppu_data(cpu->ppu, data);
     }
-    else if (addr <= 0x3FFF) {
-        /* PPU registers mirror */
+    else if (addr >= 0x2008 && addr <= 0x3FFF) {
+        /* PPU register mirrored every 8 */
+        write_byte(cpu, 0x2000 | (addr & 0x007), data);
     }
 }
 
@@ -30,13 +42,14 @@ static uint8_t read_byte(const struct CPU *cpu, uint16_t addr)
     }
     else if (addr == 0x2002) {
         return read_ppu_status(cpu->ppu);
-        /*
-        return ppu_read_register(cpu->ppu, PPUSTATUS);
-        */
     }
     else if (addr == 0x2006) {
     }
     else if (addr == 0x2007) {
+    }
+    else if (addr >= 0x2008 && addr <= 0x3FFF) {
+        /* PPU register mirrored every 8 */
+        return read_byte(cpu, 0x2000 | (addr & 0x007));
     }
     else if (addr >= 0x8000 && addr <= 0xFFFF) {
         return rom_read(cpu->cart, addr);
@@ -890,6 +903,18 @@ void reset(struct CPU *cpu)
     set_p(cpu, 0x00 | I);
 
     /* takes cycles */
+    cpu->cycles = 8;
+}
+
+void nmi(struct CPU *cpu)
+{
+    push_word(cpu, cpu->reg.pc);
+
+    set_flag(cpu, B, 0);
+    set_flag(cpu, I, 1);
+    push(cpu, cpu->reg.p);
+
+    set_pc(cpu, 0xFFFA);
     cpu->cycles = 8;
 }
 
