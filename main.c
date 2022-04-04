@@ -71,5 +71,10 @@ void update_frame(void)
         if (clock++ % 3 == 0)
             clock_cpu(&cpu);
 
+        if (is_nmi_generated(&ppu)) {
+            clear_nmi(&ppu);
+            nmi(&cpu);
+        }
+
     } while (!is_frame_ready(&ppu));
 }

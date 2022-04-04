@@ -12,7 +12,7 @@ enum ppu_status {
 enum ppu_control {
     CTRL_NAMETABLE_X     = 1 << 0,
     CTRL_NAMETABLE_Y     = 1 << 1,
-    CTRL_INCREMENT_MODE  = 1 << 2,
+    CTRL_ADDR_INCREMENT  = 1 << 2,
     CTRL_PATTERN_SPRITE  = 1 << 3,
     CTRL_PATTERN_BG      = 1 << 4,
     CTRL_SPRITE_SIZE     = 1 << 5,
@@ -30,6 +30,14 @@ enum ppu_mask {
     MASK_EMPHASIZE_G      = 1 << 6,
     MASK_EMPHASIZE_B      = 1 << 7
 };
+
+static void set_ctrl(struct PPU *ppu, uint8_t flag, uint8_t val)
+{
+    if (val)
+        ppu->ctrl |= flag;
+    else
+        ppu->ctrl &= ~flag;
+}
 
 static void set_stat(struct PPU *ppu, uint8_t flag, uint8_t val)
 {
@@ -115,6 +123,11 @@ static void set_pixel_color(struct PPU *ppu)
     }
 }
 
+void clear_nmi(struct PPU *ppu)
+{
+    set_ctrl(ppu, CTRL_ENABLE_NMI, 0);
+}
+
 int is_nmi_generated(const struct PPU *ppu)
 {
     return ppu->nmi_generated;
@@ -174,33 +187,44 @@ void write_ppu_scroll(struct PPU *ppu, uint8_t data)
 {
 }
 
-void write_ppu_address(struct PPU *ppu, uint8_t hi_or_lo)
+void write_ppu_address(struct PPU *ppu, uint8_t data)
 {
-    static int is_high = 1;
-    uint8_t data = hi_or_lo;
+    if (ppu->addr_latch == 0)
+        /* hi byte */
+        ppu->ppu_addr = data << 8;
+    else
+        /* lo byte */
+        ppu->ppu_addr |= data;
 
-    ppu->ppu_addr = is_high ? data << 8 : ppu->ppu_addr + data;
-    is_high = !is_high;
+    ppu->addr_latch = !ppu->addr_latch;
 }
 
 void write_ppu_data(struct PPU *ppu, uint8_t data)
 {
-    const uint16_t addr = ppu->ppu_addr++;
+    const uint16_t addr = ppu->ppu_addr;
 
     ppu->ppu_data_buf = data;
 
     if (0x2000 <= addr && addr <= 0x23BF) {
         ppu->name_table_0[addr - 0x2000] = data;
     }
-    if (0x3F00 <= addr && addr <= 0x3F0F) {
+    else if (0x3F00 <= addr && addr <= 0x3F0F) {
         ppu->bg_palette_table[addr - 0x3F00] = data;
     }
+
+    if (get_ctrl(ppu, CTRL_ADDR_INCREMENT))
+        ppu->ppu_addr += 32;
+    else
+        ppu->ppu_addr++;
 }
 
 uint8_t read_ppu_status(struct PPU *ppu)
 {
     const uint8_t data = ppu->stat;
+
     set_stat(ppu, STAT_VERTICAL_BLANK, 0);
+    ppu->addr_latch = 0;
+
     return data;
 }
 
