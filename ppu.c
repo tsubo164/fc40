@@ -173,28 +173,32 @@ void write_ppu_control(struct PPU *ppu, uint8_t data)
 
 void write_ppu_mask(struct PPU *ppu, uint8_t data)
 {
+    ppu->mask = data;
 }
 
-void write_oam_address(struct PPU *ppu, uint8_t data)
+void write_oam_address(struct PPU *ppu, uint8_t addr)
 {
+    ppu->oam_addr = addr;
 }
 
 void write_oam_data(struct PPU *ppu, uint8_t data)
 {
+    ppu->oam[ppu->oam_addr] = data;
 }
 
 void write_ppu_scroll(struct PPU *ppu, uint8_t data)
 {
+    /* TODO */
 }
 
-void write_ppu_address(struct PPU *ppu, uint8_t data)
+void write_ppu_address(struct PPU *ppu, uint8_t addr)
 {
     if (ppu->addr_latch == 0)
         /* hi byte */
-        ppu->ppu_addr = data << 8;
+        ppu->ppu_addr = addr << 8;
     else
         /* lo byte */
-        ppu->ppu_addr |= data;
+        ppu->ppu_addr |= addr;
 
     ppu->addr_latch = !ppu->addr_latch;
 }
@@ -230,10 +234,12 @@ uint8_t read_ppu_status(struct PPU *ppu)
 
 uint8_t read_oam_data(struct PPU *ppu)
 {
+    /* TODO */
     return 0;
 }
 
 uint8_t read_ppu_data(struct PPU *ppu)
 {
+    /* TODO */
     return 0;
 }

@@ -20,6 +20,22 @@ static void write_byte(struct CPU *cpu, uint16_t addr, uint8_t data)
         cpu->wram[addr & 0x07FF] = data;
     }
     else if (addr == 0x2000) {
+        write_ppu_control(cpu->ppu, data);
+    }
+    else if (addr == 0x2001) {
+        write_ppu_mask(cpu->ppu, data);
+    }
+    else if (addr == 0x2002) {
+        /* PPU status not writable */
+    }
+    else if (addr == 0x2003) {
+        write_oam_address(cpu->ppu, data);
+    }
+    else if (addr == 0x2004) {
+        write_oam_data(cpu->ppu, data);
+    }
+    else if (addr == 0x2005) {
+        write_ppu_scroll(cpu->ppu, data);
     }
     else if (addr == 0x2006) {
         write_ppu_address(cpu->ppu, data);
@@ -39,13 +55,28 @@ static uint8_t read_byte(const struct CPU *cpu, uint16_t addr)
         return cpu->wram[addr & 0x07FF];
     }
     else if (addr == 0x2000) {
+        /* PPU control not readable */
+    }
+    else if (addr == 0x2001) {
+        /* PPU mask not readable */
     }
     else if (addr == 0x2002) {
         return read_ppu_status(cpu->ppu);
     }
+    else if (addr == 0x2003) {
+        /* PPU oam address not readable */
+    }
+    else if (addr == 0x2004) {
+        /* PPU oam data not readable */
+    }
+    else if (addr == 0x2005) {
+        /* PPU scroll not readable */
+    }
     else if (addr == 0x2006) {
+        /* PPU address not readable */
     }
     else if (addr == 0x2007) {
+        return read_ppu_data(cpu->ppu);
     }
     else if (addr >= 0x2008 && addr <= 0x3FFF) {
         /* PPU register mirrored every 8 */
