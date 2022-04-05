@@ -31,14 +31,6 @@ enum ppu_mask {
     MASK_EMPHASIZE_B      = 1 << 7
 };
 
-static void set_ctrl(struct PPU *ppu, uint8_t flag, uint8_t val)
-{
-    if (val)
-        ppu->ctrl |= flag;
-    else
-        ppu->ctrl &= ~flag;
-}
-
 static void set_stat(struct PPU *ppu, uint8_t flag, uint8_t val)
 {
     if (val)
@@ -125,7 +117,7 @@ static void set_pixel_color(struct PPU *ppu)
 
 void clear_nmi(struct PPU *ppu)
 {
-    set_ctrl(ppu, CTRL_ENABLE_NMI, 0);
+    ppu->nmi_generated = 0;
 }
 
 int is_nmi_generated(const struct PPU *ppu)
@@ -232,14 +224,19 @@ uint8_t read_ppu_status(struct PPU *ppu)
     return data;
 }
 
-uint8_t read_oam_data(struct PPU *ppu)
+uint8_t read_oam_data(const struct PPU *ppu)
 {
     /* TODO */
     return 0;
 }
 
-uint8_t read_ppu_data(struct PPU *ppu)
+uint8_t read_ppu_data(const struct PPU *ppu)
 {
     /* TODO */
     return 0;
+}
+
+uint8_t peek_ppu_status(const struct PPU *ppu)
+{
+    return ppu->stat;
 }
