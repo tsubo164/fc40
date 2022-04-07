@@ -49,6 +49,8 @@ static void write_byte(struct CPU *cpu, uint16_t addr, uint8_t data)
     }
 }
 
+static int peek_ppu_data = 0;
+
 static uint8_t read_byte(const struct CPU *cpu, uint16_t addr)
 {
     if (addr >= 0x0000 && addr <= 0x1FFF) {
@@ -61,7 +63,10 @@ static uint8_t read_byte(const struct CPU *cpu, uint16_t addr)
         /* PPU mask not readable */
     }
     else if (addr == 0x2002) {
-        return read_ppu_status(cpu->ppu);
+        if (peek_ppu_data)
+            return peek_ppu_status(cpu->ppu);
+        else
+            return read_ppu_status(cpu->ppu);
     }
     else if (addr == 0x2003) {
         /* PPU oam address not readable */
@@ -814,6 +819,8 @@ static int execute(struct CPU *cpu, struct instruction inst)
 
 static void print_code(const struct CPU *cpu)
 {
+    peek_ppu_data = 1;
+
     const uint16_t pc = cpu->reg.pc;
     const uint8_t  x = cpu->reg.x;
     const uint8_t  y = cpu->reg.y;
@@ -919,12 +926,13 @@ static void print_code(const struct CPU *cpu)
     printf("%*s", 48 - N, " ");
     printf("A:%02X X:%02X Y:%02X P:%02X SP:%02X", cpu->reg.a, x, y, cpu->reg.p, cpu->reg.s);
     printf("\n");
+
+    peek_ppu_data = 0;
 }
 
 void reset(struct CPU *cpu)
 {
-    const uint16_t addr = read_word(cpu, 0xFFFC);
-    set_pc(cpu, addr);
+    set_pc(cpu, read_word(cpu, 0xFFFC));
 
     /* registers */
     set_a(cpu, 0x00);
@@ -945,7 +953,7 @@ void nmi(struct CPU *cpu)
     set_flag(cpu, I, 1);
     push(cpu, cpu->reg.p);
 
-    set_pc(cpu, 0xFFFA);
+    set_pc(cpu, read_word(cpu, 0xFFFA));
     cpu->cycles = 8;
 }
 
