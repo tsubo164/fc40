@@ -55,7 +55,7 @@ static void write_byte(struct CPU *cpu, uint16_t addr, uint8_t data)
 
 static int peek_ppu_data = 0;
 
-static uint8_t read_byte(const struct CPU *cpu, uint16_t addr)
+static uint8_t read_byte(struct CPU *cpu, uint16_t addr)
 {
     if (addr >= 0x0000 && addr <= 0x1FFF) {
         return cpu->wram[addr & 0x07FF];
@@ -94,8 +94,7 @@ static uint8_t read_byte(const struct CPU *cpu, uint16_t addr)
     else if (addr >= 0x4016 && addr <= 0x4017) {
         const int id = addr & 0x001;
         const uint8_t data = (cpu->controller_state[id] & 0x80) > 0;
-        /* XXX */
-        ((struct CPU *)cpu)->controller_state[id] <<= 1;
+        cpu->controller_state[id] <<= 1;
         return data;
     }
     else if (addr >= 0x8000 && addr <= 0xFFFF) {
@@ -104,7 +103,7 @@ static uint8_t read_byte(const struct CPU *cpu, uint16_t addr)
     return 0;
 }
 
-static uint16_t read_word(const struct CPU *cpu, uint16_t addr)
+static uint16_t read_word(struct CPU *cpu, uint16_t addr)
 {
     const uint16_t lo = read_byte(cpu, addr);
     const uint16_t hi = read_byte(cpu, addr + 1);
@@ -158,7 +157,7 @@ static uint16_t abs_index(uint16_t abs, uint8_t idx, int *page_crossed)
     return abs + idx;
 }
 
-static uint16_t abs_indirect(const struct CPU *cpu, uint16_t abs)
+static uint16_t abs_indirect(struct CPU *cpu, uint16_t abs)
 {
     if ((abs & 0x00FF) == 0x00FF)
         /* emulate page boundary hardware bug */
@@ -168,7 +167,7 @@ static uint16_t abs_indirect(const struct CPU *cpu, uint16_t abs)
         return read_word(cpu, abs);
 }
 
-static uint16_t zp_indirect(const struct CPU *cpu, uint8_t zp)
+static uint16_t zp_indirect(struct CPU *cpu, uint8_t zp)
 {
     const uint16_t lo = read_byte(cpu, zp & 0xFF);
     const uint16_t hi = read_byte(cpu, (zp + 1) & 0xFF);
@@ -828,7 +827,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
     return inst.cycles + page_crossed + branch_taken;
 }
 
-static void print_code(const struct CPU *cpu)
+static void print_code(struct CPU *cpu)
 {
     peek_ppu_data = 1;
 
