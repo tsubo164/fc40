@@ -265,15 +265,15 @@ enum opcode {
     /* flag */
     CLC, CLD, CLI, CLV, SEC, SED, SEI,
     /* XXX undocumented */
-    LAX, SAX,
+    LAX, SAX, DCP, ISC, SLO,
     /* no op */
     NOP
 };
 
 static const uint8_t opcode_table[] = {
 /*      00   01   02   03   04   05   06   07   08   09   0A   0B   0C   0D   0E   0F */
-/*00*/ BRK, ORA,   0,   0, NOP, ORA, ASL,   0, PHP, ORA, ASL,   0, NOP, ORA, ASL,   0,
-/*10*/ BPL, ORA,   0,   0, NOP, ORA, ASL,   0, CLC, ORA, NOP,   0, NOP, ORA, ASL,   0,
+/*00*/ BRK, ORA,   0, SLO, NOP, ORA, ASL, SLO, PHP, ORA, ASL,   0, NOP, ORA, ASL, SLO,
+/*10*/ BPL, ORA,   0, SLO, NOP, ORA, ASL, SLO, CLC, ORA, NOP, SLO, NOP, ORA, ASL, SLO,
 /*20*/ JSR, AND,   0,   0, BIT, AND, ROL,   0, PLP, AND, ROL,   0, BIT, AND, ROL,   0,
 /*30*/ BMI, AND,   0,   0, NOP, AND, ROL,   0, SEC, AND, NOP,   0, NOP, AND, ROL,   0,
 /*40*/ RTI, EOR,   0,   0, NOP, EOR, LSR,   0, PHA, EOR, LSR,   0, JMP, EOR, LSR,   0,
@@ -284,15 +284,15 @@ static const uint8_t opcode_table[] = {
 /*90*/ BCC, STA,   0,   0, STY, STA, STX, SAX, TYA, STA, TXS,   0,   0, STA,   0,   0,
 /*A0*/ LDY, LDA, LDX, LAX, LDY, LDA, LDX, LAX, TAY, LDA, TAX, LAX, LDY, LDA, LDX, LAX,
 /*B0*/ BCS, LDA,   0, LAX, LDY, LDA, LDX, LAX, CLV, LDA, TSX,   0, LDY, LDA, LDX, LAX,
-/*C0*/ CPY, CMP, NOP,   0, CPY, CMP, DEC,   0, INY, CMP, DEX,   0, CPY, CMP, DEC,   0,
-/*D0*/ BNE, CMP,   0,   0, NOP, CMP, DEC,   0, CLD, CMP, NOP,   0, NOP, CMP, DEC,   0,
-/*E0*/ CPX, SBC, NOP,   0, CPX, SBC, INC,   0, INX, SBC, NOP, SBC, CPX, SBC, INC,   0,
-/*F0*/ BEQ, SBC,   0,   0, NOP, SBC, INC,   0, SED, SBC, NOP,   0, NOP, SBC, INC,   0
+/*C0*/ CPY, CMP, NOP, DCP, CPY, CMP, DEC, DCP, INY, CMP, DEX,   0, CPY, CMP, DEC, DCP,
+/*D0*/ BNE, CMP,   0, DCP, NOP, CMP, DEC, DCP, CLD, CMP, NOP, DCP, NOP, CMP, DEC, DCP,
+/*E0*/ CPX, SBC, NOP, ISC, CPX, SBC, INC, ISC, INX, SBC, NOP, SBC, CPX, SBC, INC, ISC,
+/*F0*/ BEQ, SBC,   0, ISC, NOP, SBC, INC, ISC, SED, SBC, NOP, ISC, NOP, SBC, INC, ISC
 };
 
 static const char opcode_name_table[][4] = {
-"BRK","ORA",   "",   "","NOP","ORA","ASL",   "","PHP","ORA","ASL",   "","NOP","ORA","ASL",   "",
-"BPL","ORA",   "",   "","NOP","ORA","ASL",   "","CLC","ORA","NOP",   "","NOP","ORA","ASL",   "",
+"BRK","ORA",   "","SLO","NOP","ORA","ASL","SLO","PHP","ORA","ASL",   "","NOP","ORA","ASL","SLO",
+"BPL","ORA",   "","SLO","NOP","ORA","ASL","SLO","CLC","ORA","NOP","SLO","NOP","ORA","ASL","SLO",
 "JSR","AND",   "",   "","BIT","AND","ROL",   "","PLP","AND","ROL",   "","BIT","AND","ROL",   "",
 "BMI","AND",   "",   "","NOP","AND","ROL",   "","SEC","AND","NOP",   "","NOP","AND","ROL",   "",
 "RTI","EOR",   "",   "","NOP","EOR","LSR",   "","PHA","EOR","LSR",   "","JMP","EOR","LSR",   "",
@@ -303,10 +303,10 @@ static const char opcode_name_table[][4] = {
 "BCC","STA",   "",   "","STY","STA","STX","SAX","TYA","STA","TXS",   "",   "","STA",   "",   "",
 "LDY","LDA","LDX","LAX","LDY","LDA","LDX","LAX","TAY","LDA","TAX","LAX","LDY","LDA","LDX","LAX",
 "BCS","LDA",   "","LAX","LDY","LDA","LDX","LAX","CLV","LDA","TSX",   "","LDY","LDA","LDX","LAX",
-"CPY","CMP","NOP",   "","CPY","CMP","DEC",   "","INY","CMP","DEX",   "","CPY","CMP","DEC",   "",
-"BNE","CMP",   "",   "","NOP","CMP","DEC",   "","CLD","CMP","NOP",   "","NOP","CMP","DEC",   "",
-"CPX","SBC","NOP",   "","CPX","SBC","INC",   "","INX","SBC","NOP","SBC","CPX","SBC","INC",   "",
-"BEQ","SBC",   "",   "","NOP","SBC","INC",   "","SED","SBC","NOP",   "","NOP","SBC","INC",   ""
+"CPY","CMP","NOP","DCP","CPY","CMP","DEC","DCP","INY","CMP","DEX",   "","CPY","CMP","DEC","DCP",
+"BNE","CMP",   "","DCP","NOP","CMP","DEC","DCP","CLD","CMP","NOP","DCP","NOP","CMP","DEC","DCP",
+"CPX","SBC","NOP","ISC","CPX","SBC","INC","ISC","INX","SBC","NOP","SBC","CPX","SBC","INC","ISC",
+"BEQ","SBC",   "","ISC","NOP","SBC","INC","ISC","SED","SBC","NOP","ISC","NOP","SBC","INC","ISC"
 };
 
 static const int8_t cycle_table[] = {
@@ -833,6 +833,40 @@ static int execute(struct CPU *cpu, struct instruction inst)
     /* Store Accumulator AND Index Register X in Memory: A & X -> M () */
     case SAX:
         write_byte(cpu, addr, cpu->reg.a & cpu->reg.x);
+        break;
+
+    /* Decrement Memory by One then Compare with Accumulator: M - 1 -> M, A - M (N, Z, C) */
+    case DCP:
+        {
+            const uint8_t data = read_byte(cpu, addr) - 1;
+            update_zn(cpu, data);
+            write_byte(cpu, addr, data);
+            compare(cpu, cpu->reg.a, data);
+        }
+        break;
+
+    /* Increment Memory by One then SBC then Subtract Memory from Accumulator with Borrow:
+     * M + 1 -> M, A - M -> A (N, V, Z, C) */
+    case ISC:
+        {
+            const uint8_t data = read_byte(cpu, addr) + 1;
+            update_zn(cpu, data);
+            write_byte(cpu, addr, data);
+            add_a_m(cpu, ~data);
+        }
+        break;
+
+    /* Arithmetic Shift Left then OR Memory with Accumulator:
+     * M * 2 -> M, A | M -> A (N, Z, C) */
+    case SLO:
+        {
+            uint8_t data = read_byte(cpu, addr);
+            set_flag(cpu, C, data & 0x80);
+            data <<= 1;
+            update_zn(cpu, data);
+            write_byte(cpu, addr, data);
+            set_a(cpu, cpu->reg.a | data);
+        }
         break;
 
     default:
