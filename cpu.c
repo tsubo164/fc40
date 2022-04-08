@@ -47,6 +47,10 @@ static void write_byte(struct CPU *cpu, uint16_t addr, uint8_t data)
         /* PPU register mirrored every 8 */
         write_byte(cpu, 0x2000 | (addr & 0x007), data);
     }
+    else if (addr >= 0x4016 && addr <= 0x4017) {
+        const int id = addr & 0x001;
+        cpu->controller_state[id] = cpu->controller_input[id];
+    }
 }
 
 static int peek_ppu_data = 0;
@@ -86,6 +90,13 @@ static uint8_t read_byte(const struct CPU *cpu, uint16_t addr)
     else if (addr >= 0x2008 && addr <= 0x3FFF) {
         /* PPU register mirrored every 8 */
         return read_byte(cpu, 0x2000 | (addr & 0x007));
+    }
+    else if (addr >= 0x4016 && addr <= 0x4017) {
+        const int id = addr & 0x001;
+        const uint8_t data = (cpu->controller_state[id] & 0x80) > 0;
+        /* XXX */
+        ((struct CPU *)cpu)->controller_state[id] <<= 1;
+        return data;
     }
     else if (addr >= 0x8000 && addr <= 0xFFFF) {
         return rom_read(cpu->cart, addr);
@@ -976,4 +987,9 @@ void clock_cpu(struct CPU *cpu)
     }
 
     cpu->cycles--;
+}
+
+void set_controller_input(struct CPU *cpu, uint8_t id, uint8_t input)
+{
+    cpu->controller_input[id] = input;
 }

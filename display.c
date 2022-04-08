@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <GLFW/glfw3.h>
+
 #include "display.h"
 #include "framebuffer.h"
 
@@ -9,7 +10,9 @@ static GLuint init_gl(const struct framebuffer *fb);
 static void render(const struct framebuffer *fb, int scale);
 static void render_grid(int w, int h);
 
-int open_display(const struct framebuffer *fb, void (*update_frame_func)(void))
+int open_display(const struct framebuffer *fb,
+        void (*update_frame_func)(void),
+        void (*input_controller_func)(uint8_t id, uint8_t input))
 {
     const int MARGIN = 32;
     const int SCALE = 2;
@@ -66,6 +69,33 @@ int open_display(const struct framebuffer *fb, void (*update_frame_func)(void))
 
         /* Poll for and process events */
         glfwPollEvents();
+
+        {
+            uint8_t input = 0x00;
+
+            if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS)
+                input |= 1 << 7; /* A */
+            if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS)
+                input |= 1 << 6; /* B */
+            if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS)
+                input |= 1 << 5; /* select */
+            if (glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS)
+                input |= 1 << 4; /* start */
+            if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+                input |= 1 << 3; /* up */
+            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+                input |= 1 << 2; /* down */
+            if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+                input |= 1 << 1; /* left */
+            if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+                input |= 1 << 0; /* right */
+
+            input_controller_func(0, input);
+        }
+
+
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+            break;
 
         f++;
     }

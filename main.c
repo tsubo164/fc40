@@ -12,6 +12,7 @@ static struct PPU ppu = {0};
 static uint64_t clock = 0;
 
 void update_frame(void);
+void input_controller(uint8_t id, uint8_t input);
 
 int main(int argc, char **argv)
 {
@@ -54,7 +55,7 @@ int main(int argc, char **argv)
             clock_cpu(&cpu);
     }
     else {
-        open_display(fbuf, update_frame);
+        open_display(fbuf, update_frame, input_controller);
     }
 
     free_framebuffer(fbuf);
@@ -77,4 +78,9 @@ void update_frame(void)
         }
 
     } while (!is_frame_ready(&ppu));
+}
+
+void input_controller(uint8_t id, uint8_t input)
+{
+    set_controller_input(&cpu, 0, input);
 }

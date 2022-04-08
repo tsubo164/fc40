@@ -25,6 +25,9 @@ struct CPU {
     struct registers reg;
     int cycles;
 
+    uint8_t controller_input[2];
+    uint8_t controller_state[2];
+
     uint8_t log_mode;
     uint16_t log_line;
 };
@@ -32,5 +35,7 @@ struct CPU {
 extern void reset(struct CPU *cpu);
 extern void nmi(struct CPU *cpu);
 extern void clock_cpu(struct CPU *cpu);
+
+extern void set_controller_input(struct CPU *cpu, uint8_t id, uint8_t input);
 
 #endif /* _H */
