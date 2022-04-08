@@ -264,6 +264,8 @@ enum opcode {
     BCC, BCS, BEQ, BMI, BNE, BPL, BVC, BVS,
     /* flag */
     CLC, CLD, CLI, CLV, SEC, SED, SEI,
+    /* XXX undocumented */
+    LAX, SAX,
     /* no op */
     NOP
 };
@@ -278,13 +280,13 @@ static const uint8_t opcode_table[] = {
 /*50*/ BVC, EOR,   0,   0, NOP, EOR, LSR,   0, CLI, EOR, NOP,   0, NOP, EOR, LSR,   0,
 /*60*/ RTS, ADC,   0,   0, NOP, ADC, ROR,   0, PLA, ADC, ROR,   0, JMP, ADC, ROR,   0,
 /*70*/ BVS, ADC,   0,   0, NOP, ADC, ROR,   0, SEI, ADC, NOP,   0, NOP, ADC, ROR,   0,
-/*80*/ NOP, STA, NOP,   0, STY, STA, STX,   0, DEY, NOP, TXA,   0, STY, STA, STX,   0,
-/*90*/ BCC, STA,   0,   0, STY, STA, STX,   0, TYA, STA, TXS,   0,   0, STA,   0,   0,
-/*A0*/ LDY, LDA, LDX,   0, LDY, LDA, LDX,   0, TAY, LDA, TAX,   0, LDY, LDA, LDX,   0,
-/*B0*/ BCS, LDA,   0,   0, LDY, LDA, LDX,   0, CLV, LDA, TSX,   0, LDY, LDA, LDX,   0,
+/*80*/ NOP, STA, NOP, SAX, STY, STA, STX, SAX, DEY, NOP, TXA,   0, STY, STA, STX, SAX,
+/*90*/ BCC, STA,   0,   0, STY, STA, STX, SAX, TYA, STA, TXS,   0,   0, STA,   0,   0,
+/*A0*/ LDY, LDA, LDX, LAX, LDY, LDA, LDX, LAX, TAY, LDA, TAX, LAX, LDY, LDA, LDX, LAX,
+/*B0*/ BCS, LDA,   0, LAX, LDY, LDA, LDX, LAX, CLV, LDA, TSX,   0, LDY, LDA, LDX, LAX,
 /*C0*/ CPY, CMP, NOP,   0, CPY, CMP, DEC,   0, INY, CMP, DEX,   0, CPY, CMP, DEC,   0,
 /*D0*/ BNE, CMP,   0,   0, NOP, CMP, DEC,   0, CLD, CMP, NOP,   0, NOP, CMP, DEC,   0,
-/*E0*/ CPX, SBC, NOP,   0, CPX, SBC, INC,   0, INX, SBC, NOP,   0, CPX, SBC, INC,   0,
+/*E0*/ CPX, SBC, NOP,   0, CPX, SBC, INC,   0, INX, SBC, NOP, SBC, CPX, SBC, INC,   0,
 /*F0*/ BEQ, SBC,   0,   0, NOP, SBC, INC,   0, SED, SBC, NOP,   0, NOP, SBC, INC,   0
 };
 
@@ -297,13 +299,13 @@ static const char opcode_name_table[][4] = {
 "BVC","EOR",   "",   "","NOP","EOR","LSR",   "","CLI","EOR","NOP",   "","NOP","EOR","LSR",   "",
 "RTS","ADC",   "",   "","NOP","ADC","ROR",   "","PLA","ADC","ROR",   "","JMP","ADC","ROR",   "",
 "BVS","ADC",   "",   "","NOP","ADC","ROR",   "","SEI","ADC","NOP",   "","NOP","ADC","ROR",   "",
-"NOP","STA","NOP",   "","STY","STA","STX",   "","DEY","NOP","TXA",   "","STY","STA","STX",   "",
-"BCC","STA",   "",   "","STY","STA","STX",   "","TYA","STA","TXS",   "",   "","STA",   "",   "",
-"LDY","LDA","LDX",   "","LDY","LDA","LDX",   "","TAY","LDA","TAX",   "","LDY","LDA","LDX",   "",
-"BCS","LDA",   "",   "","LDY","LDA","LDX",   "","CLV","LDA","TSX",   "","LDY","LDA","LDX",   "",
+"NOP","STA","NOP","SAX","STY","STA","STX","SAX","DEY","NOP","TXA",   "","STY","STA","STX","SAX",
+"BCC","STA",   "",   "","STY","STA","STX","SAX","TYA","STA","TXS",   "",   "","STA",   "",   "",
+"LDY","LDA","LDX","LAX","LDY","LDA","LDX","LAX","TAY","LDA","TAX","LAX","LDY","LDA","LDX","LAX",
+"BCS","LDA",   "","LAX","LDY","LDA","LDX","LAX","CLV","LDA","TSX",   "","LDY","LDA","LDX","LAX",
 "CPY","CMP","NOP",   "","CPY","CMP","DEC",   "","INY","CMP","DEX",   "","CPY","CMP","DEC",   "",
 "BNE","CMP",   "",   "","NOP","CMP","DEC",   "","CLD","CMP","NOP",   "","NOP","CMP","DEC",   "",
-"CPX","SBC","NOP",   "","CPX","SBC","INC",   "","INX","SBC","NOP",   "","CPX","SBC","INC",   "",
+"CPX","SBC","NOP",   "","CPX","SBC","INC",   "","INX","SBC","NOP","SBC","CPX","SBC","INC",   "",
 "BEQ","SBC",   "",   "","NOP","SBC","INC",   "","SED","SBC","NOP",   "","NOP","SBC","INC",   ""
 };
 
@@ -818,6 +820,19 @@ static int execute(struct CPU *cpu, struct instruction inst)
 
     /* No Operation: () */
     case NOP:
+        break;
+
+    /* XXX Undocumented -------------------------------- */
+
+    /* Load Accumulator and Index Register X from Memory: M -> A, X (N, Z) */
+    case LAX:
+        set_a(cpu, read_byte(cpu, addr));
+        set_x(cpu, cpu->reg.a);
+        break;
+
+    /* Store Accumulator AND Index Register X in Memory: A & X -> M () */
+    case SAX:
+        write_byte(cpu, addr, cpu->reg.a & cpu->reg.x);
         break;
 
     default:
