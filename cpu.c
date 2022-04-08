@@ -265,7 +265,7 @@ enum opcode {
     /* flag */
     CLC, CLD, CLI, CLV, SEC, SED, SEI,
     /* XXX undocumented */
-    LAX, SAX, DCP, ISC, SLO,
+    LAX, SAX, DCP, ISC, SLO, RLA, SRE, RRA,
     /* no op */
     NOP
 };
@@ -274,12 +274,12 @@ static const uint8_t opcode_table[] = {
 /*      00   01   02   03   04   05   06   07   08   09   0A   0B   0C   0D   0E   0F */
 /*00*/ BRK, ORA,   0, SLO, NOP, ORA, ASL, SLO, PHP, ORA, ASL,   0, NOP, ORA, ASL, SLO,
 /*10*/ BPL, ORA,   0, SLO, NOP, ORA, ASL, SLO, CLC, ORA, NOP, SLO, NOP, ORA, ASL, SLO,
-/*20*/ JSR, AND,   0,   0, BIT, AND, ROL,   0, PLP, AND, ROL,   0, BIT, AND, ROL,   0,
-/*30*/ BMI, AND,   0,   0, NOP, AND, ROL,   0, SEC, AND, NOP,   0, NOP, AND, ROL,   0,
-/*40*/ RTI, EOR,   0,   0, NOP, EOR, LSR,   0, PHA, EOR, LSR,   0, JMP, EOR, LSR,   0,
-/*50*/ BVC, EOR,   0,   0, NOP, EOR, LSR,   0, CLI, EOR, NOP,   0, NOP, EOR, LSR,   0,
-/*60*/ RTS, ADC,   0,   0, NOP, ADC, ROR,   0, PLA, ADC, ROR,   0, JMP, ADC, ROR,   0,
-/*70*/ BVS, ADC,   0,   0, NOP, ADC, ROR,   0, SEI, ADC, NOP,   0, NOP, ADC, ROR,   0,
+/*20*/ JSR, AND,   0, RLA, BIT, AND, ROL, RLA, PLP, AND, ROL,   0, BIT, AND, ROL, RLA,
+/*30*/ BMI, AND,   0, RLA, NOP, AND, ROL, RLA, SEC, AND, NOP, RLA, NOP, AND, ROL, RLA,
+/*40*/ RTI, EOR,   0, SRE, NOP, EOR, LSR, SRE, PHA, EOR, LSR,   0, JMP, EOR, LSR, SRE,
+/*50*/ BVC, EOR,   0, SRE, NOP, EOR, LSR, SRE, CLI, EOR, NOP, SRE, NOP, EOR, LSR, SRE,
+/*60*/ RTS, ADC,   0, RRA, NOP, ADC, ROR, RRA, PLA, ADC, ROR,   0, JMP, ADC, ROR, RRA,
+/*70*/ BVS, ADC,   0, RRA, NOP, ADC, ROR, RRA, SEI, ADC, NOP, RRA, NOP, ADC, ROR, RRA,
 /*80*/ NOP, STA, NOP, SAX, STY, STA, STX, SAX, DEY, NOP, TXA,   0, STY, STA, STX, SAX,
 /*90*/ BCC, STA,   0,   0, STY, STA, STX, SAX, TYA, STA, TXS,   0,   0, STA,   0,   0,
 /*A0*/ LDY, LDA, LDX, LAX, LDY, LDA, LDX, LAX, TAY, LDA, TAX, LAX, LDY, LDA, LDX, LAX,
@@ -293,12 +293,12 @@ static const uint8_t opcode_table[] = {
 static const char opcode_name_table[][4] = {
 "BRK","ORA",   "","SLO","NOP","ORA","ASL","SLO","PHP","ORA","ASL",   "","NOP","ORA","ASL","SLO",
 "BPL","ORA",   "","SLO","NOP","ORA","ASL","SLO","CLC","ORA","NOP","SLO","NOP","ORA","ASL","SLO",
-"JSR","AND",   "",   "","BIT","AND","ROL",   "","PLP","AND","ROL",   "","BIT","AND","ROL",   "",
-"BMI","AND",   "",   "","NOP","AND","ROL",   "","SEC","AND","NOP",   "","NOP","AND","ROL",   "",
-"RTI","EOR",   "",   "","NOP","EOR","LSR",   "","PHA","EOR","LSR",   "","JMP","EOR","LSR",   "",
-"BVC","EOR",   "",   "","NOP","EOR","LSR",   "","CLI","EOR","NOP",   "","NOP","EOR","LSR",   "",
-"RTS","ADC",   "",   "","NOP","ADC","ROR",   "","PLA","ADC","ROR",   "","JMP","ADC","ROR",   "",
-"BVS","ADC",   "",   "","NOP","ADC","ROR",   "","SEI","ADC","NOP",   "","NOP","ADC","ROR",   "",
+"JSR","AND",   "","RLA","BIT","AND","ROL","RLA","PLP","AND","ROL",   "","BIT","AND","ROL","RLA",
+"BMI","AND",   "","RLA","NOP","AND","ROL","RLA","SEC","AND","NOP","RLA","NOP","AND","ROL","RLA",
+"RTI","EOR",   "","SRE","NOP","EOR","LSR","SRE","PHA","EOR","LSR",   "","JMP","EOR","LSR","SRE",
+"BVC","EOR",   "","SRE","NOP","EOR","LSR","SRE","CLI","EOR","NOP","SRE","NOP","EOR","LSR","SRE",
+"RTS","ADC",   "","RRA","NOP","ADC","ROR","RRA","PLA","ADC","ROR",   "","JMP","ADC","ROR","RRA",
+"BVS","ADC",   "","RRA","NOP","ADC","ROR","RRA","SEI","ADC","NOP","RRA","NOP","ADC","ROR","RRA",
 "NOP","STA","NOP","SAX","STY","STA","STX","SAX","DEY","NOP","TXA",   "","STY","STA","STX","SAX",
 "BCC","STA",   "",   "","STY","STA","STX","SAX","TYA","STA","TXS",   "",   "","STA",   "",   "",
 "LDY","LDA","LDX","LAX","LDY","LDA","LDX","LAX","TAY","LDA","TAX","LAX","LDY","LDA","LDX","LAX",
@@ -866,6 +866,46 @@ static int execute(struct CPU *cpu, struct instruction inst)
             update_zn(cpu, data);
             write_byte(cpu, addr, data);
             set_a(cpu, cpu->reg.a | data);
+        }
+        break;
+
+    /* Rotate Left then AND with Accumulator: C <- /M7...M0/ <- C, A & M -> A (N, Z, C) */
+    case RLA:
+        {
+            const uint8_t carry = get_flag(cpu, C);
+            uint8_t data = read_byte(cpu, addr);
+            set_flag(cpu, C, data & 0x80);
+            data = (data << 1) | carry;
+            update_zn(cpu, data);
+            write_byte(cpu, addr, data);
+            set_a(cpu, cpu->reg.a & data);
+        }
+        break;
+
+    /* Logical Shift Right then Exclusive OR Memory with Accumulator:
+     * M /2 -> M, M ^ A -> A (N, Z, C) */
+    case SRE:
+        {
+            uint8_t data = read_byte(cpu, addr);
+            set_flag(cpu, C, data & 0x01);
+            data >>= 1;
+            update_zn(cpu, data);
+            write_byte(cpu, addr, data);
+            set_a(cpu, cpu->reg.a ^ data);
+        }
+        break;
+
+    /* Rotate Right and Add Memory to Accumulator:
+     * C -> /M7...M0/ -> C, A + M + C -> A (N, V, Z, C) */
+    case RRA:
+        {
+            const uint8_t carry = get_flag(cpu, C);
+            uint8_t data = read_byte(cpu, addr);
+            set_flag(cpu, C, data & 0x01);
+            data = (data >> 1) | (carry << 7);
+            update_zn(cpu, data);
+            write_byte(cpu, addr, data);
+            add_a_m(cpu, data);
         }
         break;
 
