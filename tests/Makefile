@@ -7,7 +7,7 @@ test: cpu_test
 
 cpu_test: ../nes
 	../nes --log-mode ./nestest.nes > test.log
-	head -5003 nestest.log | cut -b -73 | diff - test.log
+	head -8980 nestest.log | sed -e 's/\*/ /' -e 's/ISB/ISC/' | cut -b -73 | diff - test.log
 
 clean:
 	$(RM) test.log

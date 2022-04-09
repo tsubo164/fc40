@@ -242,8 +242,8 @@ static uint16_t fetch_address(struct CPU *cpu, int mode, int *page_crossed)
 }
 
 enum opcode {
-    /* undocumented */
-    UDC = 0,
+    /* illegal */
+    ILL = 0,
     /* load and store */
     LDA, LDX, LDY, STA, STX, STY,
     /* transfer */
@@ -264,7 +264,7 @@ enum opcode {
     BCC, BCS, BEQ, BMI, BNE, BPL, BVC, BVS,
     /* flag */
     CLC, CLD, CLI, CLV, SEC, SED, SEI,
-    /* XXX undocumented */
+    /* XXX undocumented. there are actually some more ops. */
     LAX, SAX, DCP, ISC, SLO, RLA, SRE, RRA,
     /* no op */
     NOP
@@ -290,24 +290,26 @@ static const uint8_t opcode_table[] = {
 /*F0*/ BEQ, SBC,   0, ISC, NOP, SBC, INC, ISC, SED, SBC, NOP, ISC, NOP, SBC, INC, ISC
 };
 
+#define ILLEG "???"
 static const char opcode_name_table[][4] = {
-"BRK","ORA",   "","SLO","NOP","ORA","ASL","SLO","PHP","ORA","ASL",   "","NOP","ORA","ASL","SLO",
-"BPL","ORA",   "","SLO","NOP","ORA","ASL","SLO","CLC","ORA","NOP","SLO","NOP","ORA","ASL","SLO",
-"JSR","AND",   "","RLA","BIT","AND","ROL","RLA","PLP","AND","ROL",   "","BIT","AND","ROL","RLA",
-"BMI","AND",   "","RLA","NOP","AND","ROL","RLA","SEC","AND","NOP","RLA","NOP","AND","ROL","RLA",
-"RTI","EOR",   "","SRE","NOP","EOR","LSR","SRE","PHA","EOR","LSR",   "","JMP","EOR","LSR","SRE",
-"BVC","EOR",   "","SRE","NOP","EOR","LSR","SRE","CLI","EOR","NOP","SRE","NOP","EOR","LSR","SRE",
-"RTS","ADC",   "","RRA","NOP","ADC","ROR","RRA","PLA","ADC","ROR",   "","JMP","ADC","ROR","RRA",
-"BVS","ADC",   "","RRA","NOP","ADC","ROR","RRA","SEI","ADC","NOP","RRA","NOP","ADC","ROR","RRA",
-"NOP","STA","NOP","SAX","STY","STA","STX","SAX","DEY","NOP","TXA",   "","STY","STA","STX","SAX",
-"BCC","STA",   "",   "","STY","STA","STX","SAX","TYA","STA","TXS",   "",   "","STA",   "",   "",
+"BRK","ORA",ILLEG,"SLO","NOP","ORA","ASL","SLO","PHP","ORA","ASL",ILLEG,"NOP","ORA","ASL","SLO",
+"BPL","ORA",ILLEG,"SLO","NOP","ORA","ASL","SLO","CLC","ORA","NOP","SLO","NOP","ORA","ASL","SLO",
+"JSR","AND",ILLEG,"RLA","BIT","AND","ROL","RLA","PLP","AND","ROL",ILLEG,"BIT","AND","ROL","RLA",
+"BMI","AND",ILLEG,"RLA","NOP","AND","ROL","RLA","SEC","AND","NOP","RLA","NOP","AND","ROL","RLA",
+"RTI","EOR",ILLEG,"SRE","NOP","EOR","LSR","SRE","PHA","EOR","LSR",ILLEG,"JMP","EOR","LSR","SRE",
+"BVC","EOR",ILLEG,"SRE","NOP","EOR","LSR","SRE","CLI","EOR","NOP","SRE","NOP","EOR","LSR","SRE",
+"RTS","ADC",ILLEG,"RRA","NOP","ADC","ROR","RRA","PLA","ADC","ROR",ILLEG,"JMP","ADC","ROR","RRA",
+"BVS","ADC",ILLEG,"RRA","NOP","ADC","ROR","RRA","SEI","ADC","NOP","RRA","NOP","ADC","ROR","RRA",
+"NOP","STA","NOP","SAX","STY","STA","STX","SAX","DEY","NOP","TXA",ILLEG,"STY","STA","STX","SAX",
+"BCC","STA",ILLEG,ILLEG,"STY","STA","STX","SAX","TYA","STA","TXS",ILLEG,ILLEG,"STA",ILLEG,ILLEG,
 "LDY","LDA","LDX","LAX","LDY","LDA","LDX","LAX","TAY","LDA","TAX","LAX","LDY","LDA","LDX","LAX",
-"BCS","LDA",   "","LAX","LDY","LDA","LDX","LAX","CLV","LDA","TSX",   "","LDY","LDA","LDX","LAX",
-"CPY","CMP","NOP","DCP","CPY","CMP","DEC","DCP","INY","CMP","DEX",   "","CPY","CMP","DEC","DCP",
-"BNE","CMP",   "","DCP","NOP","CMP","DEC","DCP","CLD","CMP","NOP","DCP","NOP","CMP","DEC","DCP",
+"BCS","LDA",ILLEG,"LAX","LDY","LDA","LDX","LAX","CLV","LDA","TSX",ILLEG,"LDY","LDA","LDX","LAX",
+"CPY","CMP","NOP","DCP","CPY","CMP","DEC","DCP","INY","CMP","DEX",ILLEG,"CPY","CMP","DEC","DCP",
+"BNE","CMP",ILLEG,"DCP","NOP","CMP","DEC","DCP","CLD","CMP","NOP","DCP","NOP","CMP","DEC","DCP",
 "CPX","SBC","NOP","ISC","CPX","SBC","INC","ISC","INX","SBC","NOP","SBC","CPX","SBC","INC","ISC",
-"BEQ","SBC",   "","ISC","NOP","SBC","INC","ISC","SED","SBC","NOP","ISC","NOP","SBC","INC","ISC"
+"BEQ","SBC",ILLEG,"ISC","NOP","SBC","INC","ISC","SED","SBC","NOP","ISC","NOP","SBC","INC","ISC"
 };
+#undef ILLEG
 
 static const int8_t cycle_table[] = {
 /*     00  01  02  03  04  05  06  07  08  09  0A  0B  0C  0D  0E  0F */

@@ -51,7 +51,7 @@ int main(int argc, char **argv)
 
     if (cpu.log_mode) {
         cpu.reg.pc = 0xC000;
-        while (cpu.log_line < 5003)
+        while (cpu.log_line < 8980)
             clock_cpu(&cpu);
     }
     else {
