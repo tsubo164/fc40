@@ -77,12 +77,10 @@ static const uint8_t *get_color(int index)
     return palette_2C02[index];
 }
 
-static void set_pixel_color(struct PPU *ppu)
+static void set_pixel_color(const struct PPU *ppu, int x, int y)
 {
     struct framebuffer *fb = ppu->fbuf;
     const uint8_t *chr = ppu->char_rom;
-    const int x = ppu->cycle;
-    const int y = ppu->scanline;
     const uint8_t *table = ppu->name_table_0;
 
     const int namex = x / 8;
@@ -132,29 +130,29 @@ int is_frame_ready(const struct PPU *ppu)
 
 void clock_ppu(struct PPU *ppu)
 {
-    if (ppu->cycle == 0 && ppu->scanline == 0)
-        set_stat(ppu, STAT_VERTICAL_BLANK, 0);
+    const int x = ppu->cycle;
+    const int y = ppu->scanline;
 
-    if ((ppu->cycle >= 0 && ppu->cycle < 256) &&
-        (ppu->scanline >= 0 && ppu->scanline < 240))
-        set_pixel_color(ppu);
+    if ((x >= 1 && x <= 256) &&
+        (y >= 0 && y <= 239))
+        set_pixel_color(ppu, x - 1, y);
 
-    ppu->cycle++;
-
-    if (ppu->cycle == 341) {
-        ppu->cycle = 0;
-        ppu->scanline++;
-    }
-
-    if (ppu->cycle == 0 && ppu->scanline == 240) {
+    if (x == 1 && y == 241) {
         set_stat(ppu, STAT_VERTICAL_BLANK, 1);
 
         if (get_ctrl(ppu, CTRL_ENABLE_NMI))
             ppu->nmi_generated = 1;
     }
 
-    if (ppu->scanline == 261) {
-        ppu->scanline = 0;
+    if (x == 1 && y == 261)
+        set_stat(ppu, STAT_VERTICAL_BLANK, 0);
+
+    /* advance cycle and scanline */
+    if (x == 340) {
+        ppu->cycle    = 0;
+        ppu->scanline = (y == 261) ? 0 : y + 1;
+    } else {
+        ppu->cycle    = x + 1;
     }
 }
 
