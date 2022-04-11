@@ -4,6 +4,9 @@
 #include "display.h"
 #include "framebuffer.h"
 
+static int show_grid = 0;
+static int key_press = 0;
+
 static void transfer_texture(const struct framebuffer *fb);
 static void resize(GLFWwindow *const window, int width, int height);
 static GLuint init_gl(const struct framebuffer *fb);
@@ -93,6 +96,13 @@ int open_display(const struct framebuffer *fb,
             input_controller_func(0, input);
         }
 
+        if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS && key_press == 0) {
+            show_grid = !show_grid;
+            key_press = 1;
+        }
+        if (glfwGetKey(window, GLFW_KEY_G) == GLFW_RELEASE && key_press == 1) {
+            key_press = 0;
+        }
 
         if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
             break;
@@ -147,7 +157,7 @@ static void render(const struct framebuffer *fb, int scale)
     glEnd();
     glDisable(GL_TEXTURE_2D);
 
-    if (0)
+    if (show_grid)
         render_grid(W, H);
 
     glFlush();

@@ -77,40 +77,45 @@ static const uint8_t *get_color(int index)
     return palette_2C02[index];
 }
 
+static uint8_t get_tile_id(const struct PPU *ppu, uint8_t tile_x, uint8_t tile_y)
+{
+    return ppu->name_table_0[tile_y * 32 + tile_x];
+}
+
+static uint8_t get_tile_row(const struct PPU *ppu,
+        uint8_t tile_id, uint8_t pixel_x, uint8_t pixel_y, uint8_t offset)
+{
+    const int mask = (1 << 7) >> pixel_x;
+    uint8_t msb = ppu->char_rom[16 * tile_id + offset + pixel_y];
+    return (msb & mask) > 0;
+}
+
 static void set_pixel_color(const struct PPU *ppu, int x, int y)
 {
-    struct framebuffer *fb = ppu->fbuf;
-    const uint8_t *chr = ppu->char_rom;
-    const uint8_t *table = ppu->name_table_0;
+    const int tile_x = x / 8;
+    const int tile_y = y / 8;
+    const int pixel_x = x % 8;
+    const int pixel_y = y % 8;
 
-    const int namex = x / 8;
-    const int namey = y / 8;
-    const uint8_t data = table[namey * 32 + namex];
+    /* NT byte */
+    const uint8_t tile_id = get_tile_id(ppu, tile_x, tile_y);
 
-    const int i = x % 8;
-    const int j = y % 8;
+    /* AT byte */
+    const uint8_t tile_attr = 0;
 
-    uint8_t lsb = chr[16 * data + j];
-    uint8_t msb = chr[16 * data + 8 + j];
+    /* Low BG tile byte */
+    const uint8_t lsb = get_tile_row(ppu, tile_id, pixel_x, pixel_y, 0);
 
-    const int mask = 1 << (7 - i);
-    uint8_t val = 0;
+    /* High BG tile byte */
+    const uint8_t msb = get_tile_row(ppu, tile_id, pixel_x, pixel_y, 8);
 
-    lsb = (lsb & mask) > 0;
-    msb = (msb & mask) > 0;
-    val = (msb << 1) | lsb;
+    /* load pattern */
+    const uint8_t val = (msb << 1) | lsb;
+    const uint8_t *palette = get_bg_palette(ppu->bg_palette_table, tile_attr);
+    const uint8_t index = palette[val];
+    const uint8_t *color = get_color(index);
 
-    if (0) {
-        uint8_t color[3] = {64, 0, 0};
-        set_color(fb, x, y, color);
-    }
-    if (val || 1) {
-        const uint8_t *palette = get_bg_palette(ppu->bg_palette_table, 0);
-        const uint8_t index = palette[val];
-        const uint8_t *color = get_color(index);
-
-        set_color(fb, x, y, color);
-    }
+    set_color(ppu->fbuf, x, y, color);
 }
 
 void clear_nmi(struct PPU *ppu)
