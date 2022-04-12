@@ -83,35 +83,29 @@ static uint8_t get_tile_id(const struct PPU *ppu, uint8_t tile_x, uint8_t tile_y
 }
 
 static uint8_t get_tile_row(const struct PPU *ppu,
-        uint8_t tile_id, uint8_t pixel_x, uint8_t pixel_y, uint8_t offset)
+        uint8_t tile_id, uint8_t pixel_y, uint8_t offset)
 {
-    const int mask = (1 << 7) >> pixel_x;
-    uint8_t msb = ppu->char_rom[16 * tile_id + offset + pixel_y];
-    return (msb & mask) > 0;
+    return ppu->char_rom[16 * tile_id + offset + pixel_y];
 }
 
-static void set_pixel_color(const struct PPU *ppu, int x, int y)
+struct tile_cache {
+    uint16_t id;
+    uint8_t x, y;
+    uint8_t pixel_y;
+    uint8_t attr;
+    uint8_t lsb, msb;
+};
+
+static void set_pixel_color(const struct PPU *ppu, int x, int y, const struct tile_cache *tile)
 {
-    const int tile_x = x / 8;
-    const int tile_y = y / 8;
     const int pixel_x = x % 8;
-    const int pixel_y = y % 8;
 
-    /* NT byte */
-    const uint8_t tile_id = get_tile_id(ppu, tile_x, tile_y);
+    const int mask = (1 << 7) >> pixel_x;
+    const uint8_t m = (tile->msb & mask) > 0;
+    const uint8_t l = (tile->lsb & mask) > 0;
+    const uint8_t val = (m << 1) | l;
 
-    /* AT byte */
-    const uint8_t tile_attr = 0;
-
-    /* Low BG tile byte */
-    const uint8_t lsb = get_tile_row(ppu, tile_id, pixel_x, pixel_y, 0);
-
-    /* High BG tile byte */
-    const uint8_t msb = get_tile_row(ppu, tile_id, pixel_x, pixel_y, 8);
-
-    /* load pattern */
-    const uint8_t val = (msb << 1) | lsb;
-    const uint8_t *palette = get_bg_palette(ppu->bg_palette_table, tile_attr);
+    const uint8_t *palette = get_bg_palette(ppu->bg_palette_table, tile->attr);
     const uint8_t index = palette[val];
     const uint8_t *color = get_color(index);
 
@@ -135,29 +129,49 @@ int is_frame_ready(const struct PPU *ppu)
 
 void clock_ppu(struct PPU *ppu)
 {
-    const int x = ppu->cycle;
-    const int y = ppu->scanline;
+    const int cycle = ppu->cycle;
+    const int scanline = ppu->scanline;
 
-    if ((x >= 1 && x <= 256) &&
-        (y >= 0 && y <= 239))
-        set_pixel_color(ppu, x - 1, y);
+    static struct tile_cache next_tile = {0};
 
-    if (x == 1 && y == 241) {
+    switch (cycle % 8) {
+    case 1:
+        /* NT byte */
+        next_tile.x = (cycle - 1) / 8;
+        next_tile.y = scanline    / 8;
+        next_tile.pixel_y = scanline % 8;
+        next_tile.id = get_tile_id(ppu, next_tile.x, next_tile.y);
+        /* AT byte */
+        next_tile.attr = 0;
+        /* Low BG tile byte */
+        next_tile.lsb = get_tile_row(ppu, next_tile.id, next_tile.pixel_y, 0);
+        /* High BG tile byte */
+        next_tile.msb = get_tile_row(ppu, next_tile.id, next_tile.pixel_y, 8);
+        break;
+    default:
+        break;
+    }
+
+    if ((cycle >= 1 && cycle <= 256) &&
+        (scanline >= 0 && scanline <= 239))
+        set_pixel_color(ppu, cycle - 1, scanline, &next_tile);
+
+    if (cycle == 1 && scanline == 241) {
         set_stat(ppu, STAT_VERTICAL_BLANK, 1);
 
         if (get_ctrl(ppu, CTRL_ENABLE_NMI))
             ppu->nmi_generated = 1;
     }
 
-    if (x == 1 && y == 261)
+    if (cycle == 1 && scanline == 261)
         set_stat(ppu, STAT_VERTICAL_BLANK, 0);
 
     /* advance cycle and scanline */
-    if (x == 340) {
+    if (cycle == 340) {
         ppu->cycle    = 0;
-        ppu->scanline = (y == 261) ? 0 : y + 1;
+        ppu->scanline = (scanline == 261) ? 0 : scanline + 1;
     } else {
-        ppu->cycle    = x + 1;
+        ppu->cycle    = cycle + 1;
     }
 }
 
