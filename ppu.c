@@ -127,6 +127,11 @@ int is_frame_ready(const struct PPU *ppu)
     return ppu->cycle == 0 && ppu->scanline == 0;
 }
 
+struct vram_pointer {
+    uint8_t tile_x, tile_y;
+    uint8_t fine_y;
+};
+
 void clock_ppu(struct PPU *ppu)
 {
     const int cycle = ppu->cycle;
@@ -150,6 +155,45 @@ void clock_ppu(struct PPU *ppu)
         break;
     default:
         break;
+    }
+
+    if (((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 336)) &&
+        ((scanline >= 0 && scanline <= 239) || scanline == 261)) {
+        static struct tile_cache tile_buf[2] = {{0}};
+        struct vram_pointer vram = {0};
+        vram.tile_x = (cycle - 1) / 8;
+        vram.tile_y = scanline    / 8;
+        vram.fine_y = scanline % 8;
+
+        struct tile_cache *tile = &tile_buf[0];
+
+        switch (cycle % 8) {
+        case 0:
+            break;
+
+        case 1:
+            /* NT byte */
+            tile->id = get_tile_id(ppu, vram.tile_x, vram.tile_y);
+            break;
+
+        case 3:
+            /* AT byte */
+            tile->attr = 0;
+            break;
+
+        case 5:
+            /* Low BG tile byte */
+            tile->lsb = get_tile_row(ppu, tile->id, vram.fine_y, 0);
+            break;
+
+        case 7:
+            /* Low BG tile byte */
+            tile->msb = get_tile_row(ppu, tile->id, vram.fine_y, 8);
+            break;
+
+        default:
+            break;
+        }
     }
 
     if ((cycle >= 1 && cycle <= 256) &&
@@ -202,19 +246,31 @@ void write_ppu_scroll(struct PPU *ppu, uint8_t data)
 
 void write_ppu_address(struct PPU *ppu, uint8_t addr)
 {
-    if (ppu->addr_latch == 0)
-        /* hi byte */
-        ppu->ppu_addr = addr << 8;
-    else
-        /* lo byte */
-        ppu->ppu_addr |= addr;
-
-    ppu->addr_latch = !ppu->addr_latch;
+    if (ppu->addr_latch == 0) {
+        /*
+         * t: .CDEFGH ........ <- d: ..CDEFGH
+         *        <unused>     <- d: AB......
+         * t: Z...... ........ <- 0 (bit Z is cleared)
+         * w:                  <- 1
+         */
+        ppu->temp_addr = ((addr & 0x3F) << 8) | (ppu->temp_addr & 0x00FF);
+        ppu->temp_addr &= 0x3FFF;
+        ppu->addr_latch = 1;
+    } else {
+        /*
+         * t: ....... ABCDEFGH <- d: ABCDEFGH
+         * v: <...all bits...> <- t: <...all bits...>
+         * w:                  <- 0
+         */
+        ppu->temp_addr = (ppu->temp_addr & 0xFF00) | addr;
+        ppu->vram_addr = ppu->temp_addr;
+        ppu->addr_latch = 0;
+    }
 }
 
 void write_ppu_data(struct PPU *ppu, uint8_t data)
 {
-    const uint16_t addr = ppu->ppu_addr;
+    const uint16_t addr = ppu->vram_addr;
 
     ppu->ppu_data_buf = data;
 
@@ -226,9 +282,9 @@ void write_ppu_data(struct PPU *ppu, uint8_t data)
     }
 
     if (get_ctrl(ppu, CTRL_ADDR_INCREMENT))
-        ppu->ppu_addr += 32;
+        ppu->vram_addr += 32;
     else
-        ppu->ppu_addr++;
+        ppu->vram_addr++;
 }
 
 uint8_t read_ppu_status(struct PPU *ppu)

@@ -14,7 +14,9 @@ struct PPU {
     uint8_t stat;
 
     uint8_t addr_latch;
-    uint16_t ppu_addr;
+    uint16_t vram_addr;
+    uint16_t temp_addr;
+
     uint8_t ppu_data_buf;
     uint8_t bg_palette_table[16];
     uint8_t name_table_0[0x03C0];
