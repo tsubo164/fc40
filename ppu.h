@@ -13,9 +13,11 @@ struct PPU {
     uint8_t mask;
     uint8_t stat;
 
+    /* vram and scroll */
     uint8_t addr_latch;
     uint16_t vram_addr;
     uint16_t temp_addr;
+    uint8_t fine_x;
 
     uint8_t ppu_data_buf;
     uint8_t bg_palette_table[16];

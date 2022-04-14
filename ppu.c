@@ -221,7 +221,12 @@ void clock_ppu(struct PPU *ppu)
 
 void write_ppu_control(struct PPU *ppu, uint8_t data)
 {
+    /* Nametable x and y from control
+     * t: ...GH.. ........ <- d: ......GH
+     *    <used elsewhere> <- d: ABCDEF..
+     */
     ppu->ctrl = data;
+    ppu->temp_addr = (ppu->temp_addr & 0xF3FF) | ((data & 0x03) << 10);
 }
 
 void write_ppu_mask(struct PPU *ppu, uint8_t data)
@@ -241,23 +246,40 @@ void write_oam_data(struct PPU *ppu, uint8_t data)
 
 void write_ppu_scroll(struct PPU *ppu, uint8_t data)
 {
-    /* TODO */
+    if (ppu->addr_latch == 0) {
+        /* Coarse X and fine x
+         * t: ....... ...ABCDE <- d: ABCDE...
+         * x:              FGH <- d: .....FGH
+         * w:                  <- 1
+         */
+        ppu->fine_x = data & 0x07;
+        ppu->temp_addr = (ppu->temp_addr & 0xFFE0) | (data >> 3);
+        ppu->addr_latch = 1;
+    } else {
+        /* Coarse Y and fine y
+         * t: FGH..AB CDE..... <- d: ABCDEFGH
+         * w:                  <- 0
+         */
+        ppu->temp_addr = (ppu->temp_addr & 0xFC1F) | ((data >> 3) << 5);
+        ppu->temp_addr = (ppu->temp_addr & 0x8FFF) | (data & 0x07);
+        ppu->addr_latch = 0;
+    }
 }
 
 void write_ppu_address(struct PPU *ppu, uint8_t addr)
 {
     if (ppu->addr_latch == 0) {
-        /*
+        /* High byte
          * t: .CDEFGH ........ <- d: ..CDEFGH
          *        <unused>     <- d: AB......
          * t: Z...... ........ <- 0 (bit Z is cleared)
          * w:                  <- 1
          */
-        ppu->temp_addr = ((addr & 0x3F) << 8) | (ppu->temp_addr & 0x00FF);
+        ppu->temp_addr = (ppu->temp_addr & 0xC0FF) | ((addr & 0x3F) << 8);
         ppu->temp_addr &= 0x3FFF;
         ppu->addr_latch = 1;
     } else {
-        /*
+        /* Low byte
          * t: ....... ABCDEFGH <- d: ABCDEFGH
          * v: <...all bits...> <- t: <...all bits...>
          * w:                  <- 0
