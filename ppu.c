@@ -128,9 +128,49 @@ int is_frame_ready(const struct PPU *ppu)
 }
 
 struct vram_pointer {
+    uint8_t table_x, table_y;
     uint8_t tile_x, tile_y;
     uint8_t fine_y;
 };
+
+static struct vram_pointer decode_address(uint16_t addr)
+{
+    /*
+     *  yyy NN YYYYY XXXXX
+     *  ||| || ||||| +++++-- coarse X scroll
+     *  ||| || +++++-------- coarse Y scroll
+     *  ||| ++-------------- nametable select
+     *  +++----------------- fine Y scroll
+     */
+    struct vram_pointer v;
+
+    v.tile_x = (addr     )  & 0x001F;
+    v.tile_y = (addr >> 5)  & 0x001F;
+    v.fine_y = (addr >> 12) & 0x0007;
+
+    return v;
+}
+
+static void increment_address_x(struct vram_pointer *v)
+{
+    if (v->tile_x == 31) {
+        v->tile_x = 0;
+        v->table_x = !v->table_x;
+    }
+    else {
+        v->tile_x++;
+    }
+}
+
+static void copy_address_x(struct vram_pointer *dst, const struct vram_pointer *src)
+{
+    dst->table_x = src->table_x;
+    dst->tile_x = src->tile_x;
+}
+
+static void copy_address_y(struct vram_pointer *dst, const struct vram_pointer *src)
+{
+}
 
 void clock_ppu(struct PPU *ppu)
 {
@@ -138,6 +178,12 @@ void clock_ppu(struct PPU *ppu)
     const int scanline = ppu->scanline;
 
     static struct tile_cache next_tile = {0};
+
+        struct vram_pointer vram = decode_address(ppu->vram_addr);
+        struct vram_pointer temp = decode_address(ppu->temp_addr);
+        vram.tile_x = (cycle - 1) / 8;
+        vram.tile_y = scanline    / 8;
+        vram.fine_y = scanline % 8;
 
     switch (cycle % 8) {
     case 1:
@@ -160,15 +206,11 @@ void clock_ppu(struct PPU *ppu)
     if (((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 336)) &&
         ((scanline >= 0 && scanline <= 239) || scanline == 261)) {
         static struct tile_cache tile_buf[2] = {{0}};
-        struct vram_pointer vram = {0};
-        vram.tile_x = (cycle - 1) / 8;
-        vram.tile_y = scanline    / 8;
-        vram.fine_y = scanline % 8;
-
         struct tile_cache *tile = &tile_buf[0];
 
         switch (cycle % 8) {
         case 0:
+            increment_address_x(&vram);
             break;
 
         case 1:
@@ -196,6 +238,15 @@ void clock_ppu(struct PPU *ppu)
         }
     }
 
+    /* hori(v) = hori(t) */
+    if (((scanline >= 0 && scanline <= 239) || scanline == 261) && (cycle == 257))
+        copy_address_x(&vram, &temp);
+
+    /* vert(v) = vert(t) */
+    if (cycle >= 280 && cycle <= 305)
+        copy_address_y(&vram, &temp);
+
+    /* render pixel */
     if ((cycle >= 1 && cycle <= 256) &&
         (scanline >= 0 && scanline <= 239))
         set_pixel_color(ppu, cycle - 1, scanline, &next_tile);
