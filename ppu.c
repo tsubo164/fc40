@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include "ppu.h"
 #include "framebuffer.h"
 
@@ -144,32 +145,68 @@ static struct vram_pointer decode_address(uint16_t addr)
      */
     struct vram_pointer v;
 
-    v.tile_x = (addr     )  & 0x001F;
-    v.tile_y = (addr >> 5)  & 0x001F;
-    v.fine_y = (addr >> 12) & 0x0007;
+    v.tile_x  = (addr     )  & 0x001F;
+    v.tile_y  = (addr >> 5)  & 0x001F;
+    v.table_x = (addr >> 10) & 0x0001;
+    v.table_y = (addr >> 11) & 0x0001;
+    v.fine_y  = (addr >> 12) & 0x0007;
 
     return v;
+}
+
+static uint16_t encode_address(struct vram_pointer v)
+{
+    /*
+     *  yyy NN YYYYY XXXXX
+     *  ||| || ||||| +++++-- coarse X scroll
+     *  ||| || +++++-------- coarse Y scroll
+     *  ||| ++-------------- nametable select
+     *  +++----------------- fine Y scroll
+     */
+    uint16_t addr = 0;
+
+    addr = v.fine_y & 0x07;
+    addr = (addr << 1) | (v.table_y & 0x01);
+    addr = (addr << 1) | (v.table_x & 0x01);
+    addr = (addr << 5) | (v.tile_y & 0x05);
+    addr = (addr << 5) | (v.tile_x & 0x05);
+
+    return addr;
 }
 
 static void increment_address_x(struct vram_pointer *v)
 {
     if (v->tile_x == 31) {
         v->tile_x = 0;
-        v->table_x = !v->table_x;
+        //v->table_x = !v->table_x;
     }
     else {
         v->tile_x++;
     }
 }
 
+static void increment_address_y(struct vram_pointer *v)
+{
+    if (v->tile_y == 29) {
+        v->tile_y = 0;
+        //v->table_x = !v->table_x;
+    }
+    else {
+        v->tile_y++;
+    }
+}
+
 static void copy_address_x(struct vram_pointer *dst, const struct vram_pointer *src)
 {
     dst->table_x = src->table_x;
-    dst->tile_x = src->tile_x;
+    dst->tile_x  = src->tile_x;
 }
 
 static void copy_address_y(struct vram_pointer *dst, const struct vram_pointer *src)
 {
+    dst->table_y = src->table_y;
+    dst->tile_y  = src->tile_y;
+    dst->fine_y  = src->fine_y;
 }
 
 void clock_ppu(struct PPU *ppu)
@@ -179,11 +216,8 @@ void clock_ppu(struct PPU *ppu)
 
     static struct tile_cache next_tile = {0};
 
-        struct vram_pointer vram = decode_address(ppu->vram_addr);
-        struct vram_pointer temp = decode_address(ppu->temp_addr);
-        vram.tile_x = (cycle - 1) / 8;
-        vram.tile_y = scanline    / 8;
-        vram.fine_y = scanline % 8;
+    static struct vram_pointer vram = {0};
+    const struct vram_pointer temp = decode_address(ppu->temp_addr);
 
     switch (cycle % 8) {
     case 1:
@@ -216,6 +250,9 @@ void clock_ppu(struct PPU *ppu)
         case 1:
             /* NT byte */
             tile->id = get_tile_id(ppu, vram.tile_x, vram.tile_y);
+            if (0)
+                printf("(%03d, %03d) => vram_addr: (%d, %d)\n",
+                        cycle, scanline, vram.tile_x, vram.tile_y);
             break;
 
         case 3:
@@ -238,12 +275,16 @@ void clock_ppu(struct PPU *ppu)
         }
     }
 
+    /* inc vert(v) */
+    if (((scanline >= 0 && scanline <= 239) || scanline == 261) && (cycle == 256))
+        increment_address_y(&vram);
+
     /* hori(v) = hori(t) */
     if (((scanline >= 0 && scanline <= 239) || scanline == 261) && (cycle == 257))
         copy_address_x(&vram, &temp);
 
     /* vert(v) = vert(t) */
-    if (cycle >= 280 && cycle <= 305)
+    if ((cycle >= 280 && cycle <= 305) && scanline == 261)
         copy_address_y(&vram, &temp);
 
     /* render pixel */
@@ -268,6 +309,9 @@ void clock_ppu(struct PPU *ppu)
     } else {
         ppu->cycle    = cycle + 1;
     }
+
+    if (0)
+    ppu->vram_addr = encode_address(vram);
 }
 
 void write_ppu_control(struct PPU *ppu, uint8_t data)
