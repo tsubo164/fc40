@@ -168,8 +168,8 @@ static uint16_t encode_address(struct vram_pointer v)
     addr = v.fine_y & 0x07;
     addr = (addr << 1) | (v.table_y & 0x01);
     addr = (addr << 1) | (v.table_x & 0x01);
-    addr = (addr << 5) | (v.tile_y & 0x05);
-    addr = (addr << 5) | (v.tile_x & 0x05);
+    addr = (addr << 5) | (v.tile_y & 0x1F);
+    addr = (addr << 5) | (v.tile_x & 0x1F);
 
     return addr;
 }
@@ -178,7 +178,7 @@ static void increment_address_x(struct vram_pointer *v)
 {
     if (v->tile_x == 31) {
         v->tile_x = 0;
-        //v->table_x = !v->table_x;
+        v->table_x = !v->table_x;
     }
     else {
         v->tile_x++;
@@ -187,12 +187,19 @@ static void increment_address_x(struct vram_pointer *v)
 
 static void increment_address_y(struct vram_pointer *v)
 {
-    if (v->tile_y == 29) {
-        v->tile_y = 0;
-        //v->table_x = !v->table_x;
+    if (v->fine_y == 7) {
+        v->fine_y = 0;
+
+        if (v->tile_y == 29) {
+            v->tile_y = 0;
+            v->table_y = !v->table_y;
+        }
+        else {
+            v->tile_y++;
+        }
     }
     else {
-        v->tile_y++;
+        v->fine_y++;
     }
 }
 
@@ -207,6 +214,16 @@ static void copy_address_y(struct vram_pointer *dst, const struct vram_pointer *
     dst->table_y = src->table_y;
     dst->tile_y  = src->tile_y;
     dst->fine_y  = src->fine_y;
+}
+
+static int is_rendering_bg(const struct PPU *ppu)
+{
+    return ppu->mask & MASK_SHOW_BG;
+}
+
+static int is_rendering_sprite(const struct PPU *ppu)
+{
+    return ppu->mask & MASK_SHOW_SPRITE;
 }
 
 void clock_ppu(struct PPU *ppu)
@@ -302,6 +319,16 @@ void clock_ppu(struct PPU *ppu)
     if (cycle == 1 && scanline == 261)
         set_stat(ppu, STAT_VERTICAL_BLANK, 0);
 
+    if (((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 336)) &&
+        ((scanline >= 0 && scanline <= 239) || scanline == 261)) {
+        if (is_rendering_bg(ppu) || is_rendering_sprite(ppu)) {
+            //printf("vram_addr: %04x => ", ppu->vram_addr);
+            if (0)
+            ppu->vram_addr = encode_address(vram);
+            //printf("%04x\n", ppu->vram_addr);
+        }
+    }
+
     /* advance cycle and scanline */
     if (cycle == 340) {
         ppu->cycle    = 0;
@@ -309,9 +336,6 @@ void clock_ppu(struct PPU *ppu)
     } else {
         ppu->cycle    = cycle + 1;
     }
-
-    if (0)
-    ppu->vram_addr = encode_address(vram);
 }
 
 void write_ppu_control(struct PPU *ppu, uint8_t data)
