@@ -5,10 +5,19 @@
 
 struct framebuffer;
 
+struct tile_cache {
+    uint16_t id;
+    uint8_t x, y;
+    uint8_t pixel_y;
+    uint8_t attr;
+    uint8_t lsb, msb;
+};
+
 struct PPU {
     const uint8_t *char_rom;
     size_t char_size;
 
+    /* registers */
     uint8_t ctrl;
     uint8_t mask;
     uint8_t stat;
@@ -19,9 +28,13 @@ struct PPU {
     uint16_t temp_addr;
     uint8_t fine_x;
 
+    /* vram */
     uint8_t ppu_data_buf;
     uint8_t bg_palette_table[16];
     uint8_t name_table_0[0x03C0];
+
+    /* bg tile cache */
+    struct tile_cache tile_buf[3];
 
     uint8_t oam_addr;
     uint8_t oam[256]; /* 64 4 byte objects */
