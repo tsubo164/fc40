@@ -231,32 +231,12 @@ void clock_ppu(struct PPU *ppu)
     const int cycle = ppu->cycle;
     const int scanline = ppu->scanline;
 
-    static struct tile_cache next_tile = {0};
-
-    static struct vram_pointer vram = {0};
+    struct vram_pointer vram = decode_address(ppu->vram_addr);
     const struct vram_pointer temp = decode_address(ppu->temp_addr);
-
-    switch (cycle % 8) {
-    case 1:
-        /* NT byte */
-        next_tile.x = (cycle - 1) / 8;
-        next_tile.y = scanline    / 8;
-        next_tile.pixel_y = scanline % 8;
-        next_tile.id = get_tile_id(ppu, next_tile.x, next_tile.y);
-        /* AT byte */
-        next_tile.attr = 0;
-        /* Low BG tile byte */
-        next_tile.lsb = get_tile_row(ppu, next_tile.id, next_tile.pixel_y, 0);
-        /* High BG tile byte */
-        next_tile.msb = get_tile_row(ppu, next_tile.id, next_tile.pixel_y, 8);
-        break;
-    default:
-        break;
-    }
+    static struct tile_cache tile_buf[3] = {{0}};
 
     if (((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 336)) &&
         ((scanline >= 0 && scanline <= 239) || scanline == 261)) {
-        static struct tile_cache tile_buf[2] = {{0}};
         struct tile_cache *tile = &tile_buf[0];
 
         switch (cycle % 8) {
@@ -265,6 +245,9 @@ void clock_ppu(struct PPU *ppu)
             break;
 
         case 1:
+            tile_buf[2] = tile_buf[1];
+            tile_buf[1] = tile_buf[0];
+
             /* NT byte */
             tile->id = get_tile_id(ppu, vram.tile_x, vram.tile_y);
             if (0)
@@ -297,17 +280,28 @@ void clock_ppu(struct PPU *ppu)
         increment_address_y(&vram);
 
     /* hori(v) = hori(t) */
-    if (((scanline >= 0 && scanline <= 239) || scanline == 261) && (cycle == 257))
+    if (((scanline >= 0 && scanline <= 239) || scanline == 261) && (cycle == 257)) {
         copy_address_x(&vram, &temp);
+        if (is_rendering_bg(ppu) || is_rendering_sprite(ppu)) {
+            ppu->vram_addr = encode_address(vram);
+        }
+    }
 
     /* vert(v) = vert(t) */
-    if ((cycle >= 280 && cycle <= 305) && scanline == 261)
+    if ((cycle >= 280 && cycle <= 305) && scanline == 261) {
         copy_address_y(&vram, &temp);
+        if (is_rendering_bg(ppu) || is_rendering_sprite(ppu)) {
+            ppu->vram_addr = encode_address(vram);
+        }
+    }
 
     /* render pixel */
     if ((cycle >= 1 && cycle <= 256) &&
-        (scanline >= 0 && scanline <= 239))
-        set_pixel_color(ppu, cycle - 1, scanline, &next_tile);
+        (scanline >= 0 && scanline <= 239)) {
+        if (is_rendering_bg(ppu) || is_rendering_sprite(ppu)) {
+            set_pixel_color(ppu, cycle - 1, scanline, &tile_buf[2]);
+        }
+    }
 
     if (cycle == 1 && scanline == 241) {
         set_stat(ppu, STAT_VERTICAL_BLANK, 1);
@@ -322,10 +316,7 @@ void clock_ppu(struct PPU *ppu)
     if (((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 336)) &&
         ((scanline >= 0 && scanline <= 239) || scanline == 261)) {
         if (is_rendering_bg(ppu) || is_rendering_sprite(ppu)) {
-            //printf("vram_addr: %04x => ", ppu->vram_addr);
-            if (0)
             ppu->vram_addr = encode_address(vram);
-            //printf("%04x\n", ppu->vram_addr);
         }
     }
 
