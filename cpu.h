@@ -7,23 +7,21 @@
 struct cartridge;
 struct PPU;
 
-struct registers {
+struct CPU {
+    struct cartridge *cart;
+    struct PPU *ppu;
+    int cycles;
+
+    /* registers */
     uint8_t a;
     uint8_t x;
     uint8_t y;
     uint8_t s; /* stack pointer */
     uint8_t p; /* processor status */
     uint16_t pc;
-};
-
-struct CPU {
-    struct cartridge *cart;
-    struct PPU *ppu;
 
     /* 4 2KB ram. 3 of them are mirroring */
     uint8_t wram[2048];
-    struct registers reg;
-    int cycles;
 
     uint8_t controller_input[2];
     uint8_t controller_state[2];

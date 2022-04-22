@@ -113,7 +113,7 @@ static uint16_t read_word(struct CPU *cpu, uint16_t addr)
 
 static uint8_t fetch(struct CPU *cpu)
 {
-    return read_byte(cpu, cpu->reg.pc++);
+    return read_byte(cpu, cpu->pc++);
 }
 
 static uint16_t fetch_word(struct CPU *cpu)
@@ -185,10 +185,10 @@ static uint16_t fetch_address(struct CPU *cpu, int mode, int *page_crossed)
         return fetch_word(cpu);
 
     case ABX:
-        return abs_index(fetch_word(cpu), cpu->reg.x, page_crossed);
+        return abs_index(fetch_word(cpu), cpu->x, page_crossed);
 
     case ABY:
-        return abs_index(fetch_word(cpu), cpu->reg.y, page_crossed);
+        return abs_index(fetch_word(cpu), cpu->y, page_crossed);
 
     case ACC:
         /* no address for register */
@@ -196,7 +196,7 @@ static uint16_t fetch_address(struct CPU *cpu, int mode, int *page_crossed)
 
     case IMM:
         /* address where the immediate value is stored */
-        return cpu->reg.pc++;
+        return cpu->pc++;
 
     case IMP:
         /* no address */
@@ -208,33 +208,33 @@ static uint16_t fetch_address(struct CPU *cpu, int mode, int *page_crossed)
     case IZX:
         {
             /* addr = {[arg + X], [arg + X + 1]} */
-            return zp_indirect(cpu, fetch(cpu) + cpu->reg.x);
+            return zp_indirect(cpu, fetch(cpu) + cpu->x);
         }
 
     case IZY:
         {
             /* addr = {[arg], [arg + 1]} + Y */
             const uint16_t addr = zp_indirect(cpu, fetch(cpu));
-            if (is_page_crossing(addr, cpu->reg.y))
+            if (is_page_crossing(addr, cpu->y))
                 *page_crossed = 1;
-            return addr + cpu->reg.y;
+            return addr + cpu->y;
         }
 
     case REL:
         {
             /* fetch data first, then add it to the pc */
             const uint8_t offset = fetch(cpu);
-            return cpu->reg.pc + (int8_t) offset;
+            return cpu->pc + (int8_t) offset;
         }
 
     case ZPG:
         return fetch(cpu);
 
     case ZPX:
-        return (fetch(cpu) + cpu->reg.x) & 0x00FF;
+        return (fetch(cpu) + cpu->x) & 0x00FF;
 
     case ZPY:
-        return (fetch(cpu) + cpu->reg.y) & 0x00FF;
+        return (fetch(cpu) + cpu->y) & 0x00FF;
 
     default:
         return 0;
@@ -333,20 +333,20 @@ static const int8_t cycle_table[] = {
 
 static void set_pc(struct CPU *cpu, uint16_t addr)
 {
-    cpu->reg.pc = addr;
+    cpu->pc = addr;
 }
 
 static void set_flag(struct CPU *cpu, uint8_t flag, uint8_t val)
 {
     if (val)
-        cpu->reg.p |= flag;
+        cpu->p |= flag;
     else
-        cpu->reg.p &= ~flag;
+        cpu->p &= ~flag;
 }
 
 static uint8_t get_flag(const struct CPU *cpu, uint8_t flag)
 {
-    return (cpu->reg.p & flag) > 0;
+    return (cpu->p & flag) > 0;
 }
 
 static uint8_t update_zn(struct CPU *cpu, uint8_t val)
@@ -358,42 +358,42 @@ static uint8_t update_zn(struct CPU *cpu, uint8_t val)
 
 static void set_a(struct CPU *cpu, uint8_t val)
 {
-    cpu->reg.a = val;
-    update_zn(cpu, cpu->reg.a);
+    cpu->a = val;
+    update_zn(cpu, cpu->a);
 }
 
 static void set_x(struct CPU *cpu, uint8_t val)
 {
-    cpu->reg.x = val;
-    update_zn(cpu, cpu->reg.x);
+    cpu->x = val;
+    update_zn(cpu, cpu->x);
 }
 
 static void set_y(struct CPU *cpu, uint8_t val)
 {
-    cpu->reg.y = val;
-    update_zn(cpu, cpu->reg.y);
+    cpu->y = val;
+    update_zn(cpu, cpu->y);
 }
 
 static void set_s(struct CPU *cpu, uint8_t val)
 {
-    cpu->reg.s = val;
+    cpu->s = val;
 }
 
 static void set_p(struct CPU *cpu, uint8_t val)
 {
-    cpu->reg.p = val | U;
+    cpu->p = val | U;
 }
 
 static void push(struct CPU *cpu, uint8_t val)
 {
-    write_byte(cpu, 0x0100 | cpu->reg.s, val);
-    set_s(cpu, cpu->reg.s - 1);
+    write_byte(cpu, 0x0100 | cpu->s, val);
+    set_s(cpu, cpu->s - 1);
 }
 
 static uint8_t pop(struct CPU *cpu)
 {
-    set_s(cpu, cpu->reg.s + 1);
-    return read_byte(cpu, 0x0100 | cpu->reg.s);
+    set_s(cpu, cpu->s + 1);
+    return read_byte(cpu, 0x0100 | cpu->s);
 }
 
 static void push_word(struct CPU *cpu, uint16_t val)
@@ -433,7 +433,7 @@ static int is_positive(uint8_t val)
 static void add_a_m(struct CPU *cpu, uint8_t data)
 {
     const uint16_t m = data;
-    const uint16_t a = cpu->reg.a;
+    const uint16_t a = cpu->a;
     const uint16_t c = get_flag(cpu, C);
     const uint16_t r = a + m + c;
     const int A = is_positive(a);
@@ -488,57 +488,57 @@ static int execute(struct CPU *cpu, struct instruction inst)
 
     /* Store Accumulator in Memory: A -> M () */
     case STA:
-        write_byte(cpu, addr, cpu->reg.a);
+        write_byte(cpu, addr, cpu->a);
         break;
 
     /* Store Index Register X in Memory: X -> M () */
     case STX:
-        write_byte(cpu, addr, cpu->reg.x);
+        write_byte(cpu, addr, cpu->x);
         break;
 
     /* Store Index Register Y in Memory: Y -> M () */
     case STY:
-        write_byte(cpu, addr, cpu->reg.y);
+        write_byte(cpu, addr, cpu->y);
         break;
 
     /* Transfer Accumulator to Index X: A -> X (N, Z) */
     case TAX:
-        set_x(cpu, cpu->reg.a);
+        set_x(cpu, cpu->a);
         break;
 
     /* Transfer Accumulator to Index Y: A -> Y (N, Z) */
     case TAY:
-        set_y(cpu, cpu->reg.a);
+        set_y(cpu, cpu->a);
         break;
 
     /* Transfer Stack Pointer to Index X: S -> X (N, Z) */
     case TSX:
-        set_x(cpu, cpu->reg.s);
+        set_x(cpu, cpu->s);
         break;
 
     /* Transfer Index X to Accumulator: X -> A (N, Z) */
     case TXA:
-        set_a(cpu, cpu->reg.x);
+        set_a(cpu, cpu->x);
         break;
 
     /* Transfer Index X to Stack Pointer: X -> S () */
     case TXS:
-        set_s(cpu, cpu->reg.x);
+        set_s(cpu, cpu->x);
         break;
 
     /* Transfer Index Y to Accumulator: Y -> A (N, Z) */
     case TYA:
-        set_a(cpu, cpu->reg.y);
+        set_a(cpu, cpu->y);
         break;
 
     /* Push Accumulator on Stack: () */
     case PHA:
-        push(cpu, cpu->reg.a);
+        push(cpu, cpu->a);
         break;
 
     /* Push Processor Status on Stack: () */
     case PHP:
-        push(cpu, cpu->reg.p | B);
+        push(cpu, cpu->p | B);
         break;
 
     /* Pull Accumulator from Stack: (N, Z) */
@@ -555,7 +555,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
     /* Arithmetic Shift Left: C <- /M7...M0/ <- 0 (N, Z, C) */
     case ASL:
         if (mode == ACC) {
-            const uint8_t data = cpu->reg.a;
+            const uint8_t data = cpu->a;
             set_flag(cpu, C, data & 0x80);
             set_a(cpu, data << 1);
         } else {
@@ -570,7 +570,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
     /* Logical Shift Right: 0 -> /M7...M0/ -> C (N, Z, C) */
     case LSR:
         if (mode == ACC) {
-            const uint8_t data = cpu->reg.a;
+            const uint8_t data = cpu->a;
             set_flag(cpu, C, data & 0x01);
             set_a(cpu, data >> 1);
         } else {
@@ -586,7 +586,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
     case ROL:
         if (mode == ACC) {
             const uint8_t carry = get_flag(cpu, C);
-            const uint8_t data = cpu->reg.a;
+            const uint8_t data = cpu->a;
             set_flag(cpu, C, data & 0x80);
             set_a(cpu, (data << 1) | carry);
         } else {
@@ -603,7 +603,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
     case ROR:
         if (mode == ACC) {
             const uint8_t carry = get_flag(cpu, C);
-            const uint8_t data = cpu->reg.a;
+            const uint8_t data = cpu->a;
             set_flag(cpu, C, data & 0x01);
             set_a(cpu, (data >> 1) | (carry << 7));
         } else {
@@ -618,24 +618,24 @@ static int execute(struct CPU *cpu, struct instruction inst)
 
     /* AND Memory with Accumulator: A & M -> A (N, Z) */
     case AND:
-        set_a(cpu, cpu->reg.a & read_byte(cpu, addr));
+        set_a(cpu, cpu->a & read_byte(cpu, addr));
         break;
 
     /* Exclusive OR Memory with Accumulator: A ^ M -> A (N, Z) */
     case EOR:
-        set_a(cpu, cpu->reg.a ^ read_byte(cpu, addr));
+        set_a(cpu, cpu->a ^ read_byte(cpu, addr));
         break;
 
     /* OR Memory with Accumulator: A | M -> A (N, Z) */
     case ORA:
-        set_a(cpu, cpu->reg.a | read_byte(cpu, addr));
+        set_a(cpu, cpu->a | read_byte(cpu, addr));
         break;
 
     /* Test Bits in Memory with Accumulator: A & M (N, V, Z) */
     case BIT:
         {
             const uint8_t data = read_byte(cpu, addr);
-            set_flag(cpu, Z, (cpu->reg.a & data) == 0x00);
+            set_flag(cpu, Z, (cpu->a & data) == 0x00);
             set_flag(cpu, N, data & N);
             set_flag(cpu, V, data & V);
         }
@@ -657,17 +657,17 @@ static int execute(struct CPU *cpu, struct instruction inst)
 
     /* Compare Memory and Accumulator: A - M (N, Z, C) */
     case CMP:
-        compare(cpu, cpu->reg.a, read_byte(cpu, addr));
+        compare(cpu, cpu->a, read_byte(cpu, addr));
         break;
 
     /* Compare Index Register X to Memory: X - M (N, Z, C) */
     case CPX:
-        compare(cpu, cpu->reg.x, read_byte(cpu, addr));
+        compare(cpu, cpu->x, read_byte(cpu, addr));
         break;
 
     /* Compare Index Register Y to Memory: Y - M (N, Z, C) */
     case CPY:
-        compare(cpu, cpu->reg.y, read_byte(cpu, addr));
+        compare(cpu, cpu->y, read_byte(cpu, addr));
         break;
 
     /* Increment Memory by One: M + 1 -> M (N, Z) */
@@ -681,12 +681,12 @@ static int execute(struct CPU *cpu, struct instruction inst)
 
     /* Increment Index Register X by One: X + 1 -> X (N, Z) */
     case INX:
-        set_x(cpu, cpu->reg.x + 1);
+        set_x(cpu, cpu->x + 1);
         break;
 
     /* Increment Index Register Y by One: Y + 1 -> Y (N, Z) */
     case INY:
-        set_y(cpu, cpu->reg.y + 1);
+        set_y(cpu, cpu->y + 1);
         break;
 
     /* Decrement Memory by One: M - 1 -> M (N, Z) */
@@ -700,12 +700,12 @@ static int execute(struct CPU *cpu, struct instruction inst)
 
     /* Decrement Index Register X by One: X - 1 -> X (N, Z) */
     case DEX:
-        set_x(cpu, cpu->reg.x - 1);
+        set_x(cpu, cpu->x - 1);
         break;
 
     /* Decrement Index Register Y by One: Y - 1 -> Y (N, Z) */
     case DEY:
-        set_y(cpu, cpu->reg.y - 1);
+        set_y(cpu, cpu->y - 1);
         break;
 
     /* Jump Indirect: [PC + 1] -> PCL, [PC + 2] -> PCH () */
@@ -716,17 +716,17 @@ static int execute(struct CPU *cpu, struct instruction inst)
     /* Jump to Subroutine: push(PC + 2), [PC + 1] -> PCL, [PC + 2] -> PCH () */
     case JSR:
         /* the last byte of the jump instruction */
-        set_pc(cpu, cpu->reg.pc - 1);
-        push_word(cpu, cpu->reg.pc);
+        set_pc(cpu, cpu->pc - 1);
+        push_word(cpu, cpu->pc);
         set_pc(cpu, addr);
         break;
 
     /* Break Command: push(PC + 2), [FFFE] -> PCL, [FFFF] ->PCH (I) */
     case BRK:
         /* an extra byte of spacing for a break mark */
-        set_pc(cpu, cpu->reg.pc + 1);
-        push_word(cpu, cpu->reg.pc);
-        push(cpu, cpu->reg.p | B);
+        set_pc(cpu, cpu->pc + 1);
+        push_word(cpu, cpu->pc);
+        push(cpu, cpu->p | B);
 
         set_flag(cpu, I, 1);
         set_pc(cpu, read_word(cpu, 0xFFFE));
@@ -742,7 +742,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
     /* Return from Subroutine: pop(PC), PC + 1 -> PC () */
     case RTS:
         set_pc(cpu, pop_word(cpu));
-        set_pc(cpu, cpu->reg.pc + 1);
+        set_pc(cpu, cpu->pc + 1);
         break;
 
     /* Branch on Carry Clear: () */
@@ -829,12 +829,12 @@ static int execute(struct CPU *cpu, struct instruction inst)
     /* Load Accumulator and Index Register X from Memory: M -> A, X (N, Z) */
     case LAX:
         set_a(cpu, read_byte(cpu, addr));
-        set_x(cpu, cpu->reg.a);
+        set_x(cpu, cpu->a);
         break;
 
     /* Store Accumulator AND Index Register X in Memory: A & X -> M () */
     case SAX:
-        write_byte(cpu, addr, cpu->reg.a & cpu->reg.x);
+        write_byte(cpu, addr, cpu->a & cpu->x);
         break;
 
     /* Decrement Memory by One then Compare with Accumulator: M - 1 -> M, A - M (N, Z, C) */
@@ -843,7 +843,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
             const uint8_t data = read_byte(cpu, addr) - 1;
             update_zn(cpu, data);
             write_byte(cpu, addr, data);
-            compare(cpu, cpu->reg.a, data);
+            compare(cpu, cpu->a, data);
         }
         break;
 
@@ -867,7 +867,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
             data <<= 1;
             update_zn(cpu, data);
             write_byte(cpu, addr, data);
-            set_a(cpu, cpu->reg.a | data);
+            set_a(cpu, cpu->a | data);
         }
         break;
 
@@ -880,7 +880,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
             data = (data << 1) | carry;
             update_zn(cpu, data);
             write_byte(cpu, addr, data);
-            set_a(cpu, cpu->reg.a & data);
+            set_a(cpu, cpu->a & data);
         }
         break;
 
@@ -893,7 +893,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
             data >>= 1;
             update_zn(cpu, data);
             write_byte(cpu, addr, data);
-            set_a(cpu, cpu->reg.a ^ data);
+            set_a(cpu, cpu->a ^ data);
         }
         break;
 
@@ -922,14 +922,14 @@ static void print_code(struct CPU *cpu)
 {
     peek_ppu_data = 1;
 
-    const uint16_t pc = cpu->reg.pc;
-    const uint8_t  x = cpu->reg.x;
-    const uint8_t  y = cpu->reg.y;
+    const uint16_t pc = cpu->pc;
+    const uint8_t  x = cpu->x;
+    const uint8_t  y = cpu->y;
     const uint8_t  lo = read_byte(cpu, pc + 1);
     const uint8_t  hi = read_byte(cpu, pc + 2);
     const uint16_t wd = (hi << 8) | lo;
 
-    const uint8_t code            = read_byte(cpu, cpu->reg.pc);
+    const uint8_t code            = read_byte(cpu, cpu->pc);
     const struct instruction inst = decode(code);
     const char *name              = opcode_name_table[code];
 
@@ -1025,7 +1025,7 @@ static void print_code(struct CPU *cpu)
     }
 
     printf("%*s", 48 - N, " ");
-    printf("A:%02X X:%02X Y:%02X P:%02X SP:%02X", cpu->reg.a, x, y, cpu->reg.p, cpu->reg.s);
+    printf("A:%02X X:%02X Y:%02X P:%02X SP:%02X", cpu->a, x, y, cpu->p, cpu->s);
     printf("\n");
 
     peek_ppu_data = 0;
@@ -1048,11 +1048,11 @@ void reset(struct CPU *cpu)
 
 void nmi(struct CPU *cpu)
 {
-    push_word(cpu, cpu->reg.pc);
+    push_word(cpu, cpu->pc);
 
     set_flag(cpu, B, 0);
     set_flag(cpu, I, 1);
-    push(cpu, cpu->reg.p);
+    push(cpu, cpu->p);
 
     set_pc(cpu, read_word(cpu, 0xFFFA));
     cpu->cycles = 8;

@@ -50,7 +50,7 @@ int main(int argc, char **argv)
     reset(&cpu);
 
     if (cpu.log_mode) {
-        cpu.reg.pc = 0xC000;
+        cpu.pc = 0xC000;
         while (cpu.log_line < 8980)
             clock_cpu(&cpu);
     }
