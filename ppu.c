@@ -1,5 +1,4 @@
 #include <stdlib.h>
-#include <stdio.h>
 #include "ppu.h"
 #include "framebuffer.h"
 
@@ -89,16 +88,14 @@ static uint8_t get_tile_row(const struct PPU *ppu,
     return ppu->char_rom[16 * tile_id + offset + pixel_y];
 }
 
-static void set_pixel_color(const struct PPU *ppu, int x, int y, const struct tile_cache *tile)
+static void set_pixel_color(const struct PPU *ppu, int x, int y)
 {
-    const int pixel_x = x % 8;
+    const uint8_t hi = (ppu->tile_queue_hi & 0x8000) > 0;
+    const uint8_t lo = (ppu->tile_queue_lo & 0x8000) > 0;
+    const uint8_t val = (hi << 1) | lo;
+    const uint8_t attr = ppu->tile_queue_attr >> 8;
 
-    const int mask = (1 << 7) >> pixel_x;
-    const uint8_t m = (tile->msb & mask) > 0;
-    const uint8_t l = (tile->lsb & mask) > 0;
-    const uint8_t val = (m << 1) | l;
-
-    const uint8_t *palette = get_bg_palette(ppu->bg_palette_table, tile->attr);
+    const uint8_t *palette = get_bg_palette(ppu->bg_palette_table, attr);
     const uint8_t index = palette[val];
     const uint8_t *color = get_color(index);
 
@@ -233,33 +230,39 @@ static void leave_vblank(struct PPU *ppu)
 
 static void load_next_tile(struct PPU *ppu)
 {
-    ppu->tile_buf[2] = ppu->tile_buf[1];
-    ppu->tile_buf[1] = ppu->tile_buf[0];
+    ppu->tile_queue_lo |= ppu->tile_next_lo;
+    ppu->tile_queue_hi |= ppu->tile_next_hi;
+
+    ppu->tile_queue_attr = (ppu->tile_queue_attr << 8) | ppu->tile_next_attr;
+}
+
+static void shift_tile_data(struct PPU *ppu)
+{
+    ppu->tile_queue_lo <<= 1;
+    ppu->tile_queue_hi <<= 1;
 }
 
 static void fetch_tile_data(struct PPU *ppu, int cycle, const struct vram_pointer *v)
 {
-    struct tile_cache *next = &ppu->tile_buf[0];
-
     switch (cycle % 8) {
     case 1:
         /* NT byte */
-        next->id = get_tile_id(ppu, v->tile_x, v->tile_y);
+        ppu->tile_next_id = get_tile_id(ppu, v->tile_x, v->tile_y);
         break;
 
     case 3:
         /* AT byte */
-        next->attr = 0;
+        ppu->tile_next_attr = 0;
         break;
 
     case 5:
         /* Low BG tile byte */
-        next->lsb = get_tile_row(ppu, next->id, v->fine_y, 0);
+        ppu->tile_next_lo = get_tile_row(ppu, ppu->tile_next_id, v->fine_y, 0);
         break;
 
     case 7:
-        /* Low BG tile byte */
-        next->msb = get_tile_row(ppu, next->id, v->fine_y, 8);
+        /* High BG tile byte */
+        ppu->tile_next_hi = get_tile_row(ppu, ppu->tile_next_id, v->fine_y, 8);
         break;
 
     default:
@@ -316,8 +319,10 @@ void clock_ppu(struct PPU *ppu)
     /* render pixel */
     if (scanline >= 0 && scanline <= 239)
         if (cycle >= 1 && cycle <= 256)
-            if (is_rendering)
-                set_pixel_color(ppu, cycle - 1, scanline, &ppu->tile_buf[2]);
+            if (is_rendering) {
+                set_pixel_color(ppu, cycle - 1, scanline);
+                shift_tile_data(ppu);
+            }
 
     /* advance cycle and scanline */
     if (cycle == 340) {
