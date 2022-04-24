@@ -4,26 +4,28 @@
 #include "display.h"
 #include "framebuffer.h"
 
+const int MARGIN = 8;
+const int SCALE = 2;
+const int RESX = 256;
+const int RESY = 240;
+
 static int show_grid = 0;
 static int key_press = 0;
 
 static void transfer_texture(const struct framebuffer *fb);
 static void resize(GLFWwindow *const window, int width, int height);
 static GLuint init_gl(const struct framebuffer *fb);
-static void render(const struct framebuffer *fb, int scale);
+static void render(const struct framebuffer *fb);
 static void render_grid(int w, int h);
 
 int open_display(const struct framebuffer *fb,
         void (*update_frame_func)(void),
         void (*input_controller_func)(uint8_t id, uint8_t input))
 {
-    const int MARGIN = 32;
-    const int SCALE = 2;
-
-    const int RESX = fb->width;
-    const int RESY = fb->height;
-    const int WINX = RESX * SCALE + MARGIN;
-    const int WINY = RESY * SCALE + MARGIN;
+    /* MacOS Retina display has twice res */
+    const int WIN_MARGIN = 2 * MARGIN;
+    const int WINX = RESX * SCALE + 2 * WIN_MARGIN;
+    const int WINY = RESY * SCALE + 2 * WIN_MARGIN;
 
     uint64_t f = 0;
     GLuint texture_id;
@@ -32,8 +34,6 @@ int open_display(const struct framebuffer *fb,
     /* Initialize the library */
     if (!glfwInit())
         return -1;
-
-    glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
     /* Create a windowed mode window and its OpenGL context */
     window = glfwCreateWindow(WINX, WINY, "Famicom Emulator", NULL, NULL);
@@ -65,7 +65,7 @@ int open_display(const struct framebuffer *fb,
         transfer_texture(fb);
 
         /* Render here */
-        render(fb, SCALE);
+        render(fb);
 
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
@@ -137,7 +137,7 @@ static GLuint init_gl(const struct framebuffer *fb)
     return tex_id;
 }
 
-static void render(const struct framebuffer *fb, int scale)
+static void render(const struct framebuffer *fb)
 {
     const int W = fb->width;
     const int H = fb->height;
@@ -146,7 +146,6 @@ static void render(const struct framebuffer *fb, int scale)
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    glScalef(scale, scale, scale);
 
     glEnable(GL_TEXTURE_2D);
     glBegin(GL_QUADS);
@@ -165,19 +164,28 @@ static void render(const struct framebuffer *fb, int scale)
 
 static void resize(GLFWwindow *const window, int width, int height)
 {
-    int win_w, win_h;
+    float win_w, win_h, aspect;
     int fb_w, fb_h;
 
-    /* MaxOS Retina display has different fb size than window size */
+    /* MacOS Retina display has different fb size than window size */
     glfwGetFramebufferSize(window, &fb_w, &fb_h);
-    win_w = width;
-    win_h = height;
+    aspect = (float) fb_w / fb_h;
+
+    if (aspect > (float) RESX / RESY) {
+        win_w = RESY * aspect;
+        win_h = RESY;
+    } else {
+        win_w = RESX;
+        win_h = RESX / aspect;
+    }
 
     glViewport(0, 0, fb_w, fb_h);
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(-win_w/2, win_w/2, -win_h/2, win_h/2, -1., 1.);
+
+    glOrtho(-win_w/2 - MARGIN, win_w/2 + MARGIN,
+            -win_h/2 - MARGIN, win_h/2 + MARGIN, -1., 1.);
 }
 
 static void render_grid(int w, int h)

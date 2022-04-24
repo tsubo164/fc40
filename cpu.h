@@ -1,7 +1,6 @@
 #ifndef CPU_H
 #define CPU_H
 
-#include <stdlib.h>
 #include <stdint.h>
 
 struct cartridge;
