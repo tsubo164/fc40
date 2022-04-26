@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include "ppu.h"
 #include "framebuffer.h"
 
@@ -234,6 +235,11 @@ static void load_next_tile(struct PPU *ppu)
     ppu->tile_queue_hi |= ppu->tile_next_hi;
 
     ppu->tile_queue_attr = (ppu->tile_queue_attr << 8) | ppu->tile_next_attr;
+
+    if (!is_rendering_bg(ppu)) {
+        ppu->tile_queue_lo = 0;
+        ppu->tile_queue_hi = 0;
+    }
 }
 
 static void shift_tile_data(struct PPU *ppu)
@@ -325,11 +331,30 @@ void clock_ppu(struct PPU *ppu)
             }
 
     /* advance cycle and scanline */
-    if (cycle == 340) {
-        ppu->cycle    = 0;
-        ppu->scanline = (scanline == 261) ? 0 : scanline + 1;
-    } else {
-        ppu->cycle    = cycle + 1;
+    if (cycle == 339) {
+        if (scanline == 261 && ppu->frame % 2 == 0) {
+            /* the end of the scanline for odd frames */
+            ppu->cycle = 0;
+            ppu->scanline = 0;
+            ppu->frame++;
+        }
+        else {
+            ppu->cycle = cycle + 1;
+        }
+    }
+    else if (cycle == 340) {
+        if (scanline == 261) {
+            ppu->cycle = 0;
+            ppu->scanline = 0;
+            ppu->frame++;
+        }
+        else {
+            ppu->cycle = 0;
+            ppu->scanline = scanline + 1;
+        }
+    }
+    else {
+        ppu->cycle = cycle + 1;
     }
 }
 

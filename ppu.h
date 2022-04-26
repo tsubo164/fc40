@@ -39,9 +39,10 @@ struct PPU {
 
     int cycle;
     int scanline;
+    uint64_t frame;
     struct framebuffer *fbuf;
 
-    char nmi_generated;
+    uint8_t nmi_generated;
 };
 
 /* interruptions */
