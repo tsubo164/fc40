@@ -716,16 +716,14 @@ static int execute(struct CPU *cpu, struct instruction inst)
     /* Jump to Subroutine: push(PC + 2), [PC + 1] -> PCL, [PC + 2] -> PCH () */
     case JSR:
         /* the last byte of the jump instruction */
-        set_pc(cpu, cpu->pc - 1);
-        push_word(cpu, cpu->pc);
+        push_word(cpu, cpu->pc - 1);
         set_pc(cpu, addr);
         break;
 
     /* Break Command: push(PC + 2), [FFFE] -> PCL, [FFFF] ->PCH (I) */
     case BRK:
         /* an extra byte of spacing for a break mark */
-        set_pc(cpu, cpu->pc + 1);
-        push_word(cpu, cpu->pc);
+        push_word(cpu, cpu->pc + 1);
         push(cpu, cpu->p | B);
 
         set_flag(cpu, I, 1);
