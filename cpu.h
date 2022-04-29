@@ -35,4 +35,17 @@ extern void clock_cpu(struct CPU *cpu);
 
 extern void set_controller_input(struct CPU *cpu, uint8_t id, uint8_t input);
 
+struct cpu_status {
+    uint16_t pc;
+    uint8_t  a, x, y, p, s;
+    uint8_t  lo, hi;
+    uint16_t wd;
+    uint8_t  code;
+    char inst_name[4];
+    char mode_name[4];
+};
+
+extern void get_cpu_status(const struct CPU *cpu, struct cpu_status *stat);
+extern uint8_t peek_cpu_data(const struct CPU *cpu, uint16_t addr);
+
 #endif /* _H */

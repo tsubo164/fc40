@@ -1,7 +1,9 @@
 #include <stdio.h>
+#include <string.h>
 #include "cpu.h"
 #include "ppu.h"
 #include "cartridge.h"
+#include "log.h"
 
 enum status_flag {
     C = 1 << 0, /* carry */
@@ -53,8 +55,6 @@ static void write_byte(struct CPU *cpu, uint16_t addr, uint8_t data)
     }
 }
 
-static int peek_ppu_data = 0;
-
 static uint8_t read_byte(struct CPU *cpu, uint16_t addr)
 {
     if (addr >= 0x0000 && addr <= 0x1FFF) {
@@ -67,10 +67,7 @@ static uint8_t read_byte(struct CPU *cpu, uint16_t addr)
         /* PPU mask not readable */
     }
     else if (addr == 0x2002) {
-        if (peek_ppu_data)
-            return peek_ppu_status(cpu->ppu);
-        else
-            return read_ppu_status(cpu->ppu);
+        return read_ppu_status(cpu->ppu);
     }
     else if (addr == 0x2003) {
         /* PPU oam address not readable */
@@ -103,6 +100,22 @@ static uint8_t read_byte(struct CPU *cpu, uint16_t addr)
     return 0;
 }
 
+static uint8_t peek_byte(const struct CPU *cpu, uint16_t addr)
+{
+    if (addr == 0x2002)
+        return peek_ppu_status(cpu->ppu);
+
+    return read_byte((struct CPU *) cpu, addr);
+}
+
+static uint16_t peek_word(const struct CPU *cpu, uint16_t addr)
+{
+    const uint16_t lo = peek_byte(cpu, addr);
+    const uint16_t hi = peek_byte(cpu, addr + 1);
+
+    return (hi << 8) | lo;
+}
+
 static uint16_t read_word(struct CPU *cpu, uint16_t addr)
 {
     const uint16_t lo = read_byte(cpu, addr);
@@ -125,6 +138,10 @@ static uint16_t fetch_word(struct CPU *cpu)
 }
 
 enum addr_mode {ABS, ABX, ABY, ACC, IMM, IMP, IND, IZX, IZY, REL, ZPG, ZPX, ZPY};
+
+static const char addr_mode_name_table[][4] = {
+    "ABS","ABX","ABY","ACC","IMM","IMP","IND","IZX","IZY","REL","ZPG","ZPX","ZPY"
+};
 
 static const uint8_t addr_mode_table[] = {
 /*       +00  +01  +02  +03  +04  +05  +06  +07  +08  +09  +0A  +0B  +0C  +0D  +0E  +0F */
@@ -157,20 +174,20 @@ static uint16_t abs_index(uint16_t abs, uint8_t idx, int *page_crossed)
     return abs + idx;
 }
 
-static uint16_t abs_indirect(struct CPU *cpu, uint16_t abs)
+static uint16_t abs_indirect(const struct CPU *cpu, uint16_t abs)
 {
     if ((abs & 0x00FF) == 0x00FF)
         /* emulate page boundary hardware bug */
-        return (read_byte(cpu, abs & 0xFF00) << 8) | read_byte(cpu, abs);
+        return (peek_byte(cpu, abs & 0xFF00) << 8) | peek_byte(cpu, abs);
     else
         /* normal behavior */
-        return read_word(cpu, abs);
+        return peek_word(cpu, abs);
 }
 
-static uint16_t zp_indirect(struct CPU *cpu, uint8_t zp)
+static uint16_t zp_indirect(const struct CPU *cpu, uint8_t zp)
 {
-    const uint16_t lo = read_byte(cpu, zp & 0xFF);
-    const uint16_t hi = read_byte(cpu, (zp + 1) & 0xFF);
+    const uint16_t lo = peek_byte(cpu, zp & 0xFF);
+    const uint16_t hi = peek_byte(cpu, (zp + 1) & 0xFF);
 
     return (hi << 8) | lo;
 }
@@ -916,119 +933,6 @@ static int execute(struct CPU *cpu, struct instruction inst)
     return inst.cycles + page_crossed + branch_taken;
 }
 
-static void print_code(struct CPU *cpu)
-{
-    peek_ppu_data = 1;
-
-    const uint16_t pc = cpu->pc;
-    const uint8_t  x = cpu->x;
-    const uint8_t  y = cpu->y;
-    const uint8_t  lo = read_byte(cpu, pc + 1);
-    const uint8_t  hi = read_byte(cpu, pc + 2);
-    const uint16_t wd = (hi << 8) | lo;
-
-    const uint8_t code            = read_byte(cpu, cpu->pc);
-    const struct instruction inst = decode(code);
-    const char *name              = opcode_name_table[code];
-
-    uint16_t addr;
-    int N = 0, n = 0;
-
-    printf("%04X  %02X %n", pc, code, &n);
-    N += n;
-
-    switch (inst.addr_mode) {
-
-    case IND:
-        printf("%02X %02X  %s ($%04X) = %04X%n",
-                lo, hi, name, wd, abs_indirect(cpu, wd), &n);
-        N += n;
-        break;
-
-    case ABS:
-        printf("%02X %02X  %s $%04X%n", lo, hi, name, wd, &n);
-        N += n;
-        if (inst.opcode != JMP && inst.opcode != JSR) {
-            printf(" = %02X%n", read_byte(cpu, wd), &n);
-            N += n;
-        }
-        break;
-
-    case ABX:
-        printf("%02X %02X  %s $%04X,X @ %04X = %02X%n",
-                lo, hi, name, wd, wd + x, read_byte(cpu, wd + x), &n);
-        N += n;
-        break;
-
-    case ABY:
-        printf("%02X %02X  %s $%04X,Y @ %04X = %02X%n",
-                lo, hi, name, wd, (wd + y) & 0xFFFF,
-                read_byte(cpu, (wd + y) & 0xFFFF), &n);
-        N += n;
-        break;
-
-    case IZX:
-        addr = zp_indirect(cpu, lo + x);
-        printf("%02X     %s ($%02X,X) @ %02X = %04X = %02X%n",
-                lo, name, lo, (lo + x) & 0xFF, addr, read_byte(cpu, addr), &n);
-        N += n;
-        break;
-
-    case IZY:
-        addr = zp_indirect(cpu, lo);
-        printf("%02X     %s ($%02X),Y = %04X @ %04X = %02X%n",
-                lo, name, lo, addr, (addr + y) & 0xFFFF, read_byte(cpu, addr + y), &n);
-        N += n;
-        break;
-
-    case ZPX:
-        printf("%02X     %s $%02X,X @ %02X = %02X%n",
-                lo, name, lo, (lo + x) & 0xFF, read_byte(cpu, (lo + x) & 0xFF), &n);
-        N += n;
-        break;
-
-    case ZPY:
-        printf("%02X     %s $%02X,Y @ %02X = %02X%n",
-                lo, name, lo, (lo + y) & 0xFF, read_byte(cpu, (lo + y) & 0xFF), &n);
-        N += n;
-        break;
-
-    case REL:
-        printf("%02X     %s $%04X%n", lo, name, (pc + 2) + (int8_t)lo, &n);
-        N += n;
-        break;
-
-    case IMM:
-        printf("%02X     %s #$%02X%n", lo, name, lo, &n);
-        N += n;
-        break;
-
-    case ZPG:
-        printf("%02X     %s $%02X = %02X %n", lo, name, lo, read_byte(cpu, lo), &n);
-        N += n;
-        break;
-
-    case ACC:
-        printf("       %s A%n", name, &n);
-        N += n;
-        break;
-
-    case IMP:
-        printf("       %s%n", name, &n);
-        N += n;
-        break;
-
-    default:
-        break;
-    }
-
-    printf("%*s", 48 - N, " ");
-    printf("A:%02X X:%02X Y:%02X P:%02X SP:%02X", cpu->a, x, y, cpu->p, cpu->s);
-    printf("\n");
-
-    peek_ppu_data = 0;
-}
-
 void reset(struct CPU *cpu)
 {
     set_pc(cpu, read_word(cpu, 0xFFFC));
@@ -1063,7 +967,7 @@ void clock_cpu(struct CPU *cpu)
         struct instruction inst;
 
         if (cpu->log_mode) {
-            print_code(cpu);
+            print_cpu_log(cpu);
             cpu->log_line++;
         }
 
@@ -1080,4 +984,27 @@ void clock_cpu(struct CPU *cpu)
 void set_controller_input(struct CPU *cpu, uint8_t id, uint8_t input)
 {
     cpu->controller_input[id] = input;
+}
+
+void get_cpu_status(const struct CPU *cpu, struct cpu_status *stat)
+{
+    stat->pc = cpu->pc;
+    stat->a  = cpu->a;
+    stat->x  = cpu->x;
+    stat->y  = cpu->y;
+    stat->p  = cpu->p;
+    stat->s  = cpu->s;
+
+    stat->code = peek_byte(cpu, stat->pc + 0);
+    stat->lo   = peek_byte(cpu, stat->pc + 1);
+    stat->hi   = peek_byte(cpu, stat->pc + 2);
+    stat->wd   = (stat->hi << 8) | stat->lo;
+
+    strcpy(stat->inst_name, opcode_name_table[stat->code]);
+    strcpy(stat->mode_name, addr_mode_name_table[addr_mode_table[stat->code]]);
+}
+
+uint8_t peek_cpu_data(const struct CPU *cpu, uint16_t addr)
+{
+    return peek_byte(cpu, addr);
 }
