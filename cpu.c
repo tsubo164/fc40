@@ -102,8 +102,13 @@ static uint8_t read_byte(struct CPU *cpu, uint16_t addr)
 
 static uint8_t peek_byte(const struct CPU *cpu, uint16_t addr)
 {
-    if (addr == 0x2002)
+    if (addr == 0x2002) {
         return peek_ppu_status(cpu->ppu);
+    }
+    else if (addr >= 0x4016 && addr <= 0x4017) {
+        const int id = addr & 0x001;
+        return (cpu->controller_state[id] & 0x80) > 0;
+    }
 
     return read_byte((struct CPU *) cpu, addr);
 }
