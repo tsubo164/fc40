@@ -24,9 +24,6 @@ struct CPU {
 
     uint8_t controller_input[2];
     uint8_t controller_state[2];
-
-    uint8_t log_mode;
-    uint16_t log_line;
 };
 
 extern void reset(struct CPU *cpu);

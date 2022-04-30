@@ -3,7 +3,6 @@
 #include "cpu.h"
 #include "ppu.h"
 #include "cartridge.h"
-#include "log.h"
 
 enum status_flag {
     C = 1 << 0, /* carry */
@@ -970,11 +969,6 @@ void clock_cpu(struct CPU *cpu)
     if (cpu->cycles == 0) {
         uint8_t code, cycs;
         struct instruction inst;
-
-        if (cpu->log_mode) {
-            print_cpu_log(cpu);
-            cpu->log_line++;
-        }
 
         code = fetch(cpu);
         inst = decode(code);
