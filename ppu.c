@@ -166,46 +166,64 @@ static uint16_t encode_address(struct vram_pointer v)
     return addr;
 }
 
-static void increment_address_x(struct vram_pointer *v)
+static void increment_scroll_x(struct PPU *ppu)
 {
-    if (v->tile_x == 31) {
-        v->tile_x = 0;
-        v->table_x = !v->table_x;
+    struct vram_pointer v = decode_address(ppu->vram_addr);
+
+    if (v.tile_x == 31) {
+        v.tile_x = 0;
+        v.table_x = !v.table_x;
     }
     else {
-        v->tile_x++;
+        v.tile_x++;
     }
+
+    ppu->vram_addr = encode_address(v);
 }
 
-static void increment_address_y(struct vram_pointer *v)
+static void increment_scroll_y(struct PPU *ppu)
 {
-    if (v->fine_y == 7) {
-        v->fine_y = 0;
+    struct vram_pointer v = decode_address(ppu->vram_addr);
 
-        if (v->tile_y == 29) {
-            v->tile_y = 0;
-            v->table_y = !v->table_y;
+    if (v.fine_y == 7) {
+        v.fine_y = 0;
+
+        if (v.tile_y == 29) {
+            v.tile_y = 0;
+            v.table_y = !v.table_y;
         }
         else {
-            v->tile_y++;
+            v.tile_y++;
         }
     }
     else {
-        v->fine_y++;
+        v.fine_y++;
     }
+
+    ppu->vram_addr = encode_address(v);
 }
 
-static void copy_address_x(struct vram_pointer *dst, const struct vram_pointer *src)
+static void copy_address_x(struct PPU *ppu)
 {
-    dst->table_x = src->table_x;
-    dst->tile_x  = src->tile_x;
+    const struct vram_pointer t = decode_address(ppu->temp_addr);
+    struct vram_pointer v = decode_address(ppu->vram_addr);
+
+    v.table_x = t.table_x;
+    v.tile_x  = t.tile_x;
+
+    ppu->vram_addr = encode_address(v);
 }
 
-static void copy_address_y(struct vram_pointer *dst, const struct vram_pointer *src)
+static void copy_address_y(struct PPU *ppu)
 {
-    dst->table_y = src->table_y;
-    dst->tile_y  = src->tile_y;
-    dst->fine_y  = src->fine_y;
+    const struct vram_pointer t = decode_address(ppu->temp_addr);
+    struct vram_pointer v = decode_address(ppu->vram_addr);
+
+    v.table_y = t.table_y;
+    v.tile_y  = t.tile_y;
+    v.fine_y  = t.fine_y;
+
+    ppu->vram_addr = encode_address(v);
 }
 
 static int is_rendering_bg(const struct PPU *ppu)
@@ -243,14 +261,15 @@ static void shift_tile_data(struct PPU *ppu)
     ppu->tile_queue[2].hi <<= 1;
 }
 
-static void fetch_tile_data(struct PPU *ppu, int cycle, const struct vram_pointer *v)
+static void fetch_tile_data(struct PPU *ppu, int cycle)
 {
+    const struct vram_pointer v = decode_address(ppu->vram_addr);
     struct pattern_row *next = &ppu->tile_queue[0];
 
     switch (cycle % 8) {
     case 1:
         /* NT byte */
-        next->id = get_tile_id(ppu, v->tile_x, v->tile_y);
+        next->id = get_tile_id(ppu, v.tile_x, v.tile_y);
         break;
 
     case 3:
@@ -260,12 +279,12 @@ static void fetch_tile_data(struct PPU *ppu, int cycle, const struct vram_pointe
 
     case 5:
         /* Low BG tile byte */
-        next->lo = get_tile_row(ppu, next->id, v->fine_y, 0);
+        next->lo = get_tile_row(ppu, next->id, v.fine_y, 0);
         break;
 
     case 7:
         /* High BG tile byte */
-        next->hi = get_tile_row(ppu, next->id, v->fine_y, 8);
+        next->hi = get_tile_row(ppu, next->id, v.fine_y, 8);
         break;
 
     default:
@@ -280,35 +299,34 @@ void clock_ppu(struct PPU *ppu)
     const int is_rendering = is_rendering_bg(ppu) || is_rendering_sprite(ppu);
 
     if ((scanline >= 0 && scanline <= 239) || scanline == 261) {
-        const struct vram_pointer t = decode_address(ppu->temp_addr);
-        struct vram_pointer v = decode_address(ppu->vram_addr);
 
         /* fetch bg tile */
         if ((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 336)) {
             if (cycle % 8 == 0)
-                increment_address_x(&v);
+                if (is_rendering)
+                    increment_scroll_x(ppu);
+
 
             if (cycle % 8 == 1)
                 load_next_tile(ppu);
 
-            fetch_tile_data(ppu, cycle, &v);
+            fetch_tile_data(ppu, cycle);
         }
 
         /* inc vert(v) */
         if (cycle == 256)
-            increment_address_y(&v);
+            if (is_rendering)
+                increment_scroll_y(ppu);
 
         /* hori(v) = hori(t) */
         if (cycle == 257)
-            copy_address_x(&v, &t);
+            if (is_rendering)
+                copy_address_x(ppu);
 
         /* vert(v) = vert(t) */
         if ((cycle >= 280 && cycle <= 305) && scanline == 261)
-            copy_address_y(&v, &t);
-
-        /* update vram address */
-        if (is_rendering)
-            ppu->vram_addr = encode_address(v);
+            if (is_rendering)
+                copy_address_y(ppu);
     }
 
     if (scanline == 241)
