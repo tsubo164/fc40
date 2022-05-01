@@ -91,10 +91,12 @@ static uint8_t get_tile_row(const struct PPU *ppu,
 
 static void set_pixel_color(const struct PPU *ppu, int x, int y)
 {
-    const uint8_t hi = (ppu->tile_queue_hi & 0x8000) > 0;
-    const uint8_t lo = (ppu->tile_queue_lo & 0x8000) > 0;
+    const struct pattern_row patt = ppu->tile_queue[2];
+
+    const uint8_t hi = (patt.hi & 0x80) > 0;
+    const uint8_t lo = (patt.lo & 0x80) > 0;
     const uint8_t val = (hi << 1) | lo;
-    const uint8_t attr = ppu->tile_queue_attr >> 8;
+    const uint8_t attr = patt.attr;
 
     const uint8_t *palette = get_bg_palette(ppu->bg_palette_table, attr);
     const uint8_t index = palette[val];
@@ -231,44 +233,39 @@ static void leave_vblank(struct PPU *ppu)
 
 static void load_next_tile(struct PPU *ppu)
 {
-    ppu->tile_queue_lo |= ppu->tile_next_lo;
-    ppu->tile_queue_hi |= ppu->tile_next_hi;
-
-    ppu->tile_queue_attr = (ppu->tile_queue_attr << 8) | ppu->tile_next_attr;
-
-    if (!is_rendering_bg(ppu)) {
-        ppu->tile_queue_lo = 0;
-        ppu->tile_queue_hi = 0;
-    }
+    ppu->tile_queue[2] = ppu->tile_queue[1];
+    ppu->tile_queue[1] = ppu->tile_queue[0];
 }
 
 static void shift_tile_data(struct PPU *ppu)
 {
-    ppu->tile_queue_lo <<= 1;
-    ppu->tile_queue_hi <<= 1;
+    ppu->tile_queue[2].lo <<= 1;
+    ppu->tile_queue[2].hi <<= 1;
 }
 
 static void fetch_tile_data(struct PPU *ppu, int cycle, const struct vram_pointer *v)
 {
+    struct pattern_row *next = &ppu->tile_queue[0];
+
     switch (cycle % 8) {
     case 1:
         /* NT byte */
-        ppu->tile_next_id = get_tile_id(ppu, v->tile_x, v->tile_y);
+        next->id = get_tile_id(ppu, v->tile_x, v->tile_y);
         break;
 
     case 3:
         /* AT byte */
-        ppu->tile_next_attr = 0;
+        next->attr = 0;
         break;
 
     case 5:
         /* Low BG tile byte */
-        ppu->tile_next_lo = get_tile_row(ppu, ppu->tile_next_id, v->fine_y, 0);
+        next->lo = get_tile_row(ppu, next->id, v->fine_y, 0);
         break;
 
     case 7:
         /* High BG tile byte */
-        ppu->tile_next_hi = get_tile_row(ppu, ppu->tile_next_id, v->fine_y, 8);
+        next->hi = get_tile_row(ppu, next->id, v->fine_y, 8);
         break;
 
     default:
