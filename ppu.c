@@ -68,6 +68,15 @@ static const uint8_t palette_2C02[][3] = {
     {0xA0, 0xD6, 0xE4}, {0xA0, 0xA2, 0xA0}, {0x00, 0x00, 0x00}, {0x00, 0x00, 0x00}
 };
 
+static uint8_t read_byte(const struct PPU *ppu, uint16_t addr)
+{
+    if (addr >= 0x2000 && addr <= 0x23FF) {
+        return ppu->name_table_0[addr - 0x2000];
+    }
+
+    return 0xFF;
+}
+
 static const uint8_t *get_bg_palette(const uint8_t *palette, int attr)
 {
     return palette + attr * 4;
@@ -164,6 +173,34 @@ static uint16_t encode_address(struct vram_pointer v)
     addr = (addr << 5) | (v.tile_x & 0x1F);
 
     return addr;
+}
+
+static uint8_t fetch_tile_id(const struct PPU *ppu)
+{
+    if (1) {
+        const struct vram_pointer v = decode_address(ppu->vram_addr);
+        const uint16_t offset = v.tile_y * 32 + v.tile_x;
+
+        return read_byte(ppu, 0x2000 + offset);
+    }
+    else {
+        return read_byte(ppu, 0x2000 + (ppu->vram_addr & 0x0FFF));
+    }
+}
+
+static uint8_t fetch_tile_attr(const struct PPU *ppu)
+{
+    const struct vram_pointer v = decode_address(ppu->vram_addr);
+    const uint16_t attr_x = v.tile_x / 4;
+    const uint16_t attr_y = v.tile_y / 4;
+    const uint16_t offset = attr_y * 8 + attr_x;
+    const uint8_t attr = read_byte(ppu, 0x2000 + 32 * 30 + offset);
+
+    const uint8_t bit_x = v.tile_x % 4 > 1;
+    const uint8_t bit_y = v.tile_y % 4 > 1;
+    const uint8_t bit = (bit_y << 1) | bit_x;
+
+    return (attr >> (bit * 2)) & 0x03;
 }
 
 static void increment_scroll_x(struct PPU *ppu)
@@ -270,11 +307,15 @@ static void fetch_tile_data(struct PPU *ppu, int cycle)
     case 1:
         /* NT byte */
         next->id = get_tile_id(ppu, v.tile_x, v.tile_y);
+        if (0)
+        next->id = fetch_tile_id(ppu);
         break;
 
     case 3:
         /* AT byte */
         next->attr = 0;
+        if (0)
+        next->attr = fetch_tile_attr(ppu);
         break;
 
     case 5:
@@ -450,7 +491,7 @@ void write_ppu_data(struct PPU *ppu, uint8_t data)
 
     ppu->ppu_data_buf = data;
 
-    if (0x2000 <= addr && addr <= 0x23BF) {
+    if (0x2000 <= addr && addr <= 0x23FF) {
         ppu->name_table_0[addr - 0x2000] = data;
     }
     else if (0x3F00 <= addr && addr <= 0x3F0F) {

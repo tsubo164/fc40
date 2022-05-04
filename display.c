@@ -195,18 +195,24 @@ static void render_grid(int w, int h)
     glPushAttrib(GL_CURRENT_BIT);
     glBegin(GL_LINES);
     for (i = 0; i <= w / 8; i++) {
-        if (i % 2 == 0)
+        if (i % 4 == 0)
             glColor3f(0, 1, 0);
         else
+        if (i % 2 == 0)
             glColor3f(0, .5, 0);
+        else
+            glColor3f(0, .25, 0);
         glVertex3f(-w/2 + i * 8,  h/2, .1);
         glVertex3f(-w/2 + i * 8, -h/2, .1);
     }
     for (i = 0; i <= h / 8; i++) {
-        if (i % 2 == 0)
+        if (i % 4 == 2 || i == 0)
             glColor3f(0, 1, 0);
         else
+        if (i % 2 == 0)
             glColor3f(0, .5, 0);
+        else
+            glColor3f(0, .25, 0);
         glVertex3f( w/2, -h/2 + i * 8, .1);
         glVertex3f(-w/2, -h/2 + i * 8, .1);
     }
