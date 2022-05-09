@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "ppu.h"
 #include "framebuffer.h"
+#include "cartridge.h"
 
 enum ppu_status {
     STAT_UNUSED          = 0x1F,
@@ -40,7 +41,7 @@ static void set_stat(struct PPU *ppu, uint8_t flag, uint8_t val)
         ppu->stat &= ~flag;
 }
 
-static int get_ctrl(struct PPU *ppu, uint8_t flag)
+static int get_ctrl(const struct PPU *ppu, uint8_t flag)
 {
     return (ppu->ctrl & flag) > 0;
 }
@@ -85,17 +86,6 @@ static const uint8_t *get_bg_palette(const uint8_t *palette, int attr)
 static const uint8_t *get_color(int index)
 {
     return palette_2C02[index];
-}
-
-static uint8_t get_tile_id(const struct PPU *ppu, uint8_t tile_x, uint8_t tile_y)
-{
-    return ppu->name_table_0[tile_y * 32 + tile_x];
-}
-
-static uint8_t get_tile_row(const struct PPU *ppu,
-        uint8_t tile_id, uint8_t pixel_y, uint8_t offset)
-{
-    return ppu->char_rom[16 * tile_id + offset + pixel_y];
 }
 
 static void set_pixel_color(const struct PPU *ppu, int x, int y)
@@ -203,6 +193,15 @@ static uint8_t fetch_tile_attr(const struct PPU *ppu)
     return (attr >> (bit * 2)) & 0x03;
 }
 
+static uint8_t fetch_tile_row(const struct PPU *ppu, uint8_t tile_id, uint8_t plane)
+{
+    const struct vram_pointer v = decode_address(ppu->vram_addr);
+    const uint16_t base = get_ctrl(ppu, CTRL_PATTERN_BG) ? 0x1000 : 0x0000;
+    const uint16_t addr = base + 16 * tile_id + plane + v.fine_y;
+
+    return read_chr_rom(ppu->cart, addr);
+}
+
 static void increment_scroll_x(struct PPU *ppu)
 {
     struct vram_pointer v = decode_address(ppu->vram_addr);
@@ -300,32 +299,27 @@ static void shift_tile_data(struct PPU *ppu)
 
 static void fetch_tile_data(struct PPU *ppu, int cycle)
 {
-    const struct vram_pointer v = decode_address(ppu->vram_addr);
     struct pattern_row *next = &ppu->tile_queue[0];
 
     switch (cycle % 8) {
     case 1:
         /* NT byte */
-        next->id = get_tile_id(ppu, v.tile_x, v.tile_y);
-        if (0)
         next->id = fetch_tile_id(ppu);
         break;
 
     case 3:
         /* AT byte */
-        next->attr = 0;
-        if (0)
         next->attr = fetch_tile_attr(ppu);
         break;
 
     case 5:
         /* Low BG tile byte */
-        next->lo = get_tile_row(ppu, next->id, v.fine_y, 0);
+        next->lo = fetch_tile_row(ppu, next->id, 0);
         break;
 
     case 7:
         /* High BG tile byte */
-        next->hi = get_tile_row(ppu, next->id, v.fine_y, 8);
+        next->hi = fetch_tile_row(ppu, next->id, 8);
         break;
 
     default:

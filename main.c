@@ -45,8 +45,7 @@ int main(int argc, char **argv)
 
     cpu.cart = cart;
     cpu.ppu = &ppu;
-    ppu.char_rom = cart->char_rom;
-    ppu.char_size = cart->char_size;
+    ppu.cart = cart;
     fbuf = new_framebuffer(RESX, RESY);
     ppu.fbuf = fbuf;
 

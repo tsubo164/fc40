@@ -18,5 +18,6 @@ extern struct cartridge *open_cartridge(const char *filename);
 extern void close_cartridge(struct cartridge *cart);
 
 extern uint8_t rom_read(const struct cartridge *cart, uint16_t addr);
+extern uint8_t read_chr_rom(const struct cartridge *cart, uint16_t addr);
 
 #endif /* _H */

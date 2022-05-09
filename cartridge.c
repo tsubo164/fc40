@@ -71,3 +71,12 @@ uint8_t rom_read(const struct cartridge *cart, uint16_t addr)
 
     return 0;
 }
+
+uint8_t read_chr_rom(const struct cartridge *cart, uint16_t addr)
+{
+    if (addr >= 0x0000 && addr <= 0x1FFF) {
+        return cart->char_rom[addr];
+    }
+
+    return 0xFF;
+}

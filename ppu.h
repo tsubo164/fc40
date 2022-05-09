@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 struct framebuffer;
+struct cartridge;
 
 struct pattern_row {
     uint8_t id;
@@ -12,8 +13,7 @@ struct pattern_row {
 };
 
 struct PPU {
-    const uint8_t *char_rom;
-    size_t char_size;
+    struct cartridge *cart;
 
     /* registers */
     uint8_t ctrl;
