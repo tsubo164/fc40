@@ -14,9 +14,11 @@ static int key_press = 0;
 
 static void transfer_texture(const struct framebuffer *fb);
 static void resize(GLFWwindow *const window, int width, int height);
-static GLuint init_gl(const struct framebuffer *fb);
+static void init_gl(void);
 static void render(const struct framebuffer *fb);
 static void render_grid(int w, int h);
+
+static const GLubyte main_screen = 0;
 
 int open_display(const struct display *disp)
 {
@@ -26,7 +28,6 @@ int open_display(const struct display *disp)
     const int WINY = RESY * SCALE + 2 * WIN_MARGIN;
 
     uint64_t f = 0;
-    GLuint texture_id;
     GLFWwindow* window;
 
     /* Initialize the library */
@@ -44,7 +45,7 @@ int open_display(const struct display *disp)
     glfwMakeContextCurrent(window);
     glfwSetWindowSizeCallback(window, resize);
 
-    texture_id = init_gl(disp->fb);
+    init_gl();
     resize(window, WINX, WINY);
 
     /* Loop until the user closes the window */
@@ -119,20 +120,16 @@ static void transfer_texture(const struct framebuffer *fb)
             0, GL_RGB, GL_UNSIGNED_BYTE, fb->data);
 }
 
-static GLuint init_gl(const struct framebuffer *fb)
+static void init_gl(void)
 {
-    GLuint tex_id = 0;
     const float bg = .25;
 
-    glGenTextures(1, &tex_id);
-    glBindTexture(GL_TEXTURE_2D, tex_id);
+    glBindTexture(GL_TEXTURE_2D, main_screen);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
     glClearColor(bg, bg, bg, 0);
-
-    return tex_id;
 }
 
 static void render(const struct framebuffer *fb)
