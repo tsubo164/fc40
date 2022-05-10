@@ -18,9 +18,7 @@ static GLuint init_gl(const struct framebuffer *fb);
 static void render(const struct framebuffer *fb);
 static void render_grid(int w, int h);
 
-int open_display(const struct framebuffer *fb,
-        void (*update_frame_func)(void),
-        void (*input_controller_func)(uint8_t id, uint8_t input))
+int open_display(const struct display *disp)
 {
     /* MacOS Retina display has twice res */
     const int WIN_MARGIN = 2 * MARGIN;
@@ -46,7 +44,7 @@ int open_display(const struct framebuffer *fb,
     glfwMakeContextCurrent(window);
     glfwSetWindowSizeCallback(window, resize);
 
-    texture_id = init_gl(fb);
+    texture_id = init_gl(disp->fb);
     resize(window, WINX, WINY);
 
     /* Loop until the user closes the window */
@@ -61,11 +59,11 @@ int open_display(const struct framebuffer *fb,
         }
 
         /* Update framebuffer */
-        update_frame_func();
-        transfer_texture(fb);
+        disp->update_frame_func();
+        transfer_texture(disp->fb);
 
         /* Render here */
-        render(fb);
+        render(disp->fb);
 
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
@@ -93,7 +91,7 @@ int open_display(const struct framebuffer *fb,
             if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
                 input |= 1 << 0; /* right */
 
-            input_controller_func(0, input);
+            disp->input_controller_func(0, input);
         }
 
         if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS && key_press == 0) {

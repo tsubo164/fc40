@@ -51,10 +51,17 @@ int main(int argc, char **argv)
 
     reset(&cpu);
 
-    if (log_mode)
+    if (log_mode) {
         log_cpu_status(&cpu);
-    else
-        open_display(fbuf, update_frame, input_controller);
+    }
+    else {
+        struct display disp;
+        disp.fb = fbuf;
+        disp.update_frame_func = update_frame;
+        disp.input_controller_func = input_controller;
+        open_display(&disp);
+        //open_display(fbuf, update_frame, input_controller);
+    }
 
     free_framebuffer(fbuf);
     close_cartridge(cart);
