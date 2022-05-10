@@ -21,6 +21,7 @@ int main(int argc, char **argv)
     const int RESX = 256;
     const int RESY = 240;
     struct framebuffer *fbuf = NULL;
+    struct framebuffer *patt = NULL;
     struct cartridge *cart = NULL;
     const char *filename = NULL;
     int log_mode = 0;
@@ -51,16 +52,19 @@ int main(int argc, char **argv)
 
     reset(&cpu);
 
+    /* pattern table */
+    patt = new_framebuffer(16 * 8 * 2, 16 * 8);
+
     if (log_mode) {
         log_cpu_status(&cpu);
     }
     else {
         struct display disp;
         disp.fb = fbuf;
+        disp.pattern_table = patt;
         disp.update_frame_func = update_frame;
         disp.input_controller_func = input_controller;
         open_display(&disp);
-        //open_display(fbuf, update_frame, input_controller);
     }
 
     free_framebuffer(fbuf);

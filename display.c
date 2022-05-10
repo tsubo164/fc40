@@ -10,15 +10,19 @@ const int RESX = 256;
 const int RESY = 240;
 
 static int show_grid = 0;
-static int key_press = 0;
+static int show_patt = 0;
+static int press_g = 0;
+static int press_p = 0;
 
 static void transfer_texture(const struct framebuffer *fb);
 static void resize(GLFWwindow *const window, int width, int height);
-static void init_gl(void);
-static void render(const struct framebuffer *fb);
+static void init_gl(const struct display *disp);
+static void render(const struct framebuffer *fb, const struct framebuffer *patt);
 static void render_grid(int w, int h);
+static void render_pattern_table(const struct framebuffer *patt);
 
-static const GLubyte main_screen = 0;
+static const GLuint main_screen = 0;
+static GLuint pattern_table = 0;
 
 int open_display(const struct display *disp)
 {
@@ -45,7 +49,7 @@ int open_display(const struct display *disp)
     glfwMakeContextCurrent(window);
     glfwSetWindowSizeCallback(window, resize);
 
-    init_gl();
+    init_gl(disp);
     resize(window, WINX, WINY);
 
     /* Loop until the user closes the window */
@@ -64,7 +68,7 @@ int open_display(const struct display *disp)
         transfer_texture(disp->fb);
 
         /* Render here */
-        render(disp->fb);
+        render(disp->fb, disp->pattern_table);
 
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
@@ -95,12 +99,19 @@ int open_display(const struct display *disp)
             disp->input_controller_func(0, input);
         }
 
-        if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS && key_press == 0) {
+        if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS && press_g == 0) {
             show_grid = !show_grid;
-            key_press = 1;
+            press_g = 1;
         }
-        if (glfwGetKey(window, GLFW_KEY_G) == GLFW_RELEASE && key_press == 1) {
-            key_press = 0;
+        if (glfwGetKey(window, GLFW_KEY_G) == GLFW_RELEASE && press_g == 1) {
+            press_g = 0;
+        }
+        if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS && press_p == 0) {
+            show_patt = !show_patt;
+            press_p = 1;
+        }
+        if (glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE && press_p == 1) {
+            press_p = 0;
         }
 
         if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
@@ -120,19 +131,32 @@ static void transfer_texture(const struct framebuffer *fb)
             0, GL_RGB, GL_UNSIGNED_BYTE, fb->data);
 }
 
-static void init_gl(void)
+static void init_gl(const struct display *disp)
 {
     const float bg = .25;
 
+    /* main screen */
     glBindTexture(GL_TEXTURE_2D, main_screen);
-
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
+    /* pattern table */
+    glGenTextures(1, &pattern_table);
+    glBindTexture(GL_TEXTURE_2D, pattern_table);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, disp->pattern_table->width, disp->pattern_table->height,
+            0, GL_RGB, GL_UNSIGNED_BYTE, disp->pattern_table->data);
+
+    glBindTexture(GL_TEXTURE_2D, main_screen);
+
+    /* bg color */
     glClearColor(bg, bg, bg, 0);
 }
 
-static void render(const struct framebuffer *fb)
+static void render(const struct framebuffer *fb, const struct framebuffer *patt)
 {
     const int W = fb->width;
     const int H = fb->height;
@@ -153,6 +177,9 @@ static void render(const struct framebuffer *fb)
 
     if (show_grid)
         render_grid(W, H);
+
+    if (show_patt)
+        render_pattern_table(patt);
 
     glFlush();
 }
@@ -213,4 +240,23 @@ static void render_grid(int w, int h)
     }
     glEnd();
     glPopAttrib();
+}
+
+static void render_pattern_table(const struct framebuffer *patt)
+{
+    const int W = patt->width;
+    const int H = patt->height;
+
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, pattern_table);
+    glBegin(GL_QUADS);
+        glTexCoord2f(0, 0); glVertex2f(-W/2,  H/2);
+        glTexCoord2f(1, 0); glVertex2f( W/2,  H/2);
+        glTexCoord2f(1, 1); glVertex2f( W/2, -H/2);
+        glTexCoord2f(0, 1); glVertex2f(-W/2, -H/2);
+    glEnd();
+    glDisable(GL_TEXTURE_2D);
+
+    /* switch texture back to default */
+    glBindTexture(GL_TEXTURE_2D, main_screen);
 }
