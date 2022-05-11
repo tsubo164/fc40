@@ -259,4 +259,18 @@ static void render_pattern_table(const struct framebuffer *patt)
 
     /* switch texture back to default */
     glBindTexture(GL_TEXTURE_2D, main_screen);
+
+    glPushAttrib(GL_CURRENT_BIT);
+    glColor3f(0, 1, 1);
+    glBegin(GL_LINE_LOOP);
+        glVertex2f(-W/2,  H/2);
+        glVertex2f( W/2,  H/2);
+        glVertex2f( W/2, -H/2);
+        glVertex2f(-W/2, -H/2);
+    glEnd();
+    glBegin(GL_LINES);
+        glVertex2f(0,  H/2);
+        glVertex2f(0, -H/2);
+    glEnd();
+    glPopAttrib();
 }

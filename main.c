@@ -7,6 +7,7 @@
 #include "cpu.h"
 #include "ppu.h"
 #include "log.h"
+#include "debug.h"
 
 static struct CPU cpu = {0};
 static struct PPU ppu = {0};
@@ -54,6 +55,7 @@ int main(int argc, char **argv)
 
     /* pattern table */
     patt = new_framebuffer(16 * 8 * 2, 16 * 8);
+    load_pattern_table(patt, cart);
 
     if (log_mode) {
         log_cpu_status(&cpu);
