@@ -47,26 +47,25 @@ static int get_ctrl(const struct PPU *ppu, uint8_t flag)
 }
 
 static const uint8_t palette_2C02[][3] = {
-    /* 0x00 */
-    {0x54, 0x54, 0x54}, {0x00, 0x1E, 0x74}, {0x08, 0x10, 0x90}, {0x30, 0x00, 0x88},
-    {0x44, 0x00, 0x64}, {0x5C, 0x00, 0x30}, {0x54, 0x04, 0x00}, {0x3C, 0x18, 0x00},
-    {0x20, 0x2A, 0x00}, {0x08, 0x3A, 0x00}, {0x00, 0x40, 0x00}, {0x00, 0x3C, 0x00},
-    {0x00, 0x32, 0x3C}, {0x00, 0x00, 0x00}, {0x00, 0x00, 0x00}, {0x00, 0x00, 0x00},
-    /* 0x10 */
-    {0x98, 0x96, 0x98}, {0x08, 0x4C, 0xC4}, {0x30, 0x32, 0xEC}, {0x5C, 0x1E, 0xE4},
-    {0x88, 0x14, 0xB0}, {0xA0, 0x14, 0x64}, {0x98, 0x22, 0x20}, {0x78, 0x3C, 0x00},
-    {0x54, 0x5A, 0x00}, {0x28, 0x72, 0x00}, {0x08, 0x7C, 0x00}, {0x00, 0x76, 0x28},
-    {0x00, 0x66, 0x78}, {0x00, 0x00, 0x00}, {0x00, 0x00, 0x00}, {0x00, 0x00, 0x00},
-    /* 0x20 */
-    {0xEC, 0xEE, 0xEC}, {0x4C, 0x9A, 0xEC}, {0x78, 0x7C, 0xEC}, {0xB0, 0x62, 0xEC},
-    {0xE4, 0x54, 0xEC}, {0xEC, 0x58, 0xB4}, {0xEC, 0x6A, 0x64}, {0xD4, 0x88, 0x20},
-    {0xA0, 0xAA, 0x00}, {0x74, 0xC4, 0x00}, {0x4C, 0xD0, 0x20}, {0x38, 0xCC, 0x6C},
-    {0x38, 0xB4, 0xCC}, {0x3C, 0x3C, 0x3C}, {0x00, 0x00, 0x00}, {0x00, 0x00, 0x00},
-    /* 0x30 */
-    {0xEC, 0xEE, 0xEC}, {0xA8, 0xCC, 0xEC}, {0xBC, 0xBC, 0xEC}, {0xD4, 0xB2, 0xEC},
-    {0xEC, 0xAE, 0xEC}, {0xEC, 0xAE, 0xD4}, {0xEC, 0xB4, 0xB0}, {0xE4, 0xC4, 0x90},
-    {0xCC, 0xD2, 0x78}, {0xB4, 0xDE, 0x78}, {0xA8, 0xE2, 0x90}, {0x98, 0xE2, 0xB4},
-    {0xA0, 0xD6, 0xE4}, {0xA0, 0xA2, 0xA0}, {0x00, 0x00, 0x00}, {0x00, 0x00, 0x00}
+    { 84,  84,  84}, {  0,  30, 116}, {  8,  16, 144}, { 48,   0, 136},
+    { 68,   0, 100}, { 92,   0,  48}, { 84,   4,   0}, { 60,  24,   0},
+    { 32,  42,   0}, {  8,  58,   0}, {  0,  64,   0}, {  0,  60,   0},
+    {  0,  50,  60}, {  0,   0,   0}, {  0,   0,   0}, {  0,   0,   0},
+
+    {152, 150, 152}, {  8,  76, 196}, { 48,  50, 236}, { 92,  30, 228},
+    {136,  20, 176}, {160,  20, 100}, {152,  34,  32}, {120,  60,   0},
+    { 84,  90,   0}, { 40, 114,   0}, {  8, 124,   0}, {  0, 118,  40},
+    { 0 ,102 ,120 }, {  0,   0,   0}, {  0,   0,   0}, {  0,   0,   0},
+
+    {236, 238, 236}, { 76, 154, 236}, {120, 124, 236}, {176,  98, 236},
+    {228,  84, 236}, {236,  88, 180}, {236, 106, 100}, {212, 136,  32},
+    {160, 170,   0}, {116, 196,   0}, { 76, 208,  32}, { 56, 204, 108},
+    {56 ,180 ,204 }, { 60,  60,  60}, {  0,   0,   0}, {  0,   0,   0},
+
+    {236, 238, 236}, {168, 204, 236}, {188, 188, 236}, {212, 178, 236},
+    {236, 174, 236}, {236, 174, 212}, {236, 180, 176}, {228, 196, 144},
+    {204, 210, 120}, {180, 222, 120}, {168, 226, 144}, {152, 226, 180},
+    {160, 214, 228}, {160, 162, 160}, {  0,   0,   0}, {  0,   0,   0}
 };
 
 static uint8_t read_byte(const struct PPU *ppu, uint16_t addr)
@@ -74,18 +73,28 @@ static uint8_t read_byte(const struct PPU *ppu, uint16_t addr)
     if (addr >= 0x2000 && addr <= 0x23FF) {
         return ppu->name_table_0[addr - 0x2000];
     }
+    else if (addr >= 0x3F00 && addr <= 0x3FFF) {
+        const uint16_t a = 0x3F00 + (addr & 0x1F);
+
+        if (a % 4 == 0)
+            return ppu->palette_ram[0x00];
+        else
+            return ppu->palette_ram[a & 0x1F];
+    }
 
     return 0xFF;
-}
-
-static const uint8_t *get_bg_palette(const uint8_t *palette, int attr)
-{
-    return palette + attr * 4;
 }
 
 static const uint8_t *get_color(int index)
 {
     return palette_2C02[index];
+}
+
+static uint8_t fetch_palette_value(const struct PPU *ppu, uint8_t palette_id, uint8_t pixel_val)
+{
+    const uint16_t addr = 0x3F00 + 4 * palette_id + pixel_val;
+
+    return read_byte(ppu, addr);
 }
 
 static void set_pixel_color(const struct PPU *ppu, int x, int y)
@@ -97,8 +106,7 @@ static void set_pixel_color(const struct PPU *ppu, int x, int y)
     const uint8_t val = (hi << 1) | lo;
     const uint8_t attr = patt.attr;
 
-    const uint8_t *palette = get_bg_palette(ppu->bg_palette_table, attr);
-    const uint8_t index = palette[val];
+    const uint8_t index = fetch_palette_value(ppu, attr, val);
     const uint8_t *color = get_color(index);
 
     set_color(ppu->fbuf, x, y, color);
@@ -483,13 +491,18 @@ void write_ppu_data(struct PPU *ppu, uint8_t data)
 {
     const uint16_t addr = ppu->vram_addr;
 
-    ppu->ppu_data_buf = data;
-
     if (0x2000 <= addr && addr <= 0x23FF) {
         ppu->name_table_0[addr - 0x2000] = data;
     }
-    else if (0x3F00 <= addr && addr <= 0x3F0F) {
-        ppu->bg_palette_table[addr - 0x3F00] = data;
+    else if (0x3F00 <= addr && addr <= 0x3FFF) {
+        uint16_t a = 0x3F00 + (addr & 0x1F);
+
+        if (addr == 0x3F10) a = 0x3F00;
+        if (addr == 0x3F14) a = 0x3F04;
+        if (addr == 0x3F18) a = 0x3F08;
+        if (addr == 0x3F1C) a = 0x3F0C;
+
+        ppu->palette_ram[a & 0x1F] = data;
     }
 
     if (get_ctrl(ppu, CTRL_ADDR_INCREMENT))

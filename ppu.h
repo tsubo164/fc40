@@ -28,7 +28,7 @@ struct PPU {
 
     /* vram */
     uint8_t ppu_data_buf;
-    uint8_t bg_palette_table[16];
+    uint8_t palette_ram[32];
     uint8_t name_table_0[1024];
 
     /* bg tile cache */
