@@ -532,8 +532,7 @@ uint8_t read_ppu_status(struct PPU *ppu)
 
 uint8_t read_oam_data(const struct PPU *ppu)
 {
-    /* TODO */
-    return 0;
+    return ppu->oam[ppu->oam_addr];
 }
 
 uint8_t read_ppu_data(const struct PPU *ppu)

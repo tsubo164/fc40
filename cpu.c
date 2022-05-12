@@ -72,7 +72,7 @@ static uint8_t read_byte(struct CPU *cpu, uint16_t addr)
         /* PPU oam address not readable */
     }
     else if (addr == 0x2004) {
-        /* PPU oam data not readable */
+        return read_oam_data(cpu->ppu);
     }
     else if (addr == 0x2005) {
         /* PPU scroll not readable */
