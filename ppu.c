@@ -68,6 +68,11 @@ static const uint8_t palette_2C02[][3] = {
     {160, 214, 228}, {160, 162, 160}, {  0,   0,   0}, {  0,   0,   0}
 };
 
+static const uint8_t *get_color(int index)
+{
+    return palette_2C02[index];
+}
+
 static uint8_t read_byte(const struct PPU *ppu, uint16_t addr)
 {
     if (addr >= 0x2000 && addr <= 0x23FF) {
@@ -75,7 +80,10 @@ static uint8_t read_byte(const struct PPU *ppu, uint16_t addr)
     }
     else if (addr >= 0x3F00 && addr <= 0x3FFF) {
         const uint16_t a = 0x3F00 + (addr & 0x1F);
-
+        /* Addresses $3F04/$3F08/$3F0C can contain unique data,
+         * though these values are not used by the PPU when normally rendering
+         * (since the pattern values that would otherwise select those cells
+         * select the backdrop color instead). */
         if (a % 4 == 0)
             return ppu->palette_ram[0x00];
         else
@@ -85,9 +93,24 @@ static uint8_t read_byte(const struct PPU *ppu, uint16_t addr)
     return 0xFF;
 }
 
-static const uint8_t *get_color(int index)
+static void write_byte(struct PPU *ppu, uint16_t addr, uint8_t data)
 {
-    return palette_2C02[index];
+    if (0x2000 <= addr && addr <= 0x23FF) {
+        ppu->name_table_0[addr - 0x2000] = data;
+    }
+    else if (0x3F00 <= addr && addr <= 0x3FFF) {
+        /* $3F20-$3FFF -> Mirrors of $3F00-$3F1F */
+        uint16_t a = 0x3F00 + (addr & 0x1F);
+
+        /* Addresses $3F10/$3F14/$3F18/$3F1C are mirrors of
+         * $3F00/$3F04/$3F08/$3F0C. */
+        if (addr == 0x3F10) a = 0x3F00;
+        if (addr == 0x3F14) a = 0x3F04;
+        if (addr == 0x3F18) a = 0x3F08;
+        if (addr == 0x3F1C) a = 0x3F0C;
+
+        ppu->palette_ram[a & 0x1F] = data;
+    }
 }
 
 static uint8_t fetch_palette_value(const struct PPU *ppu, uint8_t palette_id, uint8_t pixel_val)
@@ -489,21 +512,7 @@ void write_ppu_address(struct PPU *ppu, uint8_t addr)
 
 void write_ppu_data(struct PPU *ppu, uint8_t data)
 {
-    const uint16_t addr = ppu->vram_addr;
-
-    if (0x2000 <= addr && addr <= 0x23FF) {
-        ppu->name_table_0[addr - 0x2000] = data;
-    }
-    else if (0x3F00 <= addr && addr <= 0x3FFF) {
-        uint16_t a = 0x3F00 + (addr & 0x1F);
-
-        if (addr == 0x3F10) a = 0x3F00;
-        if (addr == 0x3F14) a = 0x3F04;
-        if (addr == 0x3F18) a = 0x3F08;
-        if (addr == 0x3F1C) a = 0x3F0C;
-
-        ppu->palette_ram[a & 0x1F] = data;
-    }
+    write_byte(ppu, ppu->vram_addr, data);
 
     if (get_ctrl(ppu, CTRL_ADDR_INCREMENT))
         ppu->vram_addr += 32;
