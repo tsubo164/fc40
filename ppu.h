@@ -8,8 +8,9 @@ struct cartridge;
 
 struct pattern_row {
     uint8_t id;
-    uint8_t attr;
-    uint8_t hi, lo;
+    uint8_t lo, hi;
+    uint8_t attr_lo;
+    uint8_t attr_hi;
 };
 
 struct PPU {
@@ -33,6 +34,14 @@ struct PPU {
 
     /* bg tile cache */
     struct pattern_row tile_queue[3];
+    uint8_t  tile_next_id;
+    uint8_t  tile_next_lo;
+    uint8_t  tile_next_hi;
+    uint8_t  tile_next_attr;
+    uint16_t tile_queue_lo;
+    uint16_t tile_queue_hi;
+    uint16_t tile_queue_attr_lo;
+    uint16_t tile_queue_attr_hi;
 
     uint8_t oam_addr;
     uint8_t oam[256]; /* 64 4 byte objects */
