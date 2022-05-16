@@ -124,11 +124,12 @@ static void set_pixel_color(const struct PPU *ppu, int x, int y)
 {
     const struct pattern_row patt = ppu->tile_queue[2];
 
-    const uint8_t hi = (patt.hi & 0x80) > 0;
-    const uint8_t lo = (patt.lo & 0x80) > 0;
+    const uint8_t mask = 0x80 >> ppu->fine_x;
+    const uint8_t hi = (patt.hi & mask) > 0;
+    const uint8_t lo = (patt.lo & mask) > 0;
     const uint8_t val = (hi << 1) | lo;
-    const uint8_t attr_lo = (patt.attr_lo & 0x80) > 0;
-    const uint8_t attr_hi = (patt.attr_hi & 0x80) > 0;
+    const uint8_t attr_lo = (patt.attr_lo & mask) > 0;
+    const uint8_t attr_hi = (patt.attr_hi & mask) > 0;
     const uint8_t attr = (attr_hi << 1) | attr_lo;
 
     const uint8_t index = fetch_palette_value(ppu, attr, val);
