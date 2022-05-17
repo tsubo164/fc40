@@ -599,3 +599,8 @@ uint8_t peek_ppu_status(const struct PPU *ppu)
 {
     return ppu->stat;
 }
+
+void write_dma_sprite(struct PPU *ppu, uint8_t addr, uint8_t data)
+{
+    ppu->oam[addr] = data;
+}

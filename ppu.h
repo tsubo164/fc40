@@ -79,4 +79,7 @@ extern uint8_t read_ppu_data(const struct PPU *ppu);
 /* peek registers */
 extern uint8_t peek_ppu_status(const struct PPU *ppu);
 
+/* sprites */
+extern void write_dma_sprite(struct PPU *ppu, uint8_t addr, uint8_t data);
+
 #endif /* _H */

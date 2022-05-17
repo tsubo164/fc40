@@ -10,6 +10,7 @@ struct CPU {
     struct cartridge *cart;
     struct PPU *ppu;
     int cycles;
+    int suspended;
 
     /* registers */
     uint8_t a;
@@ -24,6 +25,9 @@ struct CPU {
 
     uint8_t controller_input[2];
     uint8_t controller_state[2];
+
+    /* dma */
+    uint8_t dma_page;
 };
 
 extern void reset(struct CPU *cpu);
@@ -31,6 +35,11 @@ extern void nmi(struct CPU *cpu);
 extern void clock_cpu(struct CPU *cpu);
 
 extern void set_controller_input(struct CPU *cpu, uint8_t id, uint8_t input);
+extern int is_suspended(const struct CPU *cpu);
+extern void resume(struct CPU *cpu);
+extern uint8_t get_dma_page(const struct CPU *cpu);
+
+extern uint8_t read_cpu_data(const struct CPU *cpu, uint16_t addr);
 
 struct cpu_status {
     uint16_t pc;
