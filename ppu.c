@@ -412,6 +412,61 @@ static void fetch_tile_data(struct PPU *ppu, int cycle)
     }
 }
 
+static void clear_secondary_oam(struct PPU *ppu, int cycle)
+{
+    /* secondary oam crear occurs cycle 1 - 64 */
+    if (cycle % 8 == 1) {
+        const struct object_attribute init = {0xFF, 0xFF, 0xFF, 0xFF};
+        ppu->secondary_oam[cycle / 8] = init;
+    }
+
+    if (cycle == 1)
+        ppu->sprite_count = 0;
+}
+
+static struct object_attribute get_sprite(const struct PPU *ppu, int index)
+{
+    struct object_attribute obj = {0xFF, 0xFF, 0xFF, 0xFF};
+
+    if (index < 0 || index > 63)
+        return obj;
+
+    obj.y    = ppu->oam[4 * index + 0];
+    obj.id   = ppu->oam[4 * index + 1];
+    obj.attr = ppu->oam[4 * index + 2];
+    obj.x    = ppu->oam[4 * index + 3];
+
+    return obj;
+}
+
+static int is_sprite_visible(const struct object_attribute *obj, int scanline, int height)
+{
+    const int diff = scanline - ((int) obj->y);
+
+    return diff >= 0 && diff < 8;
+}
+
+static void evaluate_sprite(struct PPU *ppu, int cycle, int scanline)
+{
+    /* secondary oam crear occurs cycle 65 - 256 */
+    /* index = 0 .. 191 */
+    const int index = cycle - 65;
+    struct object_attribute obj;
+
+    if (index > 63)
+        return;
+
+    if (ppu->sprite_count > 8)
+        return;
+
+    obj = get_sprite(ppu, index);
+
+    if (is_sprite_visible(&obj, scanline, 8)) {
+        ppu->secondary_oam[ppu->sprite_count] = obj;
+        ppu->sprite_count++;
+    }
+}
+
 void clock_ppu(struct PPU *ppu)
 {
     const int cycle = ppu->cycle;
@@ -447,6 +502,14 @@ void clock_ppu(struct PPU *ppu)
         if ((cycle >= 280 && cycle <= 305) && scanline == 261)
             if (is_rendering)
                 copy_address_y(ppu);
+
+        /* clear secondary oam */
+        if ((cycle >= 1 && cycle <= 64) && scanline != 261)
+            clear_secondary_oam(ppu, cycle);
+
+        /* evaluate sprite for next scanline */
+        if ((cycle >= 65 && cycle <= 256) && scanline != 261)
+            evaluate_sprite(ppu, cycle, scanline);
     }
 
     if (scanline == 241)

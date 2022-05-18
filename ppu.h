@@ -13,6 +13,12 @@ struct pattern_row {
     uint8_t attr_hi;
 };
 
+struct object_attribute {
+    uint8_t id;
+    uint8_t attr;
+    uint8_t x, y;
+};
+
 struct PPU {
     struct cartridge *cart;
 
@@ -43,8 +49,11 @@ struct PPU {
     uint16_t tile_queue_attr_lo;
     uint16_t tile_queue_attr_hi;
 
+    /* fg sprite */
     uint8_t oam_addr;
     uint8_t oam[256]; /* 64 4 byte objects */
+    struct object_attribute secondary_oam[8];
+    int sprite_count;
 
     int cycle;
     int scanline;
