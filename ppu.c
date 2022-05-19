@@ -598,7 +598,7 @@ void write_ppu_scroll(struct PPU *ppu, uint8_t data)
          * w:                  <- 0
          */
         ppu->temp_addr = (ppu->temp_addr & 0xFC1F) | ((data >> 3) << 5);
-        ppu->temp_addr = (ppu->temp_addr & 0x8FFF) | (data & 0x07);
+        ppu->temp_addr = (ppu->temp_addr & 0x8FFF) | ((data & 0x07) << 12);
         ppu->addr_latch = 0;
     }
 }
@@ -613,7 +613,7 @@ void write_ppu_address(struct PPU *ppu, uint8_t addr)
          * w:                  <- 1
          */
         ppu->temp_addr = (ppu->temp_addr & 0xC0FF) | ((addr & 0x3F) << 8);
-        ppu->temp_addr &= 0x3FFF;
+        ppu->temp_addr &= 0xBFFF;
         ppu->addr_latch = 1;
     } else {
         /* Low byte
