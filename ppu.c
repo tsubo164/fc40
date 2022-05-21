@@ -137,6 +137,27 @@ static void set_pixel_color(const struct PPU *ppu, int x, int y)
 
     set_color(ppu->fbuf, x, y, color);
 
+    int i;
+    for (i = 0; i < 8; i++) {
+        if (ppu->rendering_oam[i].x == 0) {
+            const struct pattern_row patt = ppu->rendering_sprite[i];
+            const uint8_t hi = (patt.hi & 0x80) > 0;
+            const uint8_t lo = (patt.lo & 0x80) > 0;
+            const uint8_t val = (hi << 1) | lo;
+            const uint8_t attr_lo = (patt.attr_lo & 0x80) > 0;
+            const uint8_t attr_hi = (patt.attr_hi & 0x80) > 0;
+            const uint8_t attr = (attr_hi << 1) | attr_lo;
+
+            const uint8_t index = fetch_palette_value(ppu, attr, val);
+            const uint8_t *color = get_color(index);
+
+
+            if (val > 0) {
+                set_color(ppu->fbuf, x, y, color);
+            }
+        }
+    }
+
     if (0) {
     const uint8_t lo2 = (ppu->tile_queue_lo & 0x8000) > 0;
     const uint8_t hi2 = (ppu->tile_queue_hi & 0x8000) > 0;
@@ -456,7 +477,7 @@ static void evaluate_sprite(struct PPU *ppu, int cycle, int scanline)
     if (index > 63)
         return;
 
-    if (ppu->sprite_count > 8)
+    if (ppu->sprite_count == 8)
         return;
 
     obj = get_sprite(ppu, index);
@@ -464,6 +485,48 @@ static void evaluate_sprite(struct PPU *ppu, int cycle, int scanline)
     if (is_sprite_visible(&obj, scanline, 8)) {
         ppu->secondary_oam[ppu->sprite_count] = obj;
         ppu->sprite_count++;
+    }
+}
+
+static uint8_t fetch_tile_row2(const struct PPU *ppu, uint8_t tile_id, int y, uint8_t plane)
+{
+    const uint16_t base = 0x0000;//get_ctrl(ppu, CTRL_PATTERN_FG) ? 0x1000 : 0x0000;
+    const uint16_t addr = base + 16 * tile_id + plane + y;
+
+    return read_chr_rom(ppu->cart, addr);
+}
+
+static void fetch_sprite_data(struct PPU *ppu, int cycle, int scanline)
+{
+    /* fetch sprite data occurs cycle 257 - 320 */
+    /* index = (0 .. 63) / 8 => 0 .. 7 */
+    const int index = (cycle - 257) / 8;
+    const int sprite_id = ppu->secondary_oam[index].id;
+    const int sprite_y = scanline - ppu->secondary_oam[index].y;
+    struct pattern_row *patt = &ppu->rendering_sprite[index];
+
+    if (index >= ppu->sprite_count)
+        return;
+
+    if (cycle == 257) {
+        ppu->rendering_sprite_count = ppu->sprite_count;
+    }
+
+    switch (cycle % 8) {
+    case 5:
+        ppu->rendering_oam[index] = ppu->secondary_oam[index];
+
+        /* Low sprite byte */
+        patt->lo = fetch_tile_row2(ppu, sprite_id, sprite_y, 0);
+        break;
+
+    case 7:
+        /* High sprite byte */
+        patt->hi = fetch_tile_row2(ppu, sprite_id, sprite_y, 8);
+        break;
+
+    default:
+        break;
     }
 }
 
@@ -510,6 +573,10 @@ void clock_ppu(struct PPU *ppu)
         /* evaluate sprite for next scanline */
         if ((cycle >= 65 && cycle <= 256) && scanline != 261)
             evaluate_sprite(ppu, cycle, scanline);
+
+        /* fetch sprite */
+        if (cycle >= 257 && cycle <= 320)
+            fetch_sprite_data(ppu, cycle, scanline);
     }
 
     if (scanline == 241)
@@ -526,6 +593,21 @@ void clock_ppu(struct PPU *ppu)
             if (is_rendering) {
                 set_pixel_color(ppu, cycle - 1, scanline);
                 shift_tile_data(ppu);
+
+                int i;
+                for (i = 0; i < 8; i++) {
+                    if (i >= ppu->rendering_sprite_count)
+                        break;
+
+                    if (ppu->rendering_oam[i].x > 0) {
+                        ppu->rendering_oam[i].x--;
+                    } else {
+                        ppu->rendering_sprite[i].lo <<= 1;
+                        ppu->rendering_sprite[i].hi <<= 1;
+                        ppu->rendering_sprite[i].attr_lo <<= 1;
+                        ppu->rendering_sprite[i].attr_hi <<= 1;
+                    }
+                }
             }
 
     /* advance cycle and scanline */

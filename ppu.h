@@ -51,9 +51,13 @@ struct PPU {
 
     /* fg sprite */
     uint8_t oam_addr;
-    uint8_t oam[256]; /* 64 4 byte objects */
+    uint8_t oam[256];
     struct object_attribute secondary_oam[8];
+    /* 8 latches and 8 counters */
+    struct object_attribute rendering_oam[8];
+    struct pattern_row rendering_sprite[8];
     int sprite_count;
+    int rendering_sprite_count;
 
     int cycle;
     int scanline;
