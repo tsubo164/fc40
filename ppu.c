@@ -148,7 +148,7 @@ static void set_pixel_color(const struct PPU *ppu, int x, int y)
             const uint8_t attr_hi = (patt.attr_hi & 0x80) > 0;
             const uint8_t attr = (attr_hi << 1) | attr_lo;
 
-            const uint8_t index = fetch_palette_value(ppu, attr, val);
+            const uint8_t index = fetch_palette_value(ppu, attr + 4, val);
             const uint8_t *color = get_color(index);
 
 
@@ -490,7 +490,7 @@ static void evaluate_sprite(struct PPU *ppu, int cycle, int scanline)
 
 static uint8_t fetch_tile_row2(const struct PPU *ppu, uint8_t tile_id, int y, uint8_t plane)
 {
-    const uint16_t base = 0x0000;//get_ctrl(ppu, CTRL_PATTERN_FG) ? 0x1000 : 0x0000;
+    const uint16_t base = get_ctrl(ppu, CTRL_PATTERN_SPRITE) ? 0x1000 : 0x0000;
     const uint16_t addr = base + 16 * tile_id + plane + y;
 
     return read_chr_rom(ppu->cart, addr);
@@ -501,28 +501,41 @@ static void fetch_sprite_data(struct PPU *ppu, int cycle, int scanline)
     /* fetch sprite data occurs cycle 257 - 320 */
     /* index = (0 .. 63) / 8 => 0 .. 7 */
     const int index = (cycle - 257) / 8;
+    const int is_visible = index < ppu->sprite_count;
     const int sprite_id = ppu->secondary_oam[index].id;
     const int sprite_y = scanline - ppu->secondary_oam[index].y;
     struct pattern_row *patt = &ppu->rendering_sprite[index];
 
-    if (index >= ppu->sprite_count)
-        return;
-
-    if (cycle == 257) {
-        ppu->rendering_sprite_count = ppu->sprite_count;
-    }
-
     switch (cycle % 8) {
-    case 5:
+    case 3:
+        /* Attribute and X position */
         ppu->rendering_oam[index] = ppu->secondary_oam[index];
 
+        if (is_visible) {
+            const uint8_t attr = ppu->rendering_oam[index].attr;
+            patt->attr_lo = (attr & 0x01) ? 0xFF : 0x00;
+            patt->attr_hi = (attr & 0x02) ? 0xFF : 0x00;
+        }
+        else {
+            patt->attr_lo = 0x00;
+            patt->attr_hi = 0x00;
+        }
+        break;
+
+    case 5:
         /* Low sprite byte */
-        patt->lo = fetch_tile_row2(ppu, sprite_id, sprite_y, 0);
+        if (is_visible)
+            patt->lo = fetch_tile_row2(ppu, sprite_id, sprite_y, 0);
+        else
+            patt->lo = 0x00;
         break;
 
     case 7:
         /* High sprite byte */
-        patt->hi = fetch_tile_row2(ppu, sprite_id, sprite_y, 8);
+        if (is_visible)
+            patt->hi = fetch_tile_row2(ppu, sprite_id, sprite_y, 8);
+        else
+            patt->hi = 0x00;
         break;
 
     default:
@@ -596,9 +609,6 @@ void clock_ppu(struct PPU *ppu)
 
                 int i;
                 for (i = 0; i < 8; i++) {
-                    if (i >= ppu->rendering_sprite_count)
-                        break;
-
                     if (ppu->rendering_oam[i].x > 0) {
                         ppu->rendering_oam[i].x--;
                     } else {

@@ -57,7 +57,6 @@ struct PPU {
     struct object_attribute rendering_oam[8];
     struct pattern_row rendering_sprite[8];
     int sprite_count;
-    int rendering_sprite_count;
 
     int cycle;
     int scanline;
