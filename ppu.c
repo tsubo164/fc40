@@ -496,6 +496,20 @@ static uint8_t fetch_tile_row2(const struct PPU *ppu, uint8_t tile_id, int y, ui
     return read_chr_rom(ppu->cart, addr);
 }
 
+static uint8_t flip_pattern_row(uint8_t bits)
+{
+    uint8_t src = bits;
+    uint8_t dst = 0x00;
+    int i;
+
+    for (i = 0; i < 8; i++) {
+        dst = (dst << 1) | (src & 0x01);
+        src >>= 1;
+    }
+
+    return dst;
+}
+
 static void fetch_sprite_data(struct PPU *ppu, int cycle, int scanline)
 {
     /* fetch sprite data occurs cycle 257 - 320 */
@@ -528,6 +542,9 @@ static void fetch_sprite_data(struct PPU *ppu, int cycle, int scanline)
             patt->lo = fetch_tile_row2(ppu, sprite_id, sprite_y, 0);
         else
             patt->lo = 0x00;
+
+        if (ppu->rendering_oam[index].attr & 0x40)
+            patt->lo = flip_pattern_row(patt->lo);
         break;
 
     case 7:
@@ -536,6 +553,9 @@ static void fetch_sprite_data(struct PPU *ppu, int cycle, int scanline)
             patt->hi = fetch_tile_row2(ppu, sprite_id, sprite_y, 8);
         else
             patt->hi = 0x00;
+
+        if (ppu->rendering_oam[index].attr & 0x40)
+            patt->hi = flip_pattern_row(patt->hi);
         break;
 
     default:
