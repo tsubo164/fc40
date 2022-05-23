@@ -120,11 +120,17 @@ static uint8_t fetch_palette_value(const struct PPU *ppu, uint8_t palette_id, ui
     return read_byte(ppu, addr);
 }
 
-static void set_pixel_color(const struct PPU *ppu, int x, int y)
-{
-    const struct pattern_row patt = ppu->tile_queue[2];
+struct pixel {
+    uint8_t value;
+    uint8_t palette;
+    uint8_t priority;
+};
 
-    const uint8_t mask = 0x80 >> ppu->fine_x;
+static struct pixel get_pixel(struct pattern_row patt, uint8_t fine_x)
+{
+    struct pixel pix = {0};
+
+    const uint8_t mask = 0x80 >> fine_x;
     const uint8_t hi = (patt.hi & mask) > 0;
     const uint8_t lo = (patt.lo & mask) > 0;
     const uint8_t val = (hi << 1) | lo;
@@ -132,31 +138,61 @@ static void set_pixel_color(const struct PPU *ppu, int x, int y)
     const uint8_t attr_hi = (patt.attr_hi & mask) > 0;
     const uint8_t attr = (attr_hi << 1) | attr_lo;
 
-    const uint8_t index = fetch_palette_value(ppu, attr, val);
+    pix.value = val;
+    pix.palette = attr;
+
+    return pix;
+}
+
+static struct pixel get_pixel_bg(const struct PPU *ppu)
+{
+    return get_pixel(ppu->tile_queue[2], ppu->fine_x);
+}
+
+static struct pixel get_pixel_fg(const struct PPU *ppu)
+{
+    const struct pixel empty = {0};
+    int i;
+
+    for (i = 0; i < 8; i++) {
+        if (ppu->rendering_oam[i].x == 0) {
+            struct pixel pix = get_pixel(ppu->rendering_sprite[i], 0);
+
+            pix.palette += 4;
+            pix.priority = (ppu->rendering_oam[i].attr & 0x20) > 0;
+
+            if (pix.value > 0)
+                return pix;
+        }
+    }
+
+    return empty;
+}
+
+static struct pixel composite_pixels(struct pixel bg, struct pixel fg)
+{
+    const struct pixel empty = {0};
+
+    if (bg.value == 0 && fg.value == 0)
+        return empty;
+    else if (bg.value > 0 && fg.value == 0)
+        return bg;
+    else if (bg.value == 0 && fg.value > 0)
+        return fg;
+    else
+        return fg.priority == 0 ? fg : bg;
+}
+
+static void set_pixel_color(const struct PPU *ppu, int x, int y)
+{
+    const struct pixel bg = get_pixel_bg(ppu);
+    const struct pixel fg = get_pixel_fg(ppu);
+    const struct pixel final = composite_pixels(bg, fg);
+
+    const uint8_t index = fetch_palette_value(ppu, final.palette, final.value);
     const uint8_t *color = get_color(index);
 
     set_color(ppu->fbuf, x, y, color);
-
-    int i;
-    for (i = 0; i < 8; i++) {
-        if (ppu->rendering_oam[i].x == 0) {
-            const struct pattern_row patt = ppu->rendering_sprite[i];
-            const uint8_t hi = (patt.hi & 0x80) > 0;
-            const uint8_t lo = (patt.lo & 0x80) > 0;
-            const uint8_t val = (hi << 1) | lo;
-            const uint8_t attr_lo = (patt.attr_lo & 0x80) > 0;
-            const uint8_t attr_hi = (patt.attr_hi & 0x80) > 0;
-            const uint8_t attr = (attr_hi << 1) | attr_lo;
-
-            const uint8_t index = fetch_palette_value(ppu, attr + 4, val);
-            const uint8_t *color = get_color(index);
-
-
-            if (val > 0) {
-                set_color(ppu->fbuf, x, y, color);
-            }
-        }
-    }
 
     if (0) {
     const uint8_t lo2 = (ppu->tile_queue_lo & 0x8000) > 0;
