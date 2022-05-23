@@ -183,7 +183,7 @@ static struct pixel composite_pixels(struct pixel bg, struct pixel fg)
         return fg.priority == 0 ? fg : bg;
 }
 
-static void set_pixel_color(const struct PPU *ppu, int x, int y)
+static void render_pixel(const struct PPU *ppu, int x, int y)
 {
     const struct pixel bg = get_pixel_bg(ppu);
     const struct pixel fg = get_pixel_fg(ppu);
@@ -599,6 +599,25 @@ static void fetch_sprite_data(struct PPU *ppu, int cycle, int scanline)
     }
 }
 
+static void shift_sprite_data(struct PPU *ppu)
+{
+    int i;
+
+    for (i = 0; i < 8; i++) {
+        struct object_attribute *obj = &ppu->rendering_oam[i];
+        struct pattern_row *patt = &ppu->rendering_sprite[i];
+
+        if (obj->x > 0) {
+            obj->x--;
+        } else {
+            patt->lo <<= 1;
+            patt->hi <<= 1;
+            patt->attr_lo <<= 1;
+            patt->attr_hi <<= 1;
+        }
+    }
+}
+
 void clock_ppu(struct PPU *ppu)
 {
     const int cycle = ppu->cycle;
@@ -660,20 +679,9 @@ void clock_ppu(struct PPU *ppu)
     if (scanline >= 0 && scanline <= 239)
         if (cycle >= 1 && cycle <= 256)
             if (is_rendering) {
-                set_pixel_color(ppu, cycle - 1, scanline);
+                render_pixel(ppu, cycle - 1, scanline);
                 shift_tile_data(ppu);
-
-                int i;
-                for (i = 0; i < 8; i++) {
-                    if (ppu->rendering_oam[i].x > 0) {
-                        ppu->rendering_oam[i].x--;
-                    } else {
-                        ppu->rendering_sprite[i].lo <<= 1;
-                        ppu->rendering_sprite[i].hi <<= 1;
-                        ppu->rendering_sprite[i].attr_lo <<= 1;
-                        ppu->rendering_sprite[i].attr_hi <<= 1;
-                    }
-                }
+                shift_sprite_data(ppu);
             }
 
     /* advance cycle and scanline */
