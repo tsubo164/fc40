@@ -389,6 +389,16 @@ static void leave_vblank(struct PPU *ppu)
     set_stat(ppu, STAT_VERTICAL_BLANK, 0);
 }
 
+static void set_sprite_overflow(struct PPU *ppu)
+{
+    set_stat(ppu, STAT_SPRITE_OVERFLOW, 1);
+}
+
+static void clear_sprite_overflow(struct PPU *ppu)
+{
+    set_stat(ppu, STAT_SPRITE_OVERFLOW, 0);
+}
+
 static void load_byte(uint16_t *word, uint8_t byte)
 {
     *word = (*word & 0xFF00) | byte;
@@ -496,11 +506,11 @@ static struct object_attribute get_sprite(const struct PPU *ppu, int index)
     return obj;
 }
 
-static int is_sprite_visible(const struct object_attribute *obj, int scanline, int height)
+static int is_sprite_visible(struct object_attribute obj, int scanline, int height)
 {
-    const int diff = scanline - ((int) obj->y);
+    const int diff = scanline - ((int) obj.y);
 
-    return diff >= 0 && diff < 8;
+    return diff >= 0 && diff < height;
 }
 
 static void evaluate_sprite(struct PPU *ppu, int cycle, int scanline)
@@ -508,18 +518,23 @@ static void evaluate_sprite(struct PPU *ppu, int cycle, int scanline)
     /* secondary oam crear occurs cycle 65 - 256 */
     /* index = 0 .. 191 */
     const int index = cycle - 65;
+    const int sprite_height = 8;
     struct object_attribute obj;
 
     if (index > 63)
         return;
 
-    if (ppu->sprite_count == 8)
+    if (ppu->sprite_count > 8)
         return;
 
     obj = get_sprite(ppu, index);
 
-    if (is_sprite_visible(&obj, scanline, 8)) {
-        ppu->secondary_oam[ppu->sprite_count] = obj;
+    if (is_sprite_visible(obj, scanline, sprite_height)) {
+        if (ppu->sprite_count < 8)
+            ppu->secondary_oam[ppu->sprite_count] = obj;
+        else
+            set_sprite_overflow(ppu);
+
         ppu->sprite_count++;
     }
 }
@@ -672,8 +687,10 @@ void clock_ppu(struct PPU *ppu)
             enter_vblank(ppu);
 
     if (scanline == 261)
-        if (cycle == 1)
+        if (cycle == 1) {
             leave_vblank(ppu);
+            clear_sprite_overflow(ppu);
+        }
 
     /* render pixel */
     if (scanline >= 0 && scanline <= 239)
