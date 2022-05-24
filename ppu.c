@@ -539,7 +539,7 @@ static void evaluate_sprite(struct PPU *ppu, int cycle, int scanline)
     }
 }
 
-static uint8_t fetch_tile_row2(const struct PPU *ppu, uint8_t tile_id, int y, uint8_t plane)
+static uint8_t fetch_sprite_row(const struct PPU *ppu, uint8_t tile_id, int y, uint8_t plane)
 {
     const uint16_t base = get_ctrl(ppu, CTRL_PATTERN_SPRITE) ? 0x1000 : 0x0000;
     const uint16_t addr = base + 16 * tile_id + plane + y;
@@ -561,6 +561,16 @@ static uint8_t flip_pattern_row(uint8_t bits)
     return dst;
 }
 
+static int is_flipped_horizontally(struct object_attribute obj)
+{
+    return (obj.attr & 0x40) > 0;
+}
+
+static int is_flipped_vertically(struct object_attribute obj)
+{
+    return (obj.attr & 0x80) > 0;
+}
+
 static void fetch_sprite_data(struct PPU *ppu, int cycle, int scanline)
 {
     /* fetch sprite data occurs cycle 257 - 320 */
@@ -568,8 +578,9 @@ static void fetch_sprite_data(struct PPU *ppu, int cycle, int scanline)
     const int index = (cycle - 257) / 8;
     const int is_visible = index < ppu->sprite_count;
     const int sprite_id = ppu->secondary_oam[index].id;
-    const int sprite_y = scanline - ppu->secondary_oam[index].y;
+    int sprite_y = scanline - ppu->secondary_oam[index].y;
     struct pattern_row *patt = &ppu->rendering_sprite[index];
+    const struct object_attribute obj = ppu->rendering_oam[index];
 
     switch (cycle % 8) {
     case 3:
@@ -589,23 +600,29 @@ static void fetch_sprite_data(struct PPU *ppu, int cycle, int scanline)
 
     case 5:
         /* Low sprite byte */
+        if (is_flipped_vertically(obj))
+            sprite_y = 7 - sprite_y;
+
         if (is_visible)
-            patt->lo = fetch_tile_row2(ppu, sprite_id, sprite_y, 0);
+            patt->lo = fetch_sprite_row(ppu, sprite_id, sprite_y, 0);
         else
             patt->lo = 0x00;
 
-        if (ppu->rendering_oam[index].attr & 0x40)
+        if (is_flipped_horizontally(obj))
             patt->lo = flip_pattern_row(patt->lo);
         break;
 
     case 7:
         /* High sprite byte */
+        if (is_flipped_vertically(obj))
+            sprite_y = 7 - sprite_y;
+
         if (is_visible)
-            patt->hi = fetch_tile_row2(ppu, sprite_id, sprite_y, 8);
+            patt->hi = fetch_sprite_row(ppu, sprite_id, sprite_y, 8);
         else
             patt->hi = 0x00;
 
-        if (ppu->rendering_oam[index].attr & 0x40)
+        if (is_flipped_horizontally(obj))
             patt->hi = flip_pattern_row(patt->hi);
         break;
 
