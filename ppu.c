@@ -124,6 +124,7 @@ struct pixel {
     uint8_t value;
     uint8_t palette;
     uint8_t priority;
+    uint8_t sprite_zero;
 };
 
 static struct pixel get_pixel(struct pattern_row patt, uint8_t fine_x)
@@ -144,6 +145,13 @@ static struct pixel get_pixel(struct pattern_row patt, uint8_t fine_x)
     return pix;
 }
 
+static int is_sprite_zero(const struct PPU *ppu, struct object_attribute obj)
+{
+    const int sprite_zero_id = ppu->oam[1];
+
+    return obj.id = sprite_zero_id;
+}
+
 static struct pixel get_pixel_bg(const struct PPU *ppu)
 {
     return get_pixel(ppu->tile_queue[2], ppu->fine_x);
@@ -155,11 +163,14 @@ static struct pixel get_pixel_fg(const struct PPU *ppu)
     int i;
 
     for (i = 0; i < 8; i++) {
-        if (ppu->rendering_oam[i].x == 0) {
+        const struct object_attribute obj = ppu->rendering_oam[i];
+
+        if (obj.x == 0) {
             struct pixel pix = get_pixel(ppu->rendering_sprite[i], 0);
 
             pix.palette += 4;
-            pix.priority = (ppu->rendering_oam[i].attr & 0x20) > 0;
+            pix.priority = (obj.attr & 0x20) > 0;
+            pix.sprite_zero = is_sprite_zero(ppu, obj);
 
             if (pix.value > 0)
                 return pix;
@@ -183,7 +194,38 @@ static struct pixel composite_pixels(struct pixel bg, struct pixel fg)
         return fg.priority == 0 ? fg : bg;
 }
 
-static void render_pixel(const struct PPU *ppu, int x, int y)
+static int is_rendering_bg(const struct PPU *ppu);
+static int is_rendering_sprite(const struct PPU *ppu);
+static int is_clipping_left(const struct PPU *ppu)
+{
+    return !(ppu->mask & MASK_SHOW_BG_LEFT) ||
+           !(ppu->mask & MASK_SHOW_SPRITE_LEFT);
+}
+
+static int is_sprite_zero_hit(const struct PPU *ppu, struct pixel bg, struct pixel fg, int x)
+{
+    if (!fg.sprite_zero)
+        return 0;
+
+    if (!is_rendering_bg(ppu) || !is_rendering_sprite(ppu))
+        return 0;
+
+    if ((x >= 0 && x <= 7) && is_clipping_left(ppu))
+        return 0;
+
+    if (x == 255)
+        return 0;
+
+    if (fg.value == 0 || bg.value == 0)
+        return 0;
+
+    if (ppu->stat & STAT_SPRITE_ZERO_HIT)
+        return 0;
+
+    return 1;
+}
+
+static void render_pixel(struct PPU *ppu, int x, int y)
 {
     const struct pixel bg = get_pixel_bg(ppu);
     const struct pixel fg = get_pixel_fg(ppu);
@@ -193,6 +235,9 @@ static void render_pixel(const struct PPU *ppu, int x, int y)
     const uint8_t *color = get_color(index);
 
     set_color(ppu->fbuf, x, y, color);
+
+    if (is_sprite_zero_hit(ppu, bg, fg, x))
+        set_stat(ppu, STAT_SPRITE_ZERO_HIT, 1);
 
     if (0) {
     const uint8_t lo2 = (ppu->tile_queue_lo & 0x8000) > 0;
@@ -707,6 +752,7 @@ void clock_ppu(struct PPU *ppu)
         if (cycle == 1) {
             leave_vblank(ppu);
             clear_sprite_overflow(ppu);
+            set_stat(ppu, STAT_SPRITE_ZERO_HIT, 0);
         }
 
     /* render pixel */
