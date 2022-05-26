@@ -71,6 +71,7 @@ int main(int argc, char **argv)
         disp.pattern_table = patt;
         disp.update_frame_func = update_frame;
         disp.input_controller_func = input_controller;
+        disp.ppu = &ppu;
         open_display(&disp);
     }
 

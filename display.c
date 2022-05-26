@@ -3,13 +3,14 @@
 
 #include "display.h"
 #include "framebuffer.h"
+#include "ppu.h"
 
 const int MARGIN = 8;
 const int SCALE = 2;
 const int RESX = 256;
 const int RESY = 240;
 
-static int show_grid = 0;
+static int show_guide = 0;
 static int show_patt = 0;
 static int press_g = 0;
 static int press_p = 0;
@@ -17,9 +18,10 @@ static int press_p = 0;
 static void transfer_texture(const struct framebuffer *fb);
 static void resize(GLFWwindow *const window, int width, int height);
 static void init_gl(const struct display *disp);
-static void render(const struct framebuffer *fb, const struct framebuffer *patt);
-static void render_grid(int w, int h);
+static void render(const struct display *disp);
+static void render_grid(int width, int height);
 static void render_pattern_table(const struct framebuffer *patt);
+static void render_sprite_box(const struct PPU *ppu, int width, int height);
 
 static const GLuint main_screen = 0;
 static GLuint pattern_table = 0;
@@ -68,7 +70,7 @@ int open_display(const struct display *disp)
         transfer_texture(disp->fb);
 
         /* Render here */
-        render(disp->fb, disp->pattern_table);
+        render(disp);
 
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
@@ -100,7 +102,7 @@ int open_display(const struct display *disp)
         }
 
         if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS && press_g == 0) {
-            show_grid = !show_grid;
+            show_guide = !show_guide;
             press_g = 1;
         }
         if (glfwGetKey(window, GLFW_KEY_G) == GLFW_RELEASE && press_g == 1) {
@@ -156,10 +158,10 @@ static void init_gl(const struct display *disp)
     glClearColor(bg, bg, bg, 0);
 }
 
-static void render(const struct framebuffer *fb, const struct framebuffer *patt)
+static void render(const struct display *disp)
 {
-    const int W = fb->width;
-    const int H = fb->height;
+    const int W = disp->fb->width;
+    const int H = disp->fb->height;
 
     glClear(GL_COLOR_BUFFER_BIT);
 
@@ -175,11 +177,13 @@ static void render(const struct framebuffer *fb, const struct framebuffer *patt)
     glEnd();
     glDisable(GL_TEXTURE_2D);
 
-    if (show_grid)
+    if (show_guide) {
         render_grid(W, H);
+        render_sprite_box(disp->ppu, W, H);
+    }
 
     if (show_patt)
-        render_pattern_table(patt);
+        render_pattern_table(disp->pattern_table);
 
     glFlush();
 }
@@ -210,13 +214,15 @@ static void resize(GLFWwindow *const window, int width, int height)
             -win_h/2 - MARGIN, win_h/2 + MARGIN, -1., 1.);
 }
 
-static void render_grid(int w, int h)
+static void render_grid(int width, int height)
 {
+    const int W = width;
+    const int H = height;
     int i;
 
     glPushAttrib(GL_CURRENT_BIT);
     glBegin(GL_LINES);
-    for (i = 0; i <= w / 8; i++) {
+    for (i = 0; i <= W / 8; i++) {
         if (i % 4 == 0)
             glColor3f(0, 1, 0);
         else
@@ -224,10 +230,10 @@ static void render_grid(int w, int h)
             glColor3f(0, .5, 0);
         else
             glColor3f(0, .25, 0);
-        glVertex3f(-w/2 + i * 8,  h/2, .1);
-        glVertex3f(-w/2 + i * 8, -h/2, .1);
+        glVertex3f(-W/2 + i * 8,  H/2, 0);
+        glVertex3f(-W/2 + i * 8, -H/2, 0);
     }
-    for (i = 0; i <= h / 8; i++) {
+    for (i = 0; i <= H / 8; i++) {
         if (i % 4 == 2 || i == 0)
             glColor3f(0, 1, 0);
         else
@@ -235,8 +241,8 @@ static void render_grid(int w, int h)
             glColor3f(0, .5, 0);
         else
             glColor3f(0, .25, 0);
-        glVertex3f( w/2, -h/2 + i * 8, .1);
-        glVertex3f(-w/2, -h/2 + i * 8, .1);
+        glVertex3f( W/2, -H/2 + i * 8, 0);
+        glVertex3f(-W/2, -H/2 + i * 8, 0);
     }
     glEnd();
     glPopAttrib();
@@ -272,5 +278,35 @@ static void render_pattern_table(const struct framebuffer *patt)
         glVertex2f(0,  H/2);
         glVertex2f(0, -H/2);
     glEnd();
+    glPopAttrib();
+}
+
+static void render_sprite_box(const struct PPU *ppu, int width, int height)
+{
+    int i;
+
+    glPushAttrib(GL_CURRENT_BIT);
+
+    for (i = 0; i < 64; i++) {
+        /* draw sprite zero last */
+        const int index = 63 - i;
+        const struct object_attribute obj = read_oam(ppu, index);
+        const int x = obj.x - width / 2;
+        const int y = height / 2 - obj.y - 1;
+
+        /* sprite zero */
+        if (index == 0)
+            glColor3f(1, 1, 0);
+        else
+            glColor3f(1, 0, 1);
+
+        glBegin(GL_LINE_LOOP);
+            glVertex3f(x + 0, y - 0, 0);
+            glVertex3f(x + 8, y - 0, 0);
+            glVertex3f(x + 8, y - 8, 0);
+            glVertex3f(x + 0, y - 8, 0);
+        glEnd();
+    }
+
     glPopAttrib();
 }

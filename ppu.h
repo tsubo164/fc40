@@ -94,4 +94,7 @@ extern uint8_t peek_ppu_status(const struct PPU *ppu);
 /* sprites */
 extern void write_dma_sprite(struct PPU *ppu, uint8_t addr, uint8_t data);
 
+/* debug */
+extern struct object_attribute read_oam(const struct PPU *ppu, int index);
+
 #endif /* _H */

@@ -903,3 +903,8 @@ void write_dma_sprite(struct PPU *ppu, uint8_t addr, uint8_t data)
 {
     ppu->oam[addr] = data;
 }
+
+struct object_attribute read_oam(const struct PPU *ppu, int index)
+{
+    return get_sprite(ppu, index);
+}
