@@ -9,8 +9,8 @@ struct cartridge;
 struct pattern_row {
     uint8_t id;
     uint8_t lo, hi;
-    uint8_t attr_lo;
-    uint8_t attr_hi;
+    uint8_t palette_lo;
+    uint8_t palette_hi;
 };
 
 struct object_attribute {

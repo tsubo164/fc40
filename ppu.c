@@ -135,12 +135,12 @@ static struct pixel get_pixel(struct pattern_row patt, uint8_t fine_x)
     const uint8_t hi = (patt.hi & mask) > 0;
     const uint8_t lo = (patt.lo & mask) > 0;
     const uint8_t val = (hi << 1) | lo;
-    const uint8_t attr_lo = (patt.attr_lo & mask) > 0;
-    const uint8_t attr_hi = (patt.attr_hi & mask) > 0;
-    const uint8_t attr = (attr_hi << 1) | attr_lo;
+    const uint8_t pal_lo = (patt.palette_lo & mask) > 0;
+    const uint8_t pal_hi = (patt.palette_hi & mask) > 0;
+    const uint8_t pal = (pal_hi << 1) | pal_lo;
 
     pix.value = val;
-    pix.palette = attr;
+    pix.palette = pal;
 
     return pix;
 }
@@ -447,8 +447,8 @@ static void shift_tile_data(struct PPU *ppu)
 {
     shift_word(&ppu->tile_queue[2].lo, &ppu->tile_queue[1].lo);
     shift_word(&ppu->tile_queue[2].hi, &ppu->tile_queue[1].hi);
-    shift_word(&ppu->tile_queue[2].attr_lo, &ppu->tile_queue[1].attr_lo);
-    shift_word(&ppu->tile_queue[2].attr_hi, &ppu->tile_queue[1].attr_hi);
+    shift_word(&ppu->tile_queue[2].palette_lo, &ppu->tile_queue[1].palette_lo);
+    shift_word(&ppu->tile_queue[2].palette_hi, &ppu->tile_queue[1].palette_hi);
 }
 
 static void fetch_tile_data(struct PPU *ppu, int cycle)
@@ -465,8 +465,8 @@ static void fetch_tile_data(struct PPU *ppu, int cycle)
     case 3:
         /* AT byte */
         attr = fetch_tile_attr(ppu);
-        next->attr_lo = (attr & 0x01) ? 0xFF : 0x00;
-        next->attr_hi = (attr & 0x02) ? 0xFF : 0x00;
+        next->palette_lo = (attr & 0x01) ? 0xFF : 0x00;
+        next->palette_hi = (attr & 0x02) ? 0xFF : 0x00;
         break;
 
     case 5:
@@ -594,12 +594,12 @@ static void fetch_sprite_data(struct PPU *ppu, int cycle, int scanline)
 
         if (is_visible) {
             const uint8_t attr = ppu->rendering_oam[index].attr;
-            patt->attr_lo = (attr & 0x01) ? 0xFF : 0x00;
-            patt->attr_hi = (attr & 0x02) ? 0xFF : 0x00;
+            patt->palette_lo = (attr & 0x01) ? 0xFF : 0x00;
+            patt->palette_hi = (attr & 0x02) ? 0xFF : 0x00;
         }
         else {
-            patt->attr_lo = 0x00;
-            patt->attr_hi = 0x00;
+            patt->palette_lo = 0x00;
+            patt->palette_hi = 0x00;
         }
         break;
 
@@ -649,8 +649,8 @@ static void shift_sprite_data(struct PPU *ppu)
         } else {
             patt->lo <<= 1;
             patt->hi <<= 1;
-            patt->attr_lo <<= 1;
-            patt->attr_hi <<= 1;
+            patt->palette_lo <<= 1;
+            patt->palette_hi <<= 1;
         }
     }
 }
