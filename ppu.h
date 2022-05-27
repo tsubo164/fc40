@@ -40,14 +40,6 @@ struct PPU {
 
     /* bg tile cache */
     struct pattern_row tile_queue[3];
-    uint8_t  tile_next_id;
-    uint8_t  tile_next_lo;
-    uint8_t  tile_next_hi;
-    uint8_t  tile_next_attr;
-    uint16_t tile_queue_lo;
-    uint16_t tile_queue_hi;
-    uint16_t tile_queue_attr_lo;
-    uint16_t tile_queue_attr_hi;
 
     /* fg sprite */
     uint8_t oam_addr;

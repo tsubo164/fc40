@@ -238,19 +238,6 @@ static void render_pixel(struct PPU *ppu, int x, int y)
 
     if (is_sprite_zero_hit(ppu, bg, fg, x))
         set_stat(ppu, STAT_SPRITE_ZERO_HIT, 1);
-
-    if (0) {
-    const uint8_t lo2 = (ppu->tile_queue_lo & 0x8000) > 0;
-    const uint8_t hi2 = (ppu->tile_queue_hi & 0x8000) > 0;
-    const uint8_t val2 = (hi2 << 1) | lo2;
-    const uint8_t attr_lo = (ppu->tile_queue_attr_lo & 0x8000) > 0;
-    const uint8_t attr_hi = (ppu->tile_queue_attr_hi & 0x8000) > 0;
-    const uint8_t attr2 = (attr_hi << 1) | attr_lo;
-
-    const uint8_t index2 = fetch_palette_value(ppu, attr2, val2);
-    const uint8_t *color2 = get_color(index2);
-    set_color(ppu->fbuf, x, y, color2);
-    }
 }
 
 void clear_nmi(struct PPU *ppu)
@@ -444,21 +431,9 @@ static void clear_sprite_overflow(struct PPU *ppu)
     set_stat(ppu, STAT_SPRITE_OVERFLOW, 0);
 }
 
-static void load_byte(uint16_t *word, uint8_t byte)
-{
-    *word = (*word & 0xFF00) | byte;
-}
-
 static void load_next_tile(struct PPU *ppu)
 {
     ppu->tile_queue[1] = ppu->tile_queue[0];
-
-    if (0) {
-    load_byte(&ppu->tile_queue_lo, ppu->tile_next_lo);
-    load_byte(&ppu->tile_queue_hi, ppu->tile_next_hi);
-    load_byte(&ppu->tile_queue_attr_lo, (ppu->tile_next_attr & 1) ? 0xFF : 0x00);
-    load_byte(&ppu->tile_queue_attr_hi, (ppu->tile_next_attr & 2) ? 0xFF : 0x00);
-    }
 }
 
 static void shift_word(uint8_t *left, uint8_t *right)
@@ -474,13 +449,6 @@ static void shift_tile_data(struct PPU *ppu)
     shift_word(&ppu->tile_queue[2].hi, &ppu->tile_queue[1].hi);
     shift_word(&ppu->tile_queue[2].attr_lo, &ppu->tile_queue[1].attr_lo);
     shift_word(&ppu->tile_queue[2].attr_hi, &ppu->tile_queue[1].attr_hi);
-
-    if (0) {
-    ppu->tile_queue_lo <<= 1;
-    ppu->tile_queue_hi <<= 1;
-    ppu->tile_queue_attr_lo <<= 1;
-    ppu->tile_queue_attr_hi <<= 1;
-    }
 }
 
 static void fetch_tile_data(struct PPU *ppu, int cycle)
@@ -492,8 +460,6 @@ static void fetch_tile_data(struct PPU *ppu, int cycle)
     case 1:
         /* NT byte */
         next->id = fetch_tile_id(ppu);
-        if (0)
-        ppu->tile_next_id = fetch_tile_id(ppu);
         break;
 
     case 3:
@@ -501,22 +467,16 @@ static void fetch_tile_data(struct PPU *ppu, int cycle)
         attr = fetch_tile_attr(ppu);
         next->attr_lo = (attr & 0x01) ? 0xFF : 0x00;
         next->attr_hi = (attr & 0x02) ? 0xFF : 0x00;
-        if (0)
-        ppu->tile_next_attr = fetch_tile_attr(ppu);
         break;
 
     case 5:
         /* Low BG tile byte */
         next->lo = fetch_tile_row(ppu, next->id, 0);
-        if (0)
-        ppu->tile_next_lo = fetch_tile_row(ppu, ppu->tile_next_id, 0);
         break;
 
     case 7:
         /* High BG tile byte */
         next->hi = fetch_tile_row(ppu, next->id, 8);
-        if (0)
-        ppu->tile_next_hi = fetch_tile_row(ppu, ppu->tile_next_id, 8);
         break;
 
     default:
