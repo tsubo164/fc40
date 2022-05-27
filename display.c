@@ -267,6 +267,20 @@ static void render_pattern_table(const struct framebuffer *patt)
     glBindTexture(GL_TEXTURE_2D, main_screen);
 
     glPushAttrib(GL_CURRENT_BIT);
+
+    glBegin(GL_LINES);
+    int i;
+    glColor3f(0, .5, .5);
+    for (i = 0; i <= W / 8; i++) {
+        glVertex3f(-W/2 + i * 8,  H/2, 0);
+        glVertex3f(-W/2 + i * 8, -H/2, 0);
+    }
+    for (i = 0; i <= H / 8; i++) {
+        glVertex3f( W/2, -H/2 + i * 8, 0);
+        glVertex3f(-W/2, -H/2 + i * 8, 0);
+    }
+    glEnd();
+
     glColor3f(0, 1, 1);
     glBegin(GL_LINE_LOOP);
         glVertex2f(-W/2,  H/2);
@@ -277,6 +291,7 @@ static void render_pattern_table(const struct framebuffer *patt)
     glBegin(GL_LINES);
         glVertex2f(0,  H/2);
         glVertex2f(0, -H/2);
+
     glEnd();
     glPopAttrib();
 }
