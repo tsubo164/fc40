@@ -25,12 +25,13 @@ static void load_pattern(struct framebuffer *fb, const struct cartridge *cart, i
             const uint8_t l = (lo & mask) > 0;
             const uint8_t h = (hi & mask) > 0;
             const uint8_t val = (h << 1) | l;
-            uint8_t color[3] = {0};
-            color[0] = 255;
-            color[0] = (int) (val / 3. * 255);
-            color[1] = (int) (val / 3. * 255);
-            color[2] = (int) (val / 3. * 255);
-            set_color(fb, x, y, color);
+            const struct color col = {
+                (uint8_t) (val / 3. * 255),
+                (uint8_t) (val / 3. * 255),
+                (uint8_t) (val / 3. * 255)
+            };
+
+            set_color(fb, x, y, col);
 
             mask >>= 1;
         }

@@ -225,16 +225,24 @@ static int is_sprite_zero_hit(const struct PPU *ppu, struct pixel bg, struct pix
     return 1;
 }
 
+static struct color lookup_pixel_color(const struct PPU *ppu, struct pixel pix)
+{
+    const uint8_t index = fetch_palette_value(ppu, pix.palette, pix.value);
+    const uint8_t *color = get_color(index);
+    const struct color col = {color[0], color[1], color[2]};
+
+    return col;
+}
+
 static void render_pixel(struct PPU *ppu, int x, int y)
 {
     const struct pixel bg = get_pixel_bg(ppu);
     const struct pixel fg = get_pixel_fg(ppu);
     const struct pixel final = composite_pixels(bg, fg);
 
-    const uint8_t index = fetch_palette_value(ppu, final.palette, final.value);
-    const uint8_t *color = get_color(index);
+    const struct color col = lookup_pixel_color(ppu, final);
 
-    set_color(ppu->fbuf, x, y, color);
+    set_color(ppu->fbuf, x, y, col);
 
     if (is_sprite_zero_hit(ppu, bg, fg, x))
         set_stat(ppu, STAT_SPRITE_ZERO_HIT, 1);

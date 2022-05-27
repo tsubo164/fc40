@@ -11,7 +11,11 @@ struct framebuffer {
 extern struct framebuffer *new_framebuffer(int width, int height);
 extern void free_framebuffer(struct framebuffer *fb);
 
-extern void set_color(struct framebuffer *fb, int x, int y, const uint8_t *rgb);
+struct color {
+    uint8_t r, g, b;
+};
+
+extern void set_color(struct framebuffer *fb, int x, int y, struct color col);
 extern void clear_color(struct framebuffer *fb);
 
 #endif /* _H */

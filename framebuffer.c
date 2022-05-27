@@ -21,17 +21,18 @@ void free_framebuffer(struct framebuffer *fb)
     free(fb);
 }
 
-void set_color(struct framebuffer *fb, int x, int y, const uint8_t *rgb)
+void set_color(struct framebuffer *fb, int x, int y, struct color col)
 {
     uint8_t *p = fb->data + y * fb->width * 3 + x * 3;
-    p[0] = rgb[0];
-    p[1] = rgb[1];
-    p[2] = rgb[2];
+
+    p[0] = col.r;
+    p[1] = col.g;
+    p[2] = col.b;
 }
 
 void clear_color(struct framebuffer *fb)
 {
-    const uint8_t black[3] = {0};
+    const struct color black = {0};
     int x, y;
 
     for (y = 0; y < fb->height; y++)
