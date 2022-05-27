@@ -787,7 +787,7 @@ void write_oam_data(struct PPU *ppu, uint8_t data)
 
 void write_ppu_scroll(struct PPU *ppu, uint8_t data)
 {
-    if (ppu->addr_latch == 0) {
+    if (ppu->write_toggle == 0) {
         /* Coarse X and fine x
          * t: ....... ...ABCDE <- d: ABCDE...
          * x:              FGH <- d: .....FGH
@@ -795,7 +795,7 @@ void write_ppu_scroll(struct PPU *ppu, uint8_t data)
          */
         ppu->fine_x = data & 0x07;
         ppu->temp_addr = (ppu->temp_addr & 0xFFE0) | (data >> 3);
-        ppu->addr_latch = 1;
+        ppu->write_toggle = 1;
     } else {
         /* Coarse Y and fine y
          * t: FGH..AB CDE..... <- d: ABCDEFGH
@@ -803,13 +803,13 @@ void write_ppu_scroll(struct PPU *ppu, uint8_t data)
          */
         ppu->temp_addr = (ppu->temp_addr & 0xFC1F) | ((data >> 3) << 5);
         ppu->temp_addr = (ppu->temp_addr & 0x8FFF) | ((data & 0x07) << 12);
-        ppu->addr_latch = 0;
+        ppu->write_toggle = 0;
     }
 }
 
 void write_ppu_address(struct PPU *ppu, uint8_t addr)
 {
-    if (ppu->addr_latch == 0) {
+    if (ppu->write_toggle == 0) {
         /* High byte
          * t: .CDEFGH ........ <- d: ..CDEFGH
          *        <unused>     <- d: AB......
@@ -818,7 +818,7 @@ void write_ppu_address(struct PPU *ppu, uint8_t addr)
          */
         ppu->temp_addr = (ppu->temp_addr & 0xC0FF) | ((addr & 0x3F) << 8);
         ppu->temp_addr &= 0xBFFF;
-        ppu->addr_latch = 1;
+        ppu->write_toggle = 1;
     } else {
         /* Low byte
          * t: ....... ABCDEFGH <- d: ABCDEFGH
@@ -827,7 +827,7 @@ void write_ppu_address(struct PPU *ppu, uint8_t addr)
          */
         ppu->temp_addr = (ppu->temp_addr & 0xFF00) | addr;
         ppu->vram_addr = ppu->temp_addr;
-        ppu->addr_latch = 0;
+        ppu->write_toggle = 0;
     }
 }
 
@@ -846,7 +846,7 @@ uint8_t read_ppu_status(struct PPU *ppu)
     const uint8_t data = ppu->stat;
 
     set_stat(ppu, STAT_VERTICAL_BLANK, 0);
-    ppu->addr_latch = 0;
+    ppu->write_toggle = 0;
 
     return data;
 }
