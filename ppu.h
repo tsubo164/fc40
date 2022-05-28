@@ -15,8 +15,11 @@ struct pattern_row {
 
 struct object_attribute {
     uint8_t id;
-    uint8_t attr;
     uint8_t x, y;
+    uint8_t palette;
+    uint8_t priority;
+    uint8_t flipped_h;
+    uint8_t flipped_v;
 };
 
 struct PPU {

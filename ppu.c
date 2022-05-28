@@ -321,10 +321,15 @@ static void shift_tile_data(struct PPU *ppu)
     shift_word(&ppu->tile_queue[2].palette_hi, &ppu->tile_queue[1].palette_hi);
 }
 
+static void set_tile_palette(struct pattern_row *patt, uint8_t palette)
+{
+    patt->palette_lo = (palette & 0x01) ? 0xFF : 0x00;
+    patt->palette_hi = (palette & 0x02) ? 0xFF : 0x00;
+}
+
 static void fetch_tile_data(struct PPU *ppu, int cycle)
 {
     struct pattern_row *next = &ppu->tile_queue[0];
-    uint8_t attr;
 
     switch (cycle % 8) {
     case 1:
@@ -334,9 +339,7 @@ static void fetch_tile_data(struct PPU *ppu, int cycle)
 
     case 3:
         /* AT byte */
-        attr = fetch_tile_attr(ppu);
-        next->palette_lo = (attr & 0x01) ? 0xFF : 0x00;
-        next->palette_hi = (attr & 0x02) ? 0xFF : 0x00;
+        set_tile_palette(next, fetch_tile_attr(ppu));
         break;
 
     case 5:
@@ -372,14 +375,20 @@ static void clear_secondary_oam(struct PPU *ppu, int cycle)
 static struct object_attribute get_sprite(const struct PPU *ppu, int index)
 {
     struct object_attribute obj = {0xFF, 0xFF, 0xFF, 0xFF};
+    uint8_t attr = 0;
 
     if (index < 0 || index > 63)
         return obj;
 
     obj.y    = ppu->oam[4 * index + 0];
     obj.id   = ppu->oam[4 * index + 1];
-    obj.attr = ppu->oam[4 * index + 2];
+    attr     = ppu->oam[4 * index + 2];
     obj.x    = ppu->oam[4 * index + 3];
+
+    obj.palette   = (attr & 0x03);
+    obj.priority  = (attr & 0x20) > 0;
+    obj.flipped_h = (attr & 0x40) > 0;
+    obj.flipped_v = (attr & 0x80) > 0;
 
     return obj;
 }
@@ -439,16 +448,6 @@ static uint8_t flip_pattern_row(uint8_t bits)
     return dst;
 }
 
-static int is_flipped_horizontally(struct object_attribute obj)
-{
-    return (obj.attr & 0x40) > 0;
-}
-
-static int is_flipped_vertically(struct object_attribute obj)
-{
-    return (obj.attr & 0x80) > 0;
-}
-
 static void fetch_sprite_data(struct PPU *ppu, int cycle, int scanline)
 {
     /* fetch sprite data occurs cycle 257 - 320 */
@@ -465,20 +464,15 @@ static void fetch_sprite_data(struct PPU *ppu, int cycle, int scanline)
         /* Attribute and X position */
         ppu->rendering_oam[index] = ppu->secondary_oam[index];
 
-        if (is_visible) {
-            const uint8_t attr = ppu->rendering_oam[index].attr;
-            patt->palette_lo = (attr & 0x01) ? 0xFF : 0x00;
-            patt->palette_hi = (attr & 0x02) ? 0xFF : 0x00;
-        }
-        else {
-            patt->palette_lo = 0x00;
-            patt->palette_hi = 0x00;
-        }
+        if (is_visible)
+            set_tile_palette(patt, ppu->rendering_oam[index].palette);
+        else
+            set_tile_palette(patt, 0x00);
         break;
 
     case 5:
         /* Low sprite byte */
-        if (is_flipped_vertically(obj))
+        if (obj.flipped_v)
             sprite_y = 7 - sprite_y;
 
         if (is_visible)
@@ -486,13 +480,13 @@ static void fetch_sprite_data(struct PPU *ppu, int cycle, int scanline)
         else
             patt->lo = 0x00;
 
-        if (is_flipped_horizontally(obj))
+        if (obj.flipped_h)
             patt->lo = flip_pattern_row(patt->lo);
         break;
 
     case 7:
         /* High sprite byte */
-        if (is_flipped_vertically(obj))
+        if (obj.flipped_v)
             sprite_y = 7 - sprite_y;
 
         if (is_visible)
@@ -500,7 +494,7 @@ static void fetch_sprite_data(struct PPU *ppu, int cycle, int scanline)
         else
             patt->hi = 0x00;
 
-        if (is_flipped_horizontally(obj))
+        if (obj.flipped_h)
             patt->hi = flip_pattern_row(patt->hi);
         break;
 
@@ -580,7 +574,7 @@ static struct pixel get_pixel_fg(const struct PPU *ppu)
             struct pixel pix = get_pixel(ppu->rendering_sprite[i], 0);
 
             pix.palette += 4;
-            pix.priority = (obj.attr & 0x20) > 0;
+            pix.priority = obj.priority;
             pix.sprite_zero = is_sprite_zero(ppu, obj);
 
             if (pix.value > 0)
