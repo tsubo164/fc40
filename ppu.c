@@ -301,8 +301,13 @@ static void clear_sprite_overflow(struct PPU *ppu)
     set_stat(ppu, STAT_SPRITE_OVERFLOW, 0);
 }
 
-static void load_next_tile(struct PPU *ppu)
+static void load_next_tile(struct PPU *ppu, int cycle)
 {
+    /* after rendering is done in a scanline,
+     * it is necesarry to shift bits for whole row before loading new row */
+    if (cycle >= 321)
+        ppu->tile_queue[2] = ppu->tile_queue[1];
+
     ppu->tile_queue[1] = ppu->tile_queue[0];
 }
 
@@ -685,14 +690,14 @@ void clock_ppu(struct PPU *ppu)
     if ((scanline >= 0 && scanline <= 239) || scanline == 261) {
 
         /* fetch bg tile */
-        if ((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 336)) {
+        if ((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 340)) {
+
             if (cycle % 8 == 0)
                 if (is_rendering)
                     increment_scroll_x(ppu);
 
-
             if (cycle % 8 == 1)
-                load_next_tile(ppu);
+                load_next_tile(ppu, cycle);
 
             fetch_tile_data(ppu, cycle);
         }
@@ -708,7 +713,7 @@ void clock_ppu(struct PPU *ppu)
                 copy_address_x(ppu);
 
         /* vert(v) = vert(t) */
-        if ((cycle >= 280 && cycle <= 305) && scanline == 261)
+        if ((cycle >= 280 && cycle <= 304) && scanline == 261)
             if (is_rendering)
                 copy_address_y(ppu);
 
