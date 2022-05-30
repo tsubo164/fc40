@@ -109,8 +109,12 @@ static const uint8_t *get_color(int index)
 
 static uint8_t read_byte(const struct PPU *ppu, uint16_t addr)
 {
-    if (addr >= 0x2000 && addr <= 0x23FF) {
-        return ppu->name_table_0[addr - 0x2000];
+    if (addr >= 0x2000 && addr <= 0x27FF) {
+        return ppu->name_table[addr - 0x2000];
+    }
+    else if (addr >= 0x3000 && addr <= 0x3EFF) {
+        /* mirrors of 0x2000-0x2EFF */
+        return read_byte(ppu, addr - 0x1000);
     }
     else if (addr >= 0x3F00 && addr <= 0x3FFF) {
         const uint16_t a = 0x3F00 + (addr & 0x1F);
@@ -129,8 +133,12 @@ static uint8_t read_byte(const struct PPU *ppu, uint16_t addr)
 
 static void write_byte(struct PPU *ppu, uint16_t addr, uint8_t data)
 {
-    if (0x2000 <= addr && addr <= 0x23FF) {
-        ppu->name_table_0[addr - 0x2000] = data;
+    if (0x2000 <= addr && addr <= 0x27FF) {
+        ppu->name_table[addr - 0x2000] = data;
+    }
+    else if (addr >= 0x3000 && addr <= 0x3EFF) {
+        /* mirrors of 0x2000-0x2EFF */
+        write_byte(ppu, addr - 0x1000, data);
     }
     else if (0x3F00 <= addr && addr <= 0x3FFF) {
         /* $3F20-$3FFF -> Mirrors of $3F00-$3F1F */
