@@ -112,6 +112,9 @@ static uint8_t read_byte(const struct PPU *ppu, uint16_t addr)
     if (addr >= 0x2000 && addr <= 0x27FF) {
         return ppu->name_table[addr - 0x2000];
     }
+    else if (addr >= 0x2800 && addr <= 0x2FFF) {
+        /* TODO */
+    }
     else if (addr >= 0x3000 && addr <= 0x3EFF) {
         /* mirrors of 0x2000-0x2EFF */
         return read_byte(ppu, addr - 0x1000);
@@ -133,14 +136,17 @@ static uint8_t read_byte(const struct PPU *ppu, uint16_t addr)
 
 static void write_byte(struct PPU *ppu, uint16_t addr, uint8_t data)
 {
-    if (0x2000 <= addr && addr <= 0x27FF) {
+    if (addr >= 0x2000 && addr <= 0x27FF) {
         ppu->name_table[addr - 0x2000] = data;
+    }
+    else if (addr >= 0x2800 && addr <= 0x2FFF) {
+        /* TODO */
     }
     else if (addr >= 0x3000 && addr <= 0x3EFF) {
         /* mirrors of 0x2000-0x2EFF */
         write_byte(ppu, addr - 0x1000, data);
     }
-    else if (0x3F00 <= addr && addr <= 0x3FFF) {
+    else if (addr >= 0x3F00 && addr <= 0x3FFF) {
         /* $3F20-$3FFF -> Mirrors of $3F00-$3F1F */
         uint16_t a = 0x3F00 + (addr & 0x1F);
 
@@ -269,15 +275,7 @@ static void copy_address_y(struct PPU *ppu)
 
 static uint8_t fetch_tile_id(const struct PPU *ppu)
 {
-    if (1) {
-        const struct vram_pointer v = decode_address(ppu->vram_addr);
-        const uint16_t offset = v.tile_y * 32 + v.tile_x;
-
-        return read_byte(ppu, 0x2000 + offset);
-    }
-    else {
-        return read_byte(ppu, 0x2000 + (ppu->vram_addr & 0x0FFF));
-    }
+    return read_byte(ppu, 0x2000 | (ppu->vram_addr & 0x0FFF));
 }
 
 static uint8_t fetch_tile_attr(const struct PPU *ppu)
@@ -882,10 +880,19 @@ uint8_t read_oam_data(const struct PPU *ppu)
     return ppu->oam[ppu->oam_addr];
 }
 
-uint8_t read_ppu_data(const struct PPU *ppu)
+uint8_t read_ppu_data(struct PPU *ppu)
 {
-    /* TODO */
-    return 0;
+    const uint16_t addr = ppu->vram_addr;
+    uint8_t data = ppu->read_buffer;
+
+    ppu->read_buffer = read_byte(ppu, addr);
+
+    if (addr >= 0x3F00 && addr <= 0x3FFF)
+        data = ppu->read_buffer;
+
+    ppu->vram_addr += get_ctrl(ppu, CTRL_ADDR_INCREMENT) ? 32 : 1;
+
+    return data;
 }
 
 uint8_t peek_ppu_status(const struct PPU *ppu)

@@ -37,7 +37,7 @@ struct PPU {
     uint8_t fine_x;
 
     /* vram */
-    uint8_t ppu_data_buf;
+    uint8_t read_buffer;
     uint8_t palette_ram[32];
     uint8_t name_table[2048];
 
@@ -81,7 +81,7 @@ extern void write_ppu_data(struct PPU *ppu, uint8_t data);
 /* read registers */
 extern uint8_t read_ppu_status(struct PPU *ppu);
 extern uint8_t read_oam_data(const struct PPU *ppu);
-extern uint8_t read_ppu_data(const struct PPU *ppu);
+extern uint8_t read_ppu_data(struct PPU *ppu);
 
 /* peek registers */
 extern uint8_t peek_ppu_status(const struct PPU *ppu);
