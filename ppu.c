@@ -109,7 +109,10 @@ static const uint8_t *get_color(int index)
 
 static uint8_t read_byte(const struct PPU *ppu, uint16_t addr)
 {
-    if (addr >= 0x2000 && addr <= 0x27FF) {
+    if (addr >= 0x0000 && addr <= 0x1FFF) {
+        return read_chr_rom(ppu->cart, addr);
+    }
+    else if (addr >= 0x2000 && addr <= 0x27FF) {
         return ppu->name_table[addr - 0x2000];
     }
     else if (addr >= 0x2800 && addr <= 0x2FFF) {
@@ -136,7 +139,10 @@ static uint8_t read_byte(const struct PPU *ppu, uint16_t addr)
 
 static void write_byte(struct PPU *ppu, uint16_t addr, uint8_t data)
 {
-    if (addr >= 0x2000 && addr <= 0x27FF) {
+    if (addr >= 0x0000 && addr <= 0x1FFF) {
+        /* TODO */
+    }
+    else if (addr >= 0x2000 && addr <= 0x27FF) {
         ppu->name_table[addr - 0x2000] = data;
     }
     else if (addr >= 0x2800 && addr <= 0x2FFF) {
@@ -299,7 +305,7 @@ static uint8_t fetch_tile_row(const struct PPU *ppu, uint8_t tile_id, uint8_t pl
     const uint16_t base = get_ctrl(ppu, CTRL_PATTERN_BG) ? 0x1000 : 0x0000;
     const uint16_t addr = base + 16 * tile_id + plane + v.fine_y;
 
-    return read_chr_rom(ppu->cart, addr);
+    return read_byte(ppu, addr);
 }
 
 static void clear_sprite_overflow(struct PPU *ppu)
@@ -442,7 +448,7 @@ static uint8_t fetch_sprite_row(const struct PPU *ppu, uint8_t tile_id, int y, u
     const uint16_t base = get_ctrl(ppu, CTRL_PATTERN_SPRITE) ? 0x1000 : 0x0000;
     const uint16_t addr = base + 16 * tile_id + plane + y;
 
-    return read_chr_rom(ppu->cart, addr);
+    return read_byte(ppu, addr);
 }
 
 static uint8_t flip_pattern_row(uint8_t bits)
