@@ -276,6 +276,11 @@ static void copy_address_y(struct PPU *ppu)
     ppu->vram_addr = encode_address(v);
 }
 
+static int address_increment(const struct PPU *ppu)
+{
+    return get_ctrl(ppu, CTRL_ADDR_INCREMENT) ? 32 : 1;
+}
+
 /* -------------------------------------------------------------------------- */
 /* tile */
 
@@ -572,7 +577,7 @@ static int is_sprite_zero(const struct PPU *ppu, struct object_attribute obj)
 {
     const int sprite_zero_id = ppu->oam[1];
 
-    return obj.id = sprite_zero_id;
+    return obj.id == sprite_zero_id;
 }
 
 static struct pixel get_pixel_bg(const struct PPU *ppu)
@@ -866,10 +871,7 @@ void write_ppu_data(struct PPU *ppu, uint8_t data)
 {
     write_byte(ppu, ppu->vram_addr, data);
 
-    if (get_ctrl(ppu, CTRL_ADDR_INCREMENT))
-        ppu->vram_addr += 32;
-    else
-        ppu->vram_addr++;
+    ppu->vram_addr += address_increment(ppu);
 }
 
 uint8_t read_ppu_status(struct PPU *ppu)
@@ -897,7 +899,7 @@ uint8_t read_ppu_data(struct PPU *ppu)
     if (addr >= 0x3F00 && addr <= 0x3FFF)
         data = ppu->read_buffer;
 
-    ppu->vram_addr += get_ctrl(ppu, CTRL_ADDR_INCREMENT) ? 32 : 1;
+    ppu->vram_addr += address_increment(ppu);
 
     return data;
 }
