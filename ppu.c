@@ -290,7 +290,8 @@ static uint8_t fetch_tile_attr(const struct PPU *ppu)
     const uint16_t attr_x = v.tile_x / 4;
     const uint16_t attr_y = v.tile_y / 4;
     const uint16_t offset = attr_y * 8 + attr_x;
-    const uint8_t attr = read_byte(ppu, 0x2000 + 32 * 30 + offset);
+    const uint16_t base = 0x2000 + 32 * 32 * v.table_x;
+    const uint8_t attr = read_byte(ppu, base + 32 * 30 + offset);
 
     const uint8_t bit_x = v.tile_x % 4 > 1;
     const uint8_t bit_y = v.tile_y % 4 > 1;
@@ -702,7 +703,7 @@ void clock_ppu(struct PPU *ppu)
     if ((scanline >= 0 && scanline <= 239) || scanline == 261) {
 
         /* fetch bg tile */
-        if ((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 340)) {
+        if ((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 337)) {
 
             if (cycle % 8 == 0)
                 if (is_rendering)
