@@ -107,16 +107,33 @@ static const uint8_t *get_color(int index)
     return palette_2C02[index];
 }
 
+static uint16_t name_table_index(const struct cartridge *cart, uint16_t addr)
+{
+    const uint16_t index = addr - 0x2000;
+
+    /* vertical mirroring */
+    if (is_vertical_mirroring(cart))
+        return index & 0x07FF;
+
+    /* horizontal mirroring */
+    if (index >= 0x0000 && index <= 0x07FF)
+        return index & 0x03FF;
+
+    if (index >= 0x0800 && index <= 0x0FFF)
+        return 0x400 | (index & 0x03FF);
+
+    /* unreachable */
+    return 0x0000;
+}
+
 static uint8_t read_byte(const struct PPU *ppu, uint16_t addr)
 {
     if (addr >= 0x0000 && addr <= 0x1FFF) {
         return read_chr_rom(ppu->cart, addr);
     }
-    else if (addr >= 0x2000 && addr <= 0x27FF) {
-        return ppu->name_table[addr - 0x2000];
-    }
-    else if (addr >= 0x2800 && addr <= 0x2FFF) {
-        /* TODO */
+    else if (addr >= 0x2000 && addr <= 0x2FFF) {
+        const uint16_t index = name_table_index(ppu->cart, addr);
+        return ppu->name_table[index];
     }
     else if (addr >= 0x3000 && addr <= 0x3EFF) {
         /* mirrors of 0x2000-0x2EFF */
@@ -142,11 +159,9 @@ static void write_byte(struct PPU *ppu, uint16_t addr, uint8_t data)
     if (addr >= 0x0000 && addr <= 0x1FFF) {
         /* TODO */
     }
-    else if (addr >= 0x2000 && addr <= 0x27FF) {
-        ppu->name_table[addr - 0x2000] = data;
-    }
-    else if (addr >= 0x2800 && addr <= 0x2FFF) {
-        /* TODO */
+    else if (addr >= 0x2000 && addr <= 0x2FFF) {
+        const uint16_t index = name_table_index(ppu->cart, addr);
+        ppu->name_table[index] = data;
     }
     else if (addr >= 0x3000 && addr <= 0x3EFF) {
         /* mirrors of 0x2000-0x2EFF */
@@ -295,7 +310,7 @@ static uint8_t fetch_tile_attr(const struct PPU *ppu)
     const uint16_t attr_x = v.tile_x / 4;
     const uint16_t attr_y = v.tile_y / 4;
     const uint16_t offset = attr_y * 8 + attr_x;
-    const uint16_t base = 0x2000 + 32 * 32 * v.table_x;
+    const uint16_t base = 0x2000 + 32 * 32 * v.table_x + 2 * 32 * 32 * v.table_y;
     const uint8_t attr = read_byte(ppu, base + 32 * 30 + offset);
 
     const uint8_t bit_x = v.tile_x % 4 > 1;

@@ -38,6 +38,7 @@ struct cartridge *open_cartridge(const char *filename)
 
     cart->prog_size = header[4] * 16 * 1024;
     cart->char_size = header[5] * 8 * 1024;
+    cart->mirroring = header[6] & 0x01;
     cart->mapper = header[6] >> 4;
     cart->nbanks = header[4] == 1 ? 1 : 2;
     cart->prog_rom = read_program(fp, cart->prog_size);
@@ -79,4 +80,9 @@ uint8_t read_chr_rom(const struct cartridge *cart, uint16_t addr)
     }
 
     return 0xFF;
+}
+
+int is_vertical_mirroring(const struct cartridge *cart)
+{
+    return cart->mirroring == 1;
 }
