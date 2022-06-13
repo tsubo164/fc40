@@ -12,8 +12,10 @@ const int RESY = 240;
 
 static int show_guide = 0;
 static int show_patt = 0;
-static int press_g = 0;
-static int press_p = 0;
+
+struct key_state {
+    int g, p;
+};
 
 static void transfer_texture(const struct framebuffer *fb);
 static void resize(GLFWwindow *const window, int width, int height);
@@ -33,6 +35,7 @@ int open_display(const struct display *disp)
     const int WINX = RESX * SCALE + 2 * WIN_MARGIN;
     const int WINY = RESY * SCALE + 2 * WIN_MARGIN;
 
+    struct key_state key = {0};
     uint64_t f = 0;
     GLFWwindow* window;
 
@@ -101,23 +104,56 @@ int open_display(const struct display *disp)
             disp->input_controller_func(0, input);
         }
 
-        if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS && press_g == 0) {
+        if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS && key.g == 0) {
             show_guide = !show_guide;
-            press_g = 1;
+            key.g = 1;
         }
-        if (glfwGetKey(window, GLFW_KEY_G) == GLFW_RELEASE && press_g == 1) {
-            press_g = 0;
+        if (glfwGetKey(window, GLFW_KEY_G) == GLFW_RELEASE && key.g == 1) {
+            key.g = 0;
         }
-        if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS && press_p == 0) {
+        if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS && key.p == 0) {
             show_patt = !show_patt;
-            press_p = 1;
+            key.p = 1;
         }
-        if (glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE && press_p == 1) {
-            press_p = 0;
+        if (glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE && key.p == 1) {
+            key.p = 0;
         }
 
         if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
             break;
+
+        GLFWgamepadstate state;
+        if (glfwGetGamepadState(GLFW_JOYSTICK_1, &state)) {
+            uint8_t input = 0x00;
+
+            if (state.buttons[GLFW_GAMEPAD_BUTTON_B]) {
+                input |= 1 << 7; /* A */
+            }
+            if (state.buttons[GLFW_GAMEPAD_BUTTON_A]) {
+                input |= 1 << 6; /* B */
+            }
+            if (state.buttons[GLFW_GAMEPAD_BUTTON_BACK]) {
+                input |= 1 << 5; /* select */
+            }
+            if (state.buttons[GLFW_GAMEPAD_BUTTON_START]) {
+                input |= 1 << 4; /* start */
+            }
+            if (state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y] == -1) {
+                input |= 1 << 3; /* up */
+            }
+            if (state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y] == 1) {
+                input |= 1 << 2; /* down */
+            }
+            if (state.axes[GLFW_GAMEPAD_AXIS_LEFT_X] == -1) {
+                input |= 1 << 1; /* left */
+            }
+            if (state.axes[GLFW_GAMEPAD_AXIS_LEFT_X] == 1) {
+                input |= 1 << 0; /* right */
+            }
+
+            if (input)
+                disp->input_controller_func(0, input);
+        }
 
         f++;
     }
