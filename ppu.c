@@ -102,9 +102,11 @@ static const uint8_t palette_2C02[][3] = {
     {160, 214, 228}, {160, 162, 160}, {  0,   0,   0}, {  0,   0,   0}
 };
 
-static const uint8_t *get_color(int index)
+static struct color get_color(int index)
 {
-    return palette_2C02[index];
+    const uint8_t *c = palette_2C02[index];
+    const struct color col = {c[0], c[1], c[2]};
+    return col;
 }
 
 static uint16_t name_table_index(const struct cartridge *cart, uint16_t addr)
@@ -570,6 +572,8 @@ struct pixel {
     uint8_t sprite_zero;
 };
 
+static const struct pixel BACKDROP = {0};
+
 static struct pixel get_pixel(struct pattern_row patt, uint8_t fine_x)
 {
     struct pixel pix = {0};
@@ -602,7 +606,6 @@ static struct pixel get_pixel_bg(const struct PPU *ppu)
 
 static struct pixel get_pixel_fg(const struct PPU *ppu)
 {
-    const struct pixel empty = {0};
     int i;
 
     for (i = 0; i < 8; i++) {
@@ -620,15 +623,13 @@ static struct pixel get_pixel_fg(const struct PPU *ppu)
         }
     }
 
-    return empty;
+    return BACKDROP;
 }
 
 static struct pixel composite_pixels(struct pixel bg, struct pixel fg)
 {
-    const struct pixel empty = {0};
-
     if (bg.value == 0 && fg.value == 0)
-        return empty;
+        return BACKDROP;
     else if (bg.value > 0 && fg.value == 0)
         return bg;
     else if (bg.value == 0 && fg.value > 0)
@@ -676,19 +677,28 @@ static uint8_t fetch_palette_value(const struct PPU *ppu, uint8_t palette_id, ui
 static struct color lookup_pixel_color(const struct PPU *ppu, struct pixel pix)
 {
     const uint8_t index = fetch_palette_value(ppu, pix.palette, pix.value);
-    const uint8_t *color = get_color(index);
-    const struct color col = {color[0], color[1], color[2]};
-
-    return col;
+    return get_color(index);
 }
 
 static void render_pixel(struct PPU *ppu, int x, int y)
 {
-    const struct pixel bg = get_pixel_bg(ppu);
-    const struct pixel fg = get_pixel_fg(ppu);
-    const struct pixel final = composite_pixels(bg, fg);
+    struct pixel bg = {0}, fg = {0}, final = {0};
+    struct color col = {0};
 
-    const struct color col = lookup_pixel_color(ppu, final);
+    if (is_rendering_bg(ppu))
+        bg = get_pixel_bg(ppu);
+
+    if (is_rendering_sprite(ppu))
+        fg = get_pixel_fg(ppu);
+
+    final = composite_pixels(bg, fg);
+    col = lookup_pixel_color(ppu, final);
+
+    if (!is_rendering_bg(ppu) && !is_rendering_sprite(ppu) &&
+        ppu->vram_addr >= 0x3F00 && ppu->vram_addr <= 0x3FFF) {
+        const uint8_t index = read_byte(ppu, ppu->vram_addr);
+        col = get_color(index);
+    }
 
     set_color(ppu->fbuf, x, y, col);
 
@@ -767,21 +777,26 @@ void clock_ppu(struct PPU *ppu)
         if (cycle == 1)
             enter_vblank(ppu);
 
-    if (scanline == 261)
+    if (scanline == 261) {
         if (cycle == 1) {
             leave_vblank(ppu);
             clear_sprite_overflow(ppu);
             set_stat(ppu, STAT_SPRITE_ZERO_HIT, 0);
         }
+    }
 
     /* render pixel */
-    if (scanline >= 0 && scanline <= 239)
-        if (cycle >= 1 && cycle <= 256)
-            if (is_rendering) {
-                render_pixel(ppu, cycle - 1, scanline);
+    if (scanline >= 0 && scanline <= 239) {
+        if (cycle >= 1 && cycle <= 256) {
+            render_pixel(ppu, cycle - 1, scanline);
+
+            if (is_rendering_bg(ppu))
                 shift_tile_data(ppu);
+
+            if (is_rendering_sprite(ppu))
                 shift_sprite_data(ppu);
-            }
+        }
+    }
 
     /* advance cycle and scanline */
     if (cycle == 339) {
