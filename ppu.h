@@ -69,6 +69,9 @@ extern int is_frame_ready(const struct PPU *ppu);
 /* clock */
 extern void clock_ppu(struct PPU *ppu);
 
+extern void power_up_ppu(struct PPU *ppu);
+extern void reset_ppu(struct PPU *ppu);
+
 /* write registers */
 extern void write_ppu_control(struct PPU *ppu, uint8_t data);
 extern void write_ppu_mask(struct PPU *ppu, uint8_t data);

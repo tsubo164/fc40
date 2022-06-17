@@ -57,6 +57,7 @@ int main(int argc, char **argv)
     ppu.fbuf = fbuf;
 
     reset(&cpu);
+    power_up_ppu(&ppu);
 
     /* pattern table */
     patt = new_framebuffer(16 * 8 * 2, 16 * 8);

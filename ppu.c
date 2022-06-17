@@ -826,6 +826,52 @@ void clock_ppu(struct PPU *ppu)
     }
 }
 
+void power_up_ppu(struct PPU *ppu)
+{
+    int i;
+
+    ppu->ctrl = 0x00;
+    ppu->mask = 0x00;
+    ppu->stat = 0xA0;
+    ppu->oam_addr = 0x00;
+
+    ppu->write_toggle = 0;
+
+    ppu->temp_addr = 0x0000;
+    ppu->vram_addr = 0x0000;
+    ppu->read_buffer = 0x00;
+
+    ppu->frame = 0;
+
+    for (i = 0; i < 256; i++)
+        ppu->oam[i] = 0xFF;
+
+    for (i = 0; i < 32; i++)
+        ppu->palette_ram[i] = 0xFF;
+
+    for (i = 0; i < 2048; i++)
+        ppu->name_table[i] = 0xFF;
+}
+
+void reset_ppu(struct PPU *ppu)
+{
+    int i;
+
+    ppu->ctrl = 0x00;
+    ppu->mask = 0x00;
+    ppu->stat &= 0x80;
+
+    ppu->write_toggle = 0;
+
+    ppu->temp_addr   = 0x0000;
+    ppu->read_buffer = 0x00;
+
+    ppu->frame = 0;
+
+    for (i = 0; i < 256; i++)
+        ppu->oam[i] = 0xFF;
+}
+
 void write_ppu_control(struct PPU *ppu, uint8_t data)
 {
     /* Nametable x and y from control
