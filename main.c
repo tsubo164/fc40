@@ -56,7 +56,7 @@ int main(int argc, char **argv)
     fbuf = new_framebuffer(RESX, RESY);
     ppu.fbuf = fbuf;
 
-    reset(&cpu);
+    power_up_cpu(&cpu);
     power_up_ppu(&ppu);
 
     /* pattern table */

@@ -942,16 +942,23 @@ static int execute(struct CPU *cpu, struct instruction inst)
     return inst.cycles + page_crossed + branch_taken;
 }
 
-void reset(struct CPU *cpu)
+void power_up_cpu(struct CPU *cpu)
 {
     set_pc(cpu, read_word(cpu, 0xFFFC));
 
-    /* registers */
     set_a(cpu, 0x00);
     set_x(cpu, 0x00);
     set_y(cpu, 0x00);
     set_s(cpu, 0xFD);
     set_p(cpu, 0x00 | I);
+}
+
+void reset(struct CPU *cpu)
+{
+    set_pc(cpu, read_word(cpu, 0xFFFC));
+
+    set_s(cpu, cpu->s - 3);
+    set_flag(cpu, I, 1);
 
     /* takes cycles */
     cpu->cycles = 8;
