@@ -688,7 +688,7 @@ static void render_pixel(struct PPU *ppu, int x, int y)
     if (is_rendering_bg(ppu))
         bg = get_pixel_bg(ppu);
 
-    if (is_rendering_sprite(ppu))
+    if (is_rendering_sprite(ppu) && y != 0)
         fg = get_pixel_fg(ppu);
 
     final = composite_pixels(bg, fg);
