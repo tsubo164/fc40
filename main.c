@@ -9,14 +9,22 @@
 #include "log.h"
 #include "debug.h"
 
-static struct CPU cpu = {0};
-static struct PPU ppu = {0};
-static uint64_t clock = 0;
+struct NES {
+    struct CPU cpu;
+    struct PPU ppu;
+    uint64_t clock;
 
-static int dma_wait = 1;
-static uint8_t dma_addr = 0x00;
-static uint8_t dma_page = 0x00;
-static uint8_t dma_data = 0x00;
+    int dma_wait;
+    uint8_t dma_addr;
+    uint8_t dma_page;
+    uint8_t dma_data;
+};
+
+struct NES nes = {{0}};
+void power_up_nes(struct NES *nes)
+{
+    nes->dma_wait = 1;
+}
 
 void update_frame(void);
 void input_controller(uint8_t id, uint8_t input);
@@ -31,6 +39,8 @@ int main(int argc, char **argv)
     struct cartridge *cart = NULL;
     const char *filename = NULL;
     int log_mode = 0;
+
+    power_up_nes(&nes);
 
     if (argc == 3 && !strcmp(argv[1], "--log-mode")) {
         log_mode = 1;
@@ -50,21 +60,21 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    cpu.cart = cart;
-    cpu.ppu = &ppu;
-    ppu.cart = cart;
+    nes.cpu.cart = cart;
+    nes.cpu.ppu = &nes.ppu;
+    nes.ppu.cart = cart;
     fbuf = new_framebuffer(RESX, RESY);
-    ppu.fbuf = fbuf;
+    nes.ppu.fbuf = fbuf;
 
-    power_up_cpu(&cpu);
-    power_up_ppu(&ppu);
+    power_up_cpu(&nes.cpu);
+    power_up_ppu(&nes.ppu);
 
     /* pattern table */
     patt = new_framebuffer(16 * 8 * 2, 16 * 8);
     load_pattern_table(patt, cart);
 
     if (log_mode) {
-        log_cpu_status(&cpu);
+        log_cpu_status(&nes.cpu);
     }
     else {
         struct display disp;
@@ -72,7 +82,7 @@ int main(int argc, char **argv)
         disp.pattern_table = patt;
         disp.update_frame_func = update_frame;
         disp.input_controller_func = input_controller;
-        disp.ppu = &ppu;
+        disp.ppu = &nes.ppu;
         open_display(&disp);
     }
 
@@ -84,30 +94,30 @@ int main(int argc, char **argv)
 
 static void clock_dma(void)
 {
-    if (dma_wait) {
-        if (clock % 2 == 1) {
-            dma_wait = 0;
-            dma_addr = 0x00;
-            dma_page = get_dma_page(&cpu);
+    if (nes.dma_wait) {
+        if (nes.clock % 2 == 1) {
+            nes.dma_wait = 0;
+            nes.dma_addr = 0x00;
+            nes.dma_page = get_dma_page(&nes.cpu);
         }
         /* idle for this cpu cycle */
         return;
     }
 
-    if (clock % 2 == 0) {
+    if (nes.clock % 2 == 0) {
         /* read */
-        dma_data = read_cpu_data(&cpu, (dma_page << 8) | dma_addr);
+        nes.dma_data = read_cpu_data(&nes.cpu, (nes.dma_page << 8) | nes.dma_addr);
     }
     else {
         /* write */
-        write_dma_sprite(&ppu, dma_addr, dma_data);
-        dma_addr++;
+        write_dma_sprite(&nes.ppu, nes.dma_addr, nes.dma_data);
+        nes.dma_addr++;
 
-        if (dma_addr == 0x00) {
-            dma_wait = 1;
-            dma_page = 0x00;
-            dma_addr = 0x00;
-            resume(&cpu);
+        if (nes.dma_addr == 0x00) {
+            nes.dma_wait = 1;
+            nes.dma_page = 0x00;
+            nes.dma_addr = 0x00;
+            resume(&nes.cpu);
         }
     }
 }
@@ -115,26 +125,26 @@ static void clock_dma(void)
 void update_frame(void)
 {
     do {
-        clock_ppu(&ppu);
+        clock_ppu(&nes.ppu);
 
-        if (clock++ % 3 == 0) {
-            if (is_suspended(&cpu))
+        if (nes.clock++ % 3 == 0) {
+            if (is_suspended(&nes.cpu))
                 clock_dma();
             else
-                clock_cpu(&cpu);
+                clock_cpu(&nes.cpu);
         }
 
-        if (is_nmi_generated(&ppu)) {
-            clear_nmi(&ppu);
-            nmi(&cpu);
+        if (is_nmi_generated(&nes.ppu)) {
+            clear_nmi(&nes.ppu);
+            nmi(&nes.cpu);
         }
 
-    } while (!is_frame_ready(&ppu));
+    } while (!is_frame_ready(&nes.ppu));
 }
 
 void input_controller(uint8_t id, uint8_t input)
 {
-    set_controller_input(&cpu, 0, input);
+    set_controller_input(&nes.cpu, 0, input);
 }
 
 void log_cpu_status(struct CPU *cpu)
