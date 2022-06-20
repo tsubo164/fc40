@@ -18,12 +18,25 @@ struct NES {
     uint8_t dma_addr;
     uint8_t dma_page;
     uint8_t dma_data;
+
+    struct framebuffer *fbuf;
+    struct framebuffer *patt;
+    struct cartridge *cart;
 };
 
 struct NES nes = {{0}};
+
 void power_up_nes(struct NES *nes)
 {
+    const int RESX = 256;
+    const int RESY = 240;
+
     nes->dma_wait = 1;
+
+    nes->fbuf = new_framebuffer(RESX, RESY);
+    nes->ppu.fbuf = nes->fbuf;
+
+    nes->patt = new_framebuffer(16 * 8 * 2, 16 * 8);
 }
 
 void update_frame(void);
@@ -32,15 +45,9 @@ void log_cpu_status(struct CPU *cpu);
 
 int main(int argc, char **argv)
 {
-    const int RESX = 256;
-    const int RESY = 240;
-    struct framebuffer *fbuf = NULL;
-    struct framebuffer *patt = NULL;
     struct cartridge *cart = NULL;
     const char *filename = NULL;
     int log_mode = 0;
-
-    power_up_nes(&nes);
 
     if (argc == 3 && !strcmp(argv[1], "--log-mode")) {
         log_mode = 1;
@@ -63,30 +70,29 @@ int main(int argc, char **argv)
     nes.cpu.cart = cart;
     nes.cpu.ppu = &nes.ppu;
     nes.ppu.cart = cart;
-    fbuf = new_framebuffer(RESX, RESY);
-    nes.ppu.fbuf = fbuf;
 
+    power_up_nes(&nes);
     power_up_cpu(&nes.cpu);
     power_up_ppu(&nes.ppu);
 
     /* pattern table */
-    patt = new_framebuffer(16 * 8 * 2, 16 * 8);
-    load_pattern_table(patt, cart);
+    load_pattern_table(nes.patt, cart);
 
     if (log_mode) {
         log_cpu_status(&nes.cpu);
     }
     else {
         struct display disp;
-        disp.fb = fbuf;
-        disp.pattern_table = patt;
+        disp.fb = nes.fbuf;
+        disp.pattern_table = nes.patt;
         disp.update_frame_func = update_frame;
         disp.input_controller_func = input_controller;
         disp.ppu = &nes.ppu;
         open_display(&disp);
     }
 
-    free_framebuffer(fbuf);
+    free_framebuffer(nes.fbuf);
+    free_framebuffer(nes.patt);
     close_cartridge(cart);
 
     return 0;
