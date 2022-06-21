@@ -67,8 +67,8 @@ void insert_cartridge(struct NES *nes, struct cartridge *cart)
     nes->ppu.cart = nes->cart;
 }
 
-void update_frame(void);
-void input_controller(uint8_t id, uint8_t input);
+void update_frame(struct NES *nes);
+void input_controller(struct NES *nes, uint8_t id, uint8_t input);
 void log_cpu_status(struct CPU *cpu);
 
 int main(int argc, char **argv)
@@ -103,6 +103,7 @@ int main(int argc, char **argv)
     }
     else {
         struct display disp;
+        disp.nes = &nes;
         disp.fb = nes.fbuf;
         disp.pattern_table = nes.patt;
         disp.update_frame_func = update_frame;
@@ -117,59 +118,59 @@ int main(int argc, char **argv)
     return 0;
 }
 
-static void clock_dma(void)
+static void clock_dma(struct NES *nes)
 {
-    if (nes.dma_wait) {
-        if (nes.clock % 2 == 1) {
-            nes.dma_wait = 0;
-            nes.dma_addr = 0x00;
-            nes.dma_page = get_dma_page(&nes.cpu);
+    if (nes->dma_wait) {
+        if (nes->clock % 2 == 1) {
+            nes->dma_wait = 0;
+            nes->dma_addr = 0x00;
+            nes->dma_page = get_dma_page(&nes->cpu);
         }
         /* idle for this cpu cycle */
         return;
     }
 
-    if (nes.clock % 2 == 0) {
+    if (nes->clock % 2 == 0) {
         /* read */
-        nes.dma_data = read_cpu_data(&nes.cpu, (nes.dma_page << 8) | nes.dma_addr);
+        nes->dma_data = read_cpu_data(&nes->cpu, (nes->dma_page << 8) | nes->dma_addr);
     }
     else {
         /* write */
-        write_dma_sprite(&nes.ppu, nes.dma_addr, nes.dma_data);
-        nes.dma_addr++;
+        write_dma_sprite(&nes->ppu, nes->dma_addr, nes->dma_data);
+        nes->dma_addr++;
 
-        if (nes.dma_addr == 0x00) {
-            nes.dma_wait = 1;
-            nes.dma_page = 0x00;
-            nes.dma_addr = 0x00;
-            resume(&nes.cpu);
+        if (nes->dma_addr == 0x00) {
+            nes->dma_wait = 1;
+            nes->dma_page = 0x00;
+            nes->dma_addr = 0x00;
+            resume(&nes->cpu);
         }
     }
 }
 
-void update_frame(void)
+void update_frame(struct NES *nes)
 {
     do {
-        clock_ppu(&nes.ppu);
+        clock_ppu(&nes->ppu);
 
-        if (nes.clock++ % 3 == 0) {
-            if (is_suspended(&nes.cpu))
-                clock_dma();
+        if (nes->clock++ % 3 == 0) {
+            if (is_suspended(&nes->cpu))
+                clock_dma(nes);
             else
-                clock_cpu(&nes.cpu);
+                clock_cpu(&nes->cpu);
         }
 
-        if (is_nmi_generated(&nes.ppu)) {
-            clear_nmi(&nes.ppu);
-            nmi(&nes.cpu);
+        if (is_nmi_generated(&nes->ppu)) {
+            clear_nmi(&nes->ppu);
+            nmi(&nes->cpu);
         }
 
-    } while (!is_frame_ready(&nes.ppu));
+    } while (!is_frame_ready(&nes->ppu));
 }
 
-void input_controller(uint8_t id, uint8_t input)
+void input_controller(struct NES *nes, uint8_t id, uint8_t input)
 {
-    set_controller_input(&nes.cpu, 0, input);
+    set_controller_input(&nes->cpu, 0, input);
 }
 
 void log_cpu_status(struct CPU *cpu)

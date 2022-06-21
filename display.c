@@ -69,7 +69,7 @@ int open_display(const struct display *disp)
         }
 
         /* Update framebuffer */
-        disp->update_frame_func();
+        disp->update_frame_func(disp->nes);
         transfer_texture(disp->fb);
 
         /* Render here */
@@ -101,7 +101,7 @@ int open_display(const struct display *disp)
             if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
                 input |= 1 << 0; /* right */
 
-            disp->input_controller_func(0, input);
+            disp->input_controller_func(disp->nes, 0, input);
         }
 
         if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS && key.g == 0) {
@@ -152,7 +152,7 @@ int open_display(const struct display *disp)
             }
 
             if (input)
-                disp->input_controller_func(0, input);
+                disp->input_controller_func(disp->nes, 0, input);
         }
 
         f++;
