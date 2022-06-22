@@ -5,14 +5,10 @@
 #include "cartridge.h"
 #include "display.h"
 #include "debug.h"
-#include "log.h"
-
-struct NES nes = {{0}};
-
-void log_cpu_status(struct CPU *cpu);
 
 int main(int argc, char **argv)
 {
+    struct NES nes = {{0}};
     struct cartridge *cart = NULL;
     const char *filename = NULL;
     int log_mode = 0;
@@ -39,7 +35,7 @@ int main(int argc, char **argv)
     power_up_nes(&nes);
 
     if (log_mode) {
-        log_cpu_status(&nes.cpu);
+        log_cpu_status(&nes.cpu, 8980);
     }
     else {
         struct display disp;
@@ -56,18 +52,4 @@ int main(int argc, char **argv)
     close_cartridge(cart);
 
     return 0;
-}
-
-void log_cpu_status(struct CPU *cpu)
-{
-    uint16_t log_line = 0;
-    cpu->pc = 0xC000;
-
-    while (log_line < 8980) {
-        if (cpu->cycles == 0) {
-            print_cpu_log(cpu);
-            log_line++;
-        }
-        clock_cpu(cpu);
-    }
 }

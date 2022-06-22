@@ -26,7 +26,7 @@ static uint16_t zp_indirect(const struct CPU *cpu, uint8_t zp)
     return (hi << 8) | lo;
 }
 
-void print_cpu_log(const struct CPU *cpu)
+void print_cpu_status(const struct CPU *cpu)
 {
     struct cpu_status stat;
     get_cpu_status(cpu, &stat);

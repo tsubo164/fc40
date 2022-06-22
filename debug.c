@@ -2,6 +2,22 @@
 #include "debug.h"
 #include "framebuffer.h"
 #include "cartridge.h"
+#include "cpu.h"
+#include "log.h"
+
+void log_cpu_status(struct CPU *cpu, int max_lines)
+{
+    uint16_t log_line = 0;
+    cpu->pc = 0xC000;
+
+    while (log_line < max_lines) {
+        if (cpu->cycles == 0) {
+            print_cpu_status(cpu);
+            log_line++;
+        }
+        clock_cpu(cpu);
+    }
+}
 
 static void load_pattern(struct framebuffer *fb, const struct cartridge *cart, int id)
 {

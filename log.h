@@ -3,6 +3,6 @@
 
 struct CPU;
 
-extern void print_cpu_log(const struct CPU *cpu);
+extern void print_cpu_status(const struct CPU *cpu);
 
 #endif /* _H */
