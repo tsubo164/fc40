@@ -953,7 +953,7 @@ void power_up_cpu(struct CPU *cpu)
     set_p(cpu, 0x00 | I);
 }
 
-void reset(struct CPU *cpu)
+void reset_cpu(struct CPU *cpu)
 {
     set_pc(cpu, read_word(cpu, 0xFFFC));
 

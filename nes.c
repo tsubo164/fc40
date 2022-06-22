@@ -60,6 +60,12 @@ void play_game(struct NES *nes)
     open_display(&disp);
 }
 
+void push_reset_button(struct NES *nes)
+{
+    reset_cpu(&nes->cpu);
+    reset_ppu(&nes->ppu);
+}
+
 static void clock_dma(struct NES *nes)
 {
     if (nes->dma_wait) {

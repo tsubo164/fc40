@@ -3,6 +3,7 @@
 
 #include "display.h"
 #include "framebuffer.h"
+#include "nes.h"
 #include "ppu.h"
 
 const int MARGIN = 8;
@@ -14,7 +15,7 @@ static int show_guide = 0;
 static int show_patt = 0;
 
 struct key_state {
-    int g, p;
+    int g, p, r;
 };
 
 static void transfer_texture(const struct framebuffer *fb);
@@ -117,6 +118,13 @@ int open_display(const struct display *disp)
         }
         if (glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE && key.p == 1) {
             key.p = 0;
+        }
+        if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && key.r == 0) {
+            push_reset_button(disp->nes);
+            key.r = 1;
+        }
+        if (glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE && key.r == 1) {
+            key.r = 0;
         }
 
         if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
