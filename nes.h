@@ -28,6 +28,7 @@ extern void power_up_nes(struct NES *nes);
 extern void shut_down_nes(struct NES *nes);
 
 extern void insert_cartridge(struct NES *nes, struct cartridge *cart);
+extern void play_game(struct NES *nes);
 
 /* callback functions */
 extern void update_frame(struct NES *nes);

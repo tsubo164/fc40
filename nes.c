@@ -2,6 +2,7 @@
 
 #include "nes.h"
 #include "framebuffer.h"
+#include "display.h"
 #include "debug.h"
 
 void power_up_nes(struct NES *nes)
@@ -43,6 +44,20 @@ void insert_cartridge(struct NES *nes, struct cartridge *cart)
     nes->cart = cart;
     nes->cpu.cart = nes->cart;
     nes->ppu.cart = nes->cart;
+}
+
+void play_game(struct NES *nes)
+{
+    struct display disp = {0};
+
+    disp.nes = nes;
+    disp.fb = nes->fbuf;
+    disp.pattern_table = nes->patt;
+    disp.update_frame_func = update_frame;
+    disp.input_controller_func = input_controller;
+    disp.ppu = &nes->ppu;
+
+    open_display(&disp);
 }
 
 static void clock_dma(struct NES *nes)

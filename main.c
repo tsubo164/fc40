@@ -3,7 +3,6 @@
 
 #include "nes.h"
 #include "cartridge.h"
-#include "display.h"
 #include "debug.h"
 
 int main(int argc, char **argv)
@@ -34,19 +33,10 @@ int main(int argc, char **argv)
     insert_cartridge(&nes, cart);
     power_up_nes(&nes);
 
-    if (log_mode) {
+    if (log_mode)
         log_cpu_status(&nes.cpu, 8980);
-    }
-    else {
-        struct display disp;
-        disp.nes = &nes;
-        disp.fb = nes.fbuf;
-        disp.pattern_table = nes.patt;
-        disp.update_frame_func = update_frame;
-        disp.input_controller_func = input_controller;
-        disp.ppu = &nes.ppu;
-        open_display(&disp);
-    }
+    else
+        play_game(&nes);
 
     shut_down_nes(&nes);
     close_cartridge(cart);
