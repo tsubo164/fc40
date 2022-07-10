@@ -5,7 +5,7 @@ CFLAGS  = $(DEF) $(OPT) -Wall --pedantic-errors -c
 LDFLAGS = -lglfw -framework Cocoa -framework OpenGL -framework IOKit
 RM      = rm -f
 
-SRCS    := cartridge cpu debug display framebuffer log main nes ppu
+SRCS    := apu cartridge cpu debug display framebuffer log main nes ppu
 
 .PHONY: clean run test
 

@@ -5,10 +5,12 @@
 
 struct cartridge;
 struct PPU;
+struct APU;
 
 struct CPU {
     struct cartridge *cart;
     struct PPU *ppu;
+    struct APU *apu;
     int cycles;
     int suspended;
 

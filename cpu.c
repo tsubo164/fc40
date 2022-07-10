@@ -2,6 +2,7 @@
 #include <string.h>
 #include "cpu.h"
 #include "ppu.h"
+#include "apu.h"
 #include "cartridge.h"
 
 enum status_flag {
@@ -47,6 +48,18 @@ static void write_byte(struct CPU *cpu, uint16_t addr, uint8_t data)
     else if (addr >= 0x2008 && addr <= 0x3FFF) {
         /* PPU register mirrored every 8 */
         write_byte(cpu, 0x2000 | (addr & 0x007), data);
+    }
+    else if (addr == 0x4000) {
+        write_apu_square1_volume(cpu->apu, data);
+    }
+    else if (addr == 0x4001) {
+        write_apu_square1_sweep(cpu->apu, data);
+    }
+    else if (addr == 0x4002) {
+        write_apu_square1_lo(cpu->apu, data);
+    }
+    else if (addr == 0x4003) {
+        write_apu_square1_hi(cpu->apu, data);
     }
     else if (addr == 0x4014) {
         /* DMA */
