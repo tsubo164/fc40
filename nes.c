@@ -5,6 +5,53 @@
 #include "display.h"
 #include "debug.h"
 
+#include <al.h>
+#include <alc.h>
+#include <math.h>
+#include <stdio.h>
+
+void play_sound(struct NES *nes)
+{
+    const int SAMPLINGRATE = 44100;
+    signed short *wav_data = NULL;
+    int i;
+
+    ALCdevice *device = alcOpenDevice(NULL);
+    ALCcontext *context = alcCreateContext(device, NULL);
+    alcMakeContextCurrent(context);
+
+    ALuint buffer;
+    ALuint source;
+    alGenBuffers(1, &buffer);
+    alGenSources(1, &source);
+
+    wav_data = malloc(sizeof(signed short) * SAMPLINGRATE);
+    for (i = 0; i < SAMPLINGRATE; i++)
+        wav_data[i] = 32767 * sin(2 * M_PI*i * 440 / SAMPLINGRATE);
+
+    alBufferData(buffer, AL_FORMAT_MONO16, &wav_data[0],
+            SAMPLINGRATE * sizeof(signed short), SAMPLINGRATE);
+    alSourcei(source, AL_BUFFER, buffer);
+    alSourcei(source, AL_LOOPING, AL_TRUE);
+    alSourcePlay(source);
+
+    for (i = 0; i < 1000000; i++) {
+        /*
+        printf("%d: Hello OpenAL!\n", i);
+        */
+    }
+
+    alSourceStop(source);
+
+    free(wav_data);
+    alDeleteBuffers(1, &buffer);
+    alDeleteSources(1, &source);
+
+    alcMakeContextCurrent(NULL);
+    alcDestroyContext(context);
+    alcCloseDevice(device);
+}
+
 void power_up_nes(struct NES *nes)
 {
     const int RESX = 256;
@@ -49,6 +96,8 @@ void insert_cartridge(struct NES *nes, struct cartridge *cart)
 void play_game(struct NES *nes)
 {
     struct display disp = {0};
+
+    play_sound(nes);
 
     disp.nes = nes;
     disp.fb = nes->fbuf;
