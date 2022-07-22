@@ -3,21 +3,22 @@
 <img src ="./image/smb_grid.png" width=656>
 
 ## Overview
-- An NES Emulator
+- A NES Emulator
 - Written in C
 - Requires GLFW and OpenAL
-- Support mapper 0
+- Supports mapper 0
 - No audio supoprt yet
+- No multi player supoprt yet
 
 ## Features
-- Support game pad
-- Show tile pattern
-- Show tile grid
-- Show sprite grid
+- Game pad support
 - A, S, W, D -> cross button
 - K, L -> B and A buttons
 - B, N -> select and start buttons
-- R -> buttons
+- R -> reset button
+- Show tile pattern
+- Show tile grid
+- Show sprite grid
 
 ## Build
 - `$ make`
