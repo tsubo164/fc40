@@ -35,8 +35,7 @@
 ## License
 - MIT License
 
-<img src ="./image/super_mario_bros.png" width=164>
-<img src ="./image/donkey_kong.png" width=164>
+<img src ="./image/super_mario_bros.png" width=164> <img src ="./image/donkey_kong.png" width=164>
 <img src ="./image/ice_climber.png" width=164>
 <img src ="./image/golf.png" width=164>
 <img src ="./image/xevious.png" width=164>
