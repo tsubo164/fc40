@@ -1,4 +1,4 @@
-# ANESE: A NES Emulator
+# Famulator: A Famicom/NES Emulator
 
 <img src ="./image/smb_grid.png" width=656>
 
@@ -6,9 +6,7 @@
 - A NES Emulator
 - Written in C
 - Requires GLFW and OpenAL
-- Supports mapper 0
-- No audio supoprt yet
-- No multi player supoprt yet
+- Supports mapper 0 (200+ games)
 
 ## Features
 - Game pad support
@@ -19,6 +17,8 @@
 - Show tile pattern
 - Show tile grid
 - Show sprite grid
+- No audio supoprt yet
+- No multi player supoprt yet
 
 ## Build
 - `$ make`
