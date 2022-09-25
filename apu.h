@@ -25,6 +25,8 @@ struct APU {
     float pulse1_osc_dutycycle;
 };
 
+extern void clock_apu(struct APU *apu);
+
 /* write registers */
 extern void write_apu_square1_volume(struct APU *apu, uint8_t data);
 extern void write_apu_square1_sweep(struct APU *apu, uint8_t data);

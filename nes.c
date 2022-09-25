@@ -106,6 +106,7 @@ void update_frame(struct NES *nes)
 {
     do {
         clock_ppu(&nes->ppu);
+        clock_apu(&nes->cpu.apu);
 
         if (nes->clock++ % 3 == 0) {
             if (is_suspended(&nes->cpu))

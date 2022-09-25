@@ -46,3 +46,7 @@ void write_apu_square1_hi(struct APU *apu, uint8_t data)
     apu->pulse1_length_counter = length_table[(data & 0xF8) >> 3];
     apu->pulse1_env_start = 1;
 }
+
+void clock_apu(struct APU *apu)
+{
+}
