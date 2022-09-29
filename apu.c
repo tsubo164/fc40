@@ -47,6 +47,19 @@ void write_apu_square1_hi(struct APU *apu, uint8_t data)
     apu->pulse1_env_start = 1;
 }
 
+void reset_apu(struct APU *apu)
+{
+    apu->audio_time = 0.;
+}
+
+#define CPU_CLOCK_FREQ 1789773
 void clock_apu(struct APU *apu)
 {
+    /* apu clocked every other cpu cycles */
+    apu->audio_time += 2 * 1. / CPU_CLOCK_FREQ;
+
+    if (apu->audio_time > (1. / 44100)) {
+        /* generate a sample */
+        apu->audio_time -= (1. / 44100);
+    }
 }

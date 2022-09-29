@@ -70,6 +70,7 @@ void push_reset_button(struct NES *nes)
 {
     reset_cpu(&nes->cpu);
     reset_ppu(&nes->ppu);
+    reset_apu(&nes->cpu.apu);
 }
 
 static void clock_dma(struct NES *nes)
@@ -108,7 +109,7 @@ void update_frame(struct NES *nes)
         clock_ppu(&nes->ppu);
         clock_apu(&nes->cpu.apu);
 
-        if (nes->clock++ % 3 == 0) {
+        if (nes->clock % 3 == 0) {
             if (is_suspended(&nes->cpu))
                 clock_dma(nes);
             else
@@ -119,6 +120,8 @@ void update_frame(struct NES *nes)
             clear_nmi(&nes->ppu);
             nmi(&nes->cpu);
         }
+
+        nes->clock++;
 
     } while (!is_frame_ready(&nes->ppu));
 }

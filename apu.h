@@ -4,6 +4,8 @@
 #include <stdint.h>
 
 struct APU {
+    double audio_time;
+
     uint8_t pulse1_sweep_enabled;
     uint8_t pulse1_sweep_period;
     uint8_t pulse1_sweep_down;
@@ -25,8 +27,6 @@ struct APU {
     float pulse1_osc_dutycycle;
 };
 
-extern void clock_apu(struct APU *apu);
-
 /* write registers */
 extern void write_apu_square1_volume(struct APU *apu, uint8_t data);
 extern void write_apu_square1_sweep(struct APU *apu, uint8_t data);
@@ -34,5 +34,8 @@ extern void write_apu_square1_lo(struct APU *apu, uint8_t data);
 extern void write_apu_square1_hi(struct APU *apu, uint8_t data);
 
 /* read registers */
+
+extern void reset_apu(struct APU *apu);
+extern void clock_apu(struct APU *apu);
 
 #endif /* _H */
