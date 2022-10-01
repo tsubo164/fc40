@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 #include "apu.h"
+#include "sound.h"
 
 static uint8_t length_table[] = {
      10, 254,  20,   2,  40,   4,  80,   6,
@@ -53,13 +55,22 @@ void reset_apu(struct APU *apu)
 }
 
 #define CPU_CLOCK_FREQ 1789773
+#define APU_TIME_STEP (1. / CPU_CLOCK_FREQ)
+#define AUDIO_SAMPLE_STEP (1. / 44100)
+
 void clock_apu(struct APU *apu)
 {
     /* apu clocked every other cpu cycles */
-    apu->audio_time += 2 * 1. / CPU_CLOCK_FREQ;
+    apu->audio_time += APU_TIME_STEP;
 
-    if (apu->audio_time > (1. / 44100)) {
+    if (apu->audio_time > AUDIO_SAMPLE_STEP) {
         /* generate a sample */
-        apu->audio_time -= (1. / 44100);
+        apu->audio_time -= AUDIO_SAMPLE_STEP;
+
+        /* sin wave */
+        static int64_t c = 0;
+        const int16_t sample = 32767 * sin(2 * M_PI * 440 * c/44100);
+        push_sample(sample);
+        c++;
     }
 }

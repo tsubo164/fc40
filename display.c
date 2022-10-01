@@ -5,9 +5,6 @@
 #include "framebuffer.h"
 #include "nes.h"
 #include "ppu.h"
-/* XXX temp */
-#include "sound.h"
-
 
 const int MARGIN = 8;
 const int SCALE = 2;
@@ -111,7 +108,6 @@ int open_display(const struct display *disp)
         if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS && key.g == 0) {
             show_guide = !show_guide;
             key.g = 1;
-                send_samples();
         }
         if (glfwGetKey(window, GLFW_KEY_G) == GLFW_RELEASE && key.g == 1) {
             key.g = 0;
