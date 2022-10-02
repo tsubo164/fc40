@@ -71,6 +71,9 @@ void clock_apu(struct APU *apu)
         static int64_t c = 0;
         const int16_t sample = 32767 * sin(2 * M_PI * 440 * c/44100);
         push_sample(sample);
+        /*
+        push_sample__(sample);
+        */
         c++;
     }
 }

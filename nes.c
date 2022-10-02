@@ -105,6 +105,10 @@ static void clock_dma(struct NES *nes)
 
 void update_frame(struct NES *nes)
 {
+    /*
+    play_samples__();
+    */
+
     do {
         clock_ppu(&nes->ppu);
 
@@ -125,6 +129,10 @@ void update_frame(struct NES *nes)
         nes->clock++;
 
     } while (!is_frame_ready(&nes->ppu));
+
+    /*
+    send_samples__();
+    */
 }
 
 void input_controller(struct NES *nes, uint8_t id, uint8_t input)
