@@ -106,7 +106,9 @@ static void clock_dma(struct NES *nes)
 void update_frame(struct NES *nes)
 {
     /*
-    play_samples__();
+    static uint64_t f = 0;
+    if (f % 3 == 0)
+        play_samples__();
     */
 
     do {
@@ -131,7 +133,9 @@ void update_frame(struct NES *nes)
     } while (!is_frame_ready(&nes->ppu));
 
     /*
-    send_samples__();
+    if (f % 3 == 0)
+        send_samples__();
+    f++;
     */
 }
 

@@ -11,15 +11,12 @@ static const int SAMPLINGRATE = 44100;
 static ALCdevice *device = NULL;
 static ALCcontext *context = NULL;
 
-static ALuint buffer = 0;
-static ALuint buffer1 = 0;
-static ALuint buffer_current = 0;
+#define BUFFER_COUNT 32
 static ALuint source = 0;
+static ALuint buffer_list[BUFFER_COUNT] = {0};
+static ALuint *pbuffer = buffer_list;
 
-static int16_t *sample_buf = NULL;
-static int16_t *sample_buf1 = NULL;
-static int16_t *buf_filling = NULL;
-static int16_t *buf_filled = NULL;
+static int16_t *sample_data = NULL;
 static int32_t sample_count = 0;
 
 void init_sound(void)
@@ -28,8 +25,7 @@ void init_sound(void)
     context = alcCreateContext(device, NULL);
     alcMakeContextCurrent(context);
 
-    alGenBuffers(1, &buffer);
-    alGenBuffers(1, &buffer1);
+    alGenBuffers(BUFFER_COUNT, buffer_list);
     alGenSources(1, &source);
 }
 
@@ -37,25 +33,19 @@ void finish_sound(void)
 {
     alSourceStop(source);
 
-    alDeleteBuffers(1, &buffer);
-    alDeleteBuffers(1, &buffer1);
+    alDeleteBuffers(BUFFER_COUNT, buffer_list);
     alDeleteSources(1, &source);
 
     alcMakeContextCurrent(NULL);
     alcDestroyContext(context);
     alcCloseDevice(device);
 
-    free(sample_buf);
-    free(sample_buf1);
+    free(sample_data);
 }
 
 void play_sound(void)
 {
-    sample_buf = calloc(SAMPLINGRATE, sizeof(int16_t));
-    sample_buf1 = calloc(SAMPLINGRATE, sizeof(int16_t));
-
-    buf_filling = sample_buf;
-    buf_filled = sample_buf1;
+    sample_data = calloc(SAMPLINGRATE, sizeof(int16_t));
 }
 
 void send_samples(void)
@@ -77,29 +67,37 @@ static void unqueue_buffer(void)
 }
 
 //#define MAX_SAMPLE_COUNT (44100)
-#define AUDIO_FRAME_DELAY 5
+#define AUDIO_FRAME_DELAY 2
 #define MAX_SAMPLE_COUNT (AUDIO_FRAME_DELAY * 44100 / 60)
-static void queue_buffer(int16_t *buf, int count)
+
+static void switch_buffer(void)
 {
-    buffer_current = (buf == sample_buf) ? buffer : buffer1;
-
-    alBufferData(buffer_current, AL_FORMAT_MONO16, &buf[0],
-            count * sizeof(*buf), SAMPLINGRATE);
-
-    /* attach first set of buffers using queuing mechanism */
-    alSourceQueueBuffers(source, 1, &buffer_current);
+    if (pbuffer == &buffer_list[BUFFER_COUNT - 1])
+        pbuffer = buffer_list;
+    else
+        pbuffer++;
 }
 
-static void swap_buffers(int16_t **a, int16_t **b)
+static void clear_buffer__(int16_t *data, int count)
 {
-    int16_t *tmp = *a;
-    *a = *b;
-    *b = tmp;
+    memset(data, 0, sizeof(*data) * count);
+}
+
+static void queue_buffer__(int16_t *data, int count)
+{
+    /* copy sample data */
+    alBufferData(*pbuffer, AL_FORMAT_MONO16,
+            data, count * sizeof(*data), SAMPLINGRATE);
+
+    /* queue buffer */
+    alSourceQueueBuffers(source, 1, pbuffer);
+
+    switch_buffer();
 }
 
 void push_sample(int16_t sample)
 {
-    buf_filling[sample_count++] = sample;
+    sample_data[sample_count++] = sample;
 
     if (sample_count == MAX_SAMPLE_COUNT - 1) {
         play_samples__();
@@ -110,17 +108,15 @@ void push_sample(int16_t sample)
 
         unqueue_buffer();
 
-        queue_buffer(buf_filling, MAX_SAMPLE_COUNT);
+        queue_buffer__(sample_data, MAX_SAMPLE_COUNT);
 
-        swap_buffers(&buf_filling, &buf_filled);
-
-        memset(buf_filling, 0, sizeof(signed short) * SAMPLINGRATE);
+        clear_buffer__(sample_data, MAX_SAMPLE_COUNT);
     }
 }
 
 void push_sample__(int16_t sample)
 {
-    buf_filling[sample_count++] = sample;
+    sample_data[sample_count++] = sample;
 
     if (sample_count == MAX_SAMPLE_COUNT)
         sample_count = 0;
@@ -130,11 +126,9 @@ void send_samples__(void)
 {
     unqueue_buffer();
 
-    queue_buffer(buf_filling, sample_count);
+    queue_buffer__(sample_data, sample_count);
 
-    swap_buffers(&buf_filling, &buf_filled);
-
-    memset(buf_filling, 0, sizeof(signed short) * SAMPLINGRATE);
+    clear_buffer__(sample_data, sample_count);
 
     sample_count = 0;
 }
