@@ -59,11 +59,16 @@ static void write_byte(struct CPU *cpu, uint16_t addr, uint8_t data)
     }
     else if (addr == 0x4003) {
         write_apu_square1_hi(&cpu->apu, data);
+
+        write_apu_pulse1_length(&cpu->apu, data);
     }
     else if (addr == 0x4014) {
         /* DMA */
         cpu->suspended = 1;
         cpu->dma_page = data;
+    }
+    else if (addr == 0x4015) {
+        write_apu_status(&cpu->apu, data);
     }
     else if (addr >= 0x4016 && addr <= 0x4017) {
         const int id = addr & 0x001;

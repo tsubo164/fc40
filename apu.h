@@ -3,8 +3,17 @@
 
 #include <stdint.h>
 
+struct pulse_channel {
+    uint8_t enabled;
+    uint8_t length;
+};
+
 struct APU {
     double audio_time;
+    uint32_t clock;
+    uint32_t cycle;
+
+    struct pulse_channel pulse1;
 
     uint8_t pulse1_sweep_enabled;
     uint8_t pulse1_sweep_period;
@@ -28,6 +37,9 @@ struct APU {
 };
 
 /* write registers */
+extern void write_apu_status(struct APU *apu, uint8_t data);
+extern void write_apu_pulse1_length(struct APU *apu, uint8_t data);
+
 extern void write_apu_square1_volume(struct APU *apu, uint8_t data);
 extern void write_apu_square1_sweep(struct APU *apu, uint8_t data);
 extern void write_apu_square1_lo(struct APU *apu, uint8_t data);

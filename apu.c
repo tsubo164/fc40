@@ -11,6 +11,18 @@ static uint8_t length_table[] = {
     192,  24,  72,  26,  16,  28,  32,  30
 };
 
+void write_apu_status(struct APU *apu, uint8_t data)
+{
+    apu->pulse1.enabled = (data & 0x01);
+    if (!apu->pulse1.enabled)
+        apu->pulse1.length = 0;
+}
+
+void write_apu_pulse1_length(struct APU *apu, uint8_t data)
+{
+    apu->pulse1.length = length_table[data >> 3];
+}
+
 void write_apu_square1_volume(struct APU *apu, uint8_t data)
 {
     static uint8_t sequence_table[] = { 0x40,  0x60,  0x78,  0x9F};
@@ -52,6 +64,40 @@ void write_apu_square1_hi(struct APU *apu, uint8_t data)
 void reset_apu(struct APU *apu)
 {
     apu->audio_time = 0.;
+    apu->clock = 0;
+    apu->cycle = 0;
+    apu->pulse1.enabled = 0;
+    apu->pulse1.length = 0;
+}
+
+static void clock_frame_counter(struct APU *apu)
+{
+    if (apu->pulse1.length > 0)
+        apu->pulse1.length--;
+}
+
+static void clock_sequencer(struct APU *apu)
+{
+    switch (apu->cycle) {
+    case 3729:
+        break;
+
+    case 7457:
+        clock_frame_counter(apu);
+        break;
+
+    case 14915:
+        clock_frame_counter(apu);
+        break;
+
+    default:
+        break;
+    }
+
+    if (apu->cycle == 14915)
+        apu->cycle = 0;
+    else
+        apu->cycle++;
 }
 
 #define CPU_CLOCK_FREQ 1789773
@@ -61,19 +107,29 @@ void reset_apu(struct APU *apu)
 void clock_apu(struct APU *apu)
 {
     /* apu clocked every other cpu cycles */
+    if (apu->clock++ % 2 == 0)
+        clock_sequencer(apu);
+
     apu->audio_time += APU_TIME_STEP;
 
     if (apu->audio_time > AUDIO_SAMPLE_STEP) {
         /* generate a sample */
         apu->audio_time -= AUDIO_SAMPLE_STEP;
 
-        /* sin wave */
-        static int64_t c = 0;
-        const int16_t sample = 32767 * sin(2 * M_PI * 440 * c/44100);
+        /*
+        if (apu->pulse1.length > 0)
+            apu->pulse1.length--;
+        */
+        int16_t sample = 0;
+        if (apu->pulse1.length > 0) {
+            /* sin wave */
+            static int64_t c = 0;
+            sample = 32767 * sin(2 * M_PI * 440 * c/44100);
+            c++;
+        }
         push_sample(sample);
         /*
         push_sample__(sample);
         */
-        c++;
     }
 }
