@@ -59,8 +59,6 @@ static void write_byte(struct CPU *cpu, uint16_t addr, uint8_t data)
     }
     else if (addr == 0x4003) {
         write_apu_square1_hi(&cpu->apu, data);
-
-        write_apu_pulse1_length(&cpu->apu, data);
     }
     else if (addr == 0x4014) {
         /* DMA */

@@ -5,7 +5,15 @@
 
 struct pulse_channel {
     uint8_t enabled;
+
     uint8_t length;
+    uint8_t length_halt;
+
+    uint16_t timer;
+    uint16_t timer_period;
+
+    uint8_t duty;
+    uint8_t sequence_pos;
 };
 
 struct APU {
@@ -38,7 +46,6 @@ struct APU {
 
 /* write registers */
 extern void write_apu_status(struct APU *apu, uint8_t data);
-extern void write_apu_pulse1_length(struct APU *apu, uint8_t data);
 
 extern void write_apu_square1_volume(struct APU *apu, uint8_t data);
 extern void write_apu_square1_sweep(struct APU *apu, uint8_t data);
