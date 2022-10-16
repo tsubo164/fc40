@@ -3,17 +3,26 @@
 
 #include <stdint.h>
 
+struct envelope {
+    uint8_t start;
+    uint8_t decay;
+    uint8_t divider;
+    uint8_t volume;
+    uint8_t loop;
+    uint8_t constant;
+};
+
 struct pulse_channel {
     uint8_t enabled;
-
     uint8_t length;
-    uint8_t length_halt;
 
     uint16_t timer;
     uint16_t timer_period;
 
     uint8_t duty;
     uint8_t sequence_pos;
+
+    struct envelope envelope;
 };
 
 struct APU {
