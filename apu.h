@@ -3,6 +3,16 @@
 
 #include <stdint.h>
 
+struct sweep_unit {
+    uint8_t enabled;
+    uint8_t period;
+    uint16_t target_period;
+    uint8_t negate;
+    uint8_t shift;
+    uint8_t reload;
+    uint8_t divider;
+};
+
 struct envelope {
     uint8_t start;
     uint8_t decay;
@@ -22,6 +32,7 @@ struct pulse_channel {
     uint8_t duty;
     uint8_t sequence_pos;
 
+    struct sweep_unit sweep;
     struct envelope envelope;
 };
 
@@ -31,26 +42,6 @@ struct APU {
     uint32_t cycle;
 
     struct pulse_channel pulse1;
-
-    uint8_t pulse1_sweep_enabled;
-    uint8_t pulse1_sweep_period;
-    uint8_t pulse1_sweep_down;
-    uint8_t pulse1_sweep_shift;
-    uint8_t pulse1_sweep_reload;
-
-    uint32_t pulse1_seq_sequence;
-    uint32_t pulse1_seq_new_sequence;
-    uint16_t pulse1_seq_reload;
-    uint16_t pulse1_seq_timer;
-
-    uint8_t pulse1_length_counter;
-    uint8_t pulse1_halt;
-
-    uint8_t pulse1_env_start;
-    uint8_t pulse1_env_disable;
-    uint16_t pulse1_env_volume;
-
-    float pulse1_osc_dutycycle;
 };
 
 /* write registers */

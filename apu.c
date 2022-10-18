@@ -11,6 +11,8 @@ static uint8_t length_table[] = {
     192,  24,  72,  26,  16,  28,  32,  30
 };
 
+static void calculate_target_period(struct sweep_unit *swp, uint16_t current_period);
+
 void write_apu_status(struct APU *apu, uint8_t data)
 {
     apu->pulse1.enabled = (data & 0x01);
@@ -20,12 +22,10 @@ void write_apu_status(struct APU *apu, uint8_t data)
 
 void write_apu_square1_volume(struct APU *apu, uint8_t data)
 {
-    /*
-    $4000 | DDlc.vvvv | Pulse 1 Duty cycle, length counter halt,
-    constant volume/envelope flag, and volume/envelope divider period
-
-    The duty cycle is changed, but the sequencer's current position isn't affected.
-    */
+    /* $4000 | DDlc.vvvv | Pulse 1 Duty cycle, length counter halt,
+     * constant volume/envelope flag, and volume/envelope divider period
+     *
+     * The duty cycle is changed, but the sequencer's current position isn't affected.  */
     apu->pulse1.duty = (data >> 6) & 0x03;
     apu->pulse1.envelope.loop = (data >> 5) & 0x01;
     apu->pulse1.envelope.constant = (data >> 4) & 0x01;
@@ -34,37 +34,44 @@ void write_apu_square1_volume(struct APU *apu, uint8_t data)
 
 void write_apu_square1_sweep(struct APU *apu, uint8_t data)
 {
-    apu->pulse1_sweep_enabled = (data & 0x80) >> 7;
-    apu->pulse1_sweep_period = (data & 0x70) >> 4;
-    apu->pulse1_sweep_down = (data & 0x08) >> 3;
-    apu->pulse1_sweep_shift = data & 0x07;
-    apu->pulse1_sweep_reload = 1;
+    /* $4001 | EPPP.NSSS | Pulse channel 1 sweep setup (write)
+     * bit 7    | E--- ---- | Enabled flag
+     * bits 6-4 | -PPP ---- | The divider's period is P + 1 half-frames
+     * bit 3    | ---- N--- | Negate flag
+     *          |           | 0: add to period, sweeping toward lower frequencies
+     *          |           | 1: subtract from period, sweeping toward higher frequencies
+     * bits 2-0 | ---- -SSS | Shift count (number of bits)
+     * Side effects | Sets the reload flag */
+    apu->pulse1.sweep.enabled = (data >> 7) & 0x01;
+    /* The divider's period is set to P + 1 */
+    apu->pulse1.sweep.period = ((data >> 4) & 0x07) + 1;
+    apu->pulse1.sweep.negate = (data >> 3) & 0x01;
+    apu->pulse1.sweep.shift = (data & 0x07);
+    apu->pulse1.sweep.reload = 1;
 }
 
 void write_apu_square1_lo(struct APU *apu, uint8_t data)
 {
-    /*
-    $4002 | LLLL.LLLL | Pulse 1 timer Low 8 bits
-    */
+    /* $4002 | LLLL.LLLL | Pulse 1 timer Low 8 bits */
     apu->pulse1.timer_period = (apu->pulse1.timer_period & 0xFF00) | data;
 }
 
 void write_apu_square1_hi(struct APU *apu, uint8_t data)
 {
-    /*
-    $4003 | llll.lHHH | Pulse 1 length counter load and timer High 3 bits
-    */
-    /*
-    The sequencer is immediately restarted at the first value of the current sequence.
-    The envelope is also restarted. The period divider is not reset.
-    */
+    /* $4003 | llll.lHHH | Pulse 1 length counter load and timer High 3 bits
+     *
+     * The sequencer is immediately restarted at the first value of the current sequence.
+     * The envelope is also restarted. The period divider is not reset.  */
     apu->pulse1.length = length_table[data >> 3];
-
     apu->pulse1.timer_period = ((data & 0x07) << 8) | (apu->pulse1.timer_period & 0x00FF);
     /* XXX reset timer here? */
     apu->pulse1.timer = apu->pulse1.timer_period;
     apu->pulse1.sequence_pos = 0;
     apu->pulse1.envelope.start = 1;
+
+    /* Whenever the current period changes for any reason, whether by $400x writes or
+     * by sweep, the target period also changes. */
+    calculate_target_period(&apu->pulse1.sweep, apu->pulse1.timer_period);
 }
 
 void reset_apu(struct APU *apu)
@@ -81,6 +88,9 @@ void reset_apu(struct APU *apu)
 
     apu->pulse1.duty = 0;
     apu->pulse1.sequence_pos = 0;
+
+    struct sweep_unit s = {0};
+    apu->pulse1.sweep = s;
 
     struct envelope e = {0};
     apu->pulse1.envelope = e;
@@ -135,6 +145,40 @@ static void clock_length_counter(struct APU *apu)
         apu->pulse1.length--;
 }
 
+static void calculate_target_period(struct sweep_unit *swp, uint16_t current_period)
+{
+    uint16_t change = current_period >> swp->shift;
+
+    if (swp->negate) {
+        swp->target_period = current_period - change;
+
+        if (1 /* pulse1 */)
+            swp->target_period--;
+    }
+    else {
+        swp->target_period = current_period + change;
+    }
+}
+
+static void clock_sweep(struct sweep_unit *swp, struct pulse_channel *pulse)
+{
+    if (swp->divider == 0 && swp->enabled
+            && pulse->timer_period >= 8 && swp->target_period <= 0x07FF
+            && swp->shift > 0
+            /* && is_muting_pulse(swp) */) {
+        pulse->timer_period = swp->target_period;
+        calculate_target_period(&pulse->sweep, pulse->timer_period);
+    }
+
+    if (swp->divider == 0 || swp->reload) {
+        swp->divider = swp->period;
+        swp->reload = 0;
+    }
+    else {
+        swp->divider--;
+    }
+}
+
 static void clock_envelope(struct envelope *env)
 {
     if (env->start == 0) {
@@ -158,6 +202,11 @@ static void clock_envelope(struct envelope *env)
     }
 }
 
+static void clock_sweeps(struct APU *apu)
+{
+    clock_sweep(&apu->pulse1.sweep, &apu->pulse1);
+}
+
 static void clock_envelopes(struct APU *apu)
 {
     clock_envelope(&apu->pulse1.envelope);
@@ -168,12 +217,12 @@ static void clock_sequencer(struct APU *apu)
     switch (apu->cycle) {
     case 3729:
         clock_envelopes(apu);
-        clock_length_counter(apu);
         break;
 
     case 7457:
         clock_envelopes(apu);
         clock_length_counter(apu);
+        clock_sweeps(apu);
         break;
 
     case 11186:
@@ -183,6 +232,7 @@ static void clock_sequencer(struct APU *apu)
     case 14915:
         clock_envelopes(apu);
         clock_length_counter(apu);
+        clock_sweeps(apu);
         break;
 
     default:
