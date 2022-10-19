@@ -13,7 +13,7 @@ struct sweep_unit {
     uint8_t divider;
 };
 
-struct envelope {
+struct envelope_unit {
     uint8_t start;
     uint8_t decay;
     uint8_t divider;
@@ -33,7 +33,7 @@ struct pulse_channel {
     uint8_t sequence_pos;
 
     struct sweep_unit sweep;
-    struct envelope envelope;
+    struct envelope_unit envelope;
 };
 
 struct APU {

@@ -182,7 +182,7 @@ static void clock_sweep(struct sweep_unit *swp, struct pulse_channel *pulse)
     }
 }
 
-static void clock_envelope(struct envelope *env)
+static void clock_envelope(struct envelope_unit *env)
 {
     if (env->start == 0) {
         /* clock divider */
