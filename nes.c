@@ -70,7 +70,6 @@ void push_reset_button(struct NES *nes)
 {
     reset_cpu(&nes->cpu);
     reset_ppu(&nes->ppu);
-    reset_apu(&nes->cpu.apu);
 }
 
 static void clock_dma(struct NES *nes)

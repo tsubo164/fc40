@@ -54,6 +54,7 @@ extern void write_apu_square1_hi(struct APU *apu, uint8_t data);
 
 /* read registers */
 
+extern void power_up_apu(struct APU *apu);
 extern void reset_apu(struct APU *apu);
 extern void clock_apu(struct APU *apu);
 

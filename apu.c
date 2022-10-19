@@ -4,13 +4,6 @@
 #include "apu.h"
 #include "sound.h"
 
-static uint8_t length_table[] = {
-     10, 254,  20,   2,  40,   4,  80,   6,
-    160,   8,  60,  10,  14,  12,  26,  14,
-     12,  16,  24,  18,  48,  20,  96,  22,
-    192,  24,  72,  26,  16,  28,  32,  30
-};
-
 static void calculate_target_period(struct sweep_unit *swp, uint16_t current_period);
 
 void write_apu_status(struct APU *apu, uint8_t data)
@@ -58,6 +51,13 @@ void write_apu_square1_lo(struct APU *apu, uint8_t data)
 
 void write_apu_square1_hi(struct APU *apu, uint8_t data)
 {
+    static uint8_t length_table[] = {
+         10, 254,  20,   2,  40,   4,  80,   6,
+        160,   8,  60,  10,  14,  12,  26,  14,
+         12,  16,  24,  18,  48,  20,  96,  22,
+        192,  24,  72,  26,  16,  28,  32,  30
+    };
+
     /* $4003 | llll.lHHH | Pulse 1 length counter load and timer High 3 bits
      *
      * The sequencer is immediately restarted at the first value of the current sequence.
@@ -74,29 +74,35 @@ void write_apu_square1_hi(struct APU *apu, uint8_t data)
     calculate_target_period(&apu->pulse1.sweep, apu->pulse1.timer_period);
 }
 
-void reset_apu(struct APU *apu)
+void power_up_apu(struct APU *apu)
 {
-    apu->audio_time = 0.;
-    apu->clock = 0;
-    apu->cycle = 0;
-
-    apu->pulse1.enabled = 0;
-    apu->pulse1.length = 0;
-
-    apu->pulse1.timer = 0;
-    apu->pulse1.timer_period = 0;
-
-    apu->pulse1.duty = 0;
-    apu->pulse1.sequence_pos = 0;
-
-    struct sweep_unit s = {0};
-    apu->pulse1.sweep = s;
-
-    struct envelope e = {0};
-    apu->pulse1.envelope = e;
+    struct APU a = {0};
+    *apu = a;
 }
 
-static uint16_t sample_pulse(struct pulse_channel *pulse)
+void reset_apu(struct APU *apu)
+{
+    struct APU a = {0};
+    *apu = a;
+}
+
+static float pulse_output(uint8_t value)
+{
+    static float output_table[32] = {0.f};
+    static int table_built = 0;
+
+    if (!table_built) {
+        const int N = sizeof(output_table) / sizeof(output_table[0]);
+        int i;
+        for (i = 0; i < N; i++)
+            output_table[i] = 95.88 / (8128. / i + 100);
+        table_built = 1;
+    }
+
+    return output_table[value & 0x1F];
+}
+
+static float sample_pulse(struct pulse_channel *pulse)
 {
     const static uint8_t sequence_table[][8] = {
         {0, 1, 0, 0, 0, 0, 0, 0}, /* (12.5%) */
@@ -120,12 +126,9 @@ static uint16_t sample_pulse(struct pulse_channel *pulse)
         return 0;
 
     if (pulse->envelope.constant)
-        return pulse->envelope.volume * 32767 / 16;
+        return pulse_output(pulse->envelope.volume);
     else
-        return pulse->envelope.decay * 32767 / 16;
-    /*
-    return sample * 32767 / 8;
-    */
+        return pulse_output(pulse->envelope.decay);
 }
 
 static void update_timer(struct APU *apu)
@@ -264,19 +267,8 @@ void clock_apu(struct APU *apu)
         /* generate a sample */
         apu->audio_time -= AUDIO_SAMPLE_STEP;
 
-        int16_t sample = 0;
-        if (apu->pulse1.length > 0) {
-            if (0) {
-                /* sin wave */
-                static int64_t c = 0;
-                sample = 32767 * sin(2 * M_PI * 440 * c/44100);
-                c++;
-            }
-            else {
-                sample = sample_pulse(&apu->pulse1);
-            }
-        }
-        push_sample(sample);
+        const float sample = sample_pulse(&apu->pulse1);
+        push_sample(0xFFFF * sample);
         /*
         push_sample__(sample);
         */

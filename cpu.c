@@ -966,6 +966,8 @@ void power_up_cpu(struct CPU *cpu)
     set_y(cpu, 0x00);
     set_s(cpu, 0xFD);
     set_p(cpu, 0x00 | I);
+
+    power_up_apu(&cpu->apu);
 }
 
 void reset_cpu(struct CPU *cpu)
@@ -977,6 +979,8 @@ void reset_cpu(struct CPU *cpu)
 
     /* takes cycles */
     cpu->cycles = 8;
+
+    reset_apu(&cpu->apu);
 }
 
 void nmi(struct CPU *cpu)
