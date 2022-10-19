@@ -23,6 +23,7 @@ struct envelope_unit {
 };
 
 struct pulse_channel {
+    uint8_t id;
     uint8_t enabled;
     uint8_t length;
 
@@ -41,7 +42,7 @@ struct APU {
     uint32_t clock;
     uint32_t cycle;
 
-    struct pulse_channel pulse1;
+    struct pulse_channel pulse1, pulse2;
 };
 
 /* write registers */

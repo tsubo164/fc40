@@ -4,7 +4,7 @@
 #include "apu.h"
 #include "sound.h"
 
-static void calculate_target_period(struct sweep_unit *swp, uint16_t current_period);
+static void calculate_target_period(struct pulse_channel *pulse);
 
 void write_apu_status(struct APU *apu, uint8_t data)
 {
@@ -71,19 +71,25 @@ void write_apu_square1_hi(struct APU *apu, uint8_t data)
 
     /* Whenever the current period changes for any reason, whether by $400x writes or
      * by sweep, the target period also changes. */
-    calculate_target_period(&apu->pulse1.sweep, apu->pulse1.timer_period);
+    calculate_target_period(&apu->pulse1);
 }
 
 void power_up_apu(struct APU *apu)
 {
     struct APU a = {0};
     *apu = a;
+
+    apu->pulse1.id = 1;
+    apu->pulse2.id = 2;
 }
 
 void reset_apu(struct APU *apu)
 {
     struct APU a = {0};
     *apu = a;
+
+    apu->pulse1.id = 1;
+    apu->pulse2.id = 2;
 }
 
 static float pulse_output(uint8_t value)
@@ -148,14 +154,17 @@ static void clock_length_counter(struct APU *apu)
         apu->pulse1.length--;
 }
 
-static void calculate_target_period(struct sweep_unit *swp, uint16_t current_period)
+static void calculate_target_period(struct pulse_channel *pulse)
 {
+    const uint16_t current_period = pulse->timer_period;
+    struct sweep_unit *swp = &pulse->sweep;
+
     uint16_t change = current_period >> swp->shift;
 
     if (swp->negate) {
         swp->target_period = current_period - change;
 
-        if (1 /* pulse1 */)
+        if (pulse->id == 1)
             swp->target_period--;
     }
     else {
@@ -163,14 +172,18 @@ static void calculate_target_period(struct sweep_unit *swp, uint16_t current_per
     }
 }
 
-static void clock_sweep(struct sweep_unit *swp, struct pulse_channel *pulse)
+static int is_sweep_muting(const struct pulse_channel *pulse)
 {
-    if (swp->divider == 0 && swp->enabled
-            && pulse->timer_period >= 8 && swp->target_period <= 0x07FF
-            && swp->shift > 0
-            /* && is_muting_pulse(swp) */) {
+    return pulse->timer_period < 8 || pulse->sweep.target_period > 0x07FF;
+}
+
+static void clock_sweep(struct pulse_channel *pulse)
+{
+    struct sweep_unit *swp = &pulse->sweep;
+
+    if (swp->divider == 0 && swp->enabled && !is_sweep_muting(pulse)) {
         pulse->timer_period = swp->target_period;
-        calculate_target_period(&pulse->sweep, pulse->timer_period);
+        calculate_target_period(pulse);
     }
 
     if (swp->divider == 0 || swp->reload) {
@@ -207,7 +220,7 @@ static void clock_envelope(struct envelope_unit *env)
 
 static void clock_sweeps(struct APU *apu)
 {
-    clock_sweep(&apu->pulse1.sweep, &apu->pulse1);
+    clock_sweep(&apu->pulse1);
 }
 
 static void clock_envelopes(struct APU *apu)
