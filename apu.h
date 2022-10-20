@@ -53,6 +53,11 @@ extern void write_apu_square1_sweep(struct APU *apu, uint8_t data);
 extern void write_apu_square1_lo(struct APU *apu, uint8_t data);
 extern void write_apu_square1_hi(struct APU *apu, uint8_t data);
 
+extern void write_apu_square2_volume(struct APU *apu, uint8_t data);
+extern void write_apu_square2_sweep(struct APU *apu, uint8_t data);
+extern void write_apu_square2_lo(struct APU *apu, uint8_t data);
+extern void write_apu_square2_hi(struct APU *apu, uint8_t data);
+
 /* read registers */
 
 extern void power_up_apu(struct APU *apu);

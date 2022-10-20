@@ -6,28 +6,21 @@
 
 static void calculate_target_period(struct pulse_channel *pulse);
 
-void write_apu_status(struct APU *apu, uint8_t data)
+static void write_pulse_volume(struct pulse_channel *pulse, uint8_t data)
 {
-    apu->pulse1.enabled = (data & 0x01);
-    if (!apu->pulse1.enabled)
-        apu->pulse1.length = 0;
-}
-
-void write_apu_square1_volume(struct APU *apu, uint8_t data)
-{
-    /* $4000 | DDlc.vvvv | Pulse 1 Duty cycle, length counter halt,
+    /* $4000/$4004 | DDlc.vvvv | Pulse 1/2 Duty cycle, length counter halt,
      * constant volume/envelope flag, and volume/envelope divider period
      *
      * The duty cycle is changed, but the sequencer's current position isn't affected.  */
-    apu->pulse1.duty = (data >> 6) & 0x03;
-    apu->pulse1.envelope.loop = (data >> 5) & 0x01;
-    apu->pulse1.envelope.constant = (data >> 4) & 0x01;
-    apu->pulse1.envelope.volume = (data & 0x0F);
+    pulse->duty = (data >> 6) & 0x03;
+    pulse->envelope.loop = (data >> 5) & 0x01;
+    pulse->envelope.constant = (data >> 4) & 0x01;
+    pulse->envelope.volume = (data & 0x0F);
 }
 
-void write_apu_square1_sweep(struct APU *apu, uint8_t data)
+static void write_pulse_sweep(struct pulse_channel *pulse, uint8_t data)
 {
-    /* $4001 | EPPP.NSSS | Pulse channel 1 sweep setup (write)
+    /* $4001/$4005 | EPPP.NSSS | Pulse channel 1/2 sweep setup (write)
      * bit 7    | E--- ---- | Enabled flag
      * bits 6-4 | -PPP ---- | The divider's period is P + 1 half-frames
      * bit 3    | ---- N--- | Negate flag
@@ -35,21 +28,22 @@ void write_apu_square1_sweep(struct APU *apu, uint8_t data)
      *          |           | 1: subtract from period, sweeping toward higher frequencies
      * bits 2-0 | ---- -SSS | Shift count (number of bits)
      * Side effects | Sets the reload flag */
-    apu->pulse1.sweep.enabled = (data >> 7) & 0x01;
+    pulse->sweep.enabled = (data >> 7) & 0x01;
     /* The divider's period is set to P + 1 */
-    apu->pulse1.sweep.period = ((data >> 4) & 0x07) + 1;
-    apu->pulse1.sweep.negate = (data >> 3) & 0x01;
-    apu->pulse1.sweep.shift = (data & 0x07);
-    apu->pulse1.sweep.reload = 1;
+    pulse->sweep.period = ((data >> 4) & 0x07) + 1;
+    pulse->sweep.negate = (data >> 3) & 0x01;
+    pulse->sweep.shift = (data & 0x07);
+    pulse->sweep.reload = 1;
 }
 
-void write_apu_square1_lo(struct APU *apu, uint8_t data)
+static void write_pulse_lo(struct pulse_channel *pulse, uint8_t data)
 {
-    /* $4002 | LLLL.LLLL | Pulse 1 timer Low 8 bits */
-    apu->pulse1.timer_period = (apu->pulse1.timer_period & 0xFF00) | data;
+    /* $4002/$4006 | LLLL.LLLL | Pulse 1/2 timer Low 8 bits */
+    pulse->timer_period = (pulse->timer_period & 0xFF00) | data;
+    calculate_target_period(pulse);
 }
 
-void write_apu_square1_hi(struct APU *apu, uint8_t data)
+static void write_pulse_hi(struct pulse_channel *pulse, uint8_t data)
 {
     static uint8_t length_table[] = {
          10, 254,  20,   2,  40,   4,  80,   6,
@@ -58,20 +52,74 @@ void write_apu_square1_hi(struct APU *apu, uint8_t data)
         192,  24,  72,  26,  16,  28,  32,  30
     };
 
-    /* $4003 | llll.lHHH | Pulse 1 length counter load and timer High 3 bits
+    /* $4003/$4007 | llll.lHHH | Pulse 1/2 length counter load and timer High 3 bits
      *
      * The sequencer is immediately restarted at the first value of the current sequence.
      * The envelope is also restarted. The period divider is not reset.  */
-    apu->pulse1.length = length_table[data >> 3];
-    apu->pulse1.timer_period = ((data & 0x07) << 8) | (apu->pulse1.timer_period & 0x00FF);
+    pulse->length = length_table[data >> 3];
+    pulse->timer_period = ((data & 0x07) << 8) | (pulse->timer_period & 0x00FF);
     /* XXX reset timer here? */
-    apu->pulse1.timer = apu->pulse1.timer_period;
-    apu->pulse1.sequence_pos = 0;
-    apu->pulse1.envelope.start = 1;
+    pulse->timer = pulse->timer_period;
+    pulse->sequence_pos = 0;
+    pulse->envelope.start = 1;
 
     /* Whenever the current period changes for any reason, whether by $400x writes or
      * by sweep, the target period also changes. */
-    calculate_target_period(&apu->pulse1);
+    calculate_target_period(pulse);
+}
+
+void write_apu_status(struct APU *apu, uint8_t data)
+{
+
+    /* $4015 write | ---D NT21 | Enable DMC (D), noise (N), triangle (T),
+     * and pulse channels (2/1) */
+    apu->pulse1.enabled = (data & 0x01);
+    if (!apu->pulse1.enabled)
+        apu->pulse1.length = 0;
+
+    apu->pulse2.enabled = (data >> 1) & 0x01;
+    if (!apu->pulse2.enabled)
+        apu->pulse2.length = 0;
+}
+
+void write_apu_square1_volume(struct APU *apu, uint8_t data)
+{
+    write_pulse_volume(&apu->pulse1, data);
+}
+
+void write_apu_square1_sweep(struct APU *apu, uint8_t data)
+{
+    write_pulse_sweep(&apu->pulse1, data);
+}
+
+void write_apu_square1_lo(struct APU *apu, uint8_t data)
+{
+    write_pulse_lo(&apu->pulse1, data);
+}
+
+void write_apu_square1_hi(struct APU *apu, uint8_t data)
+{
+    write_pulse_hi(&apu->pulse1, data);
+}
+
+void write_apu_square2_volume(struct APU *apu, uint8_t data)
+{
+    write_pulse_volume(&apu->pulse2, data);
+}
+
+void write_apu_square2_sweep(struct APU *apu, uint8_t data)
+{
+    write_pulse_sweep(&apu->pulse2, data);
+}
+
+void write_apu_square2_lo(struct APU *apu, uint8_t data)
+{
+    write_pulse_lo(&apu->pulse2, data);
+}
+
+void write_apu_square2_hi(struct APU *apu, uint8_t data)
+{
+    write_pulse_hi(&apu->pulse2, data);
 }
 
 void power_up_apu(struct APU *apu)
@@ -92,7 +140,7 @@ void reset_apu(struct APU *apu)
     apu->pulse2.id = 2;
 }
 
-static float pulse_output(uint8_t value)
+static float calculate_pulse_level(uint8_t value)
 {
     static float output_table[32] = {0.f};
     static int table_built = 0;
@@ -108,7 +156,7 @@ static float pulse_output(uint8_t value)
     return output_table[value & 0x1F];
 }
 
-static float sample_pulse(struct pulse_channel *pulse)
+static uint8_t sample_pulse(struct pulse_channel *pulse)
 {
     const static uint8_t sequence_table[][8] = {
         {0, 1, 0, 0, 0, 0, 0, 0}, /* (12.5%) */
@@ -132,26 +180,34 @@ static float sample_pulse(struct pulse_channel *pulse)
         return 0;
 
     if (pulse->envelope.constant)
-        return pulse_output(pulse->envelope.volume);
+        return pulse->envelope.volume;
     else
-        return pulse_output(pulse->envelope.decay);
+        return pulse->envelope.decay;
 }
 
-static void update_timer(struct APU *apu)
+static void clock_pulse_timer(struct pulse_channel *pulse)
 {
-    if (apu->pulse1.timer == 0) {
-        apu->pulse1.timer = apu->pulse1.timer_period;
-        apu->pulse1.sequence_pos = (apu->pulse1.sequence_pos + 1) % 8;
+    if (pulse->timer == 0) {
+        pulse->timer = pulse->timer_period;
+        pulse->sequence_pos = (pulse->sequence_pos + 1) % 8;
     }
     else {
-        apu->pulse1.timer--;
+        pulse->timer--;
     }
+}
+
+static void clock_timers(struct APU *apu)
+{
+    clock_pulse_timer(&apu->pulse1);
+    clock_pulse_timer(&apu->pulse2);
 }
 
 static void clock_length_counter(struct APU *apu)
 {
     if (apu->pulse1.length > 0)
         apu->pulse1.length--;
+    if (apu->pulse2.length > 0)
+        apu->pulse2.length--;
 }
 
 static void calculate_target_period(struct pulse_channel *pulse)
@@ -221,11 +277,13 @@ static void clock_envelope(struct envelope_unit *env)
 static void clock_sweeps(struct APU *apu)
 {
     clock_sweep(&apu->pulse1);
+    clock_sweep(&apu->pulse2);
 }
 
 static void clock_envelopes(struct APU *apu)
 {
     clock_envelope(&apu->pulse1.envelope);
+    clock_envelope(&apu->pulse2.envelope);
 }
 
 static void clock_sequencer(struct APU *apu)
@@ -272,7 +330,7 @@ void clock_apu(struct APU *apu)
         clock_sequencer(apu);
 
     if (apu->clock % 2 == 0)
-        update_timer(apu);
+        clock_timers(apu);
 
     apu->audio_time += APU_TIME_STEP;
 
@@ -280,10 +338,10 @@ void clock_apu(struct APU *apu)
         /* generate a sample */
         apu->audio_time -= AUDIO_SAMPLE_STEP;
 
-        const float sample = sample_pulse(&apu->pulse1);
-        push_sample(0xFFFF * sample);
-        /*
-        push_sample__(sample);
-        */
+        const uint8_t p1 = sample_pulse(&apu->pulse1);
+        const uint8_t p2 = sample_pulse(&apu->pulse2);
+        const float pulse_out = calculate_pulse_level(p1 + p2);
+
+        push_sample(0xFFFF * pulse_out);
     }
 }
