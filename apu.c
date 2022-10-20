@@ -15,12 +15,18 @@ static void calculate_target_period(struct pulse_channel *pulse);
 
 static void write_pulse_volume(struct pulse_channel *pulse, uint8_t data)
 {
-    /* $4000/$4004 | DDlc.vvvv | Pulse 1/2 Duty cycle, length counter halt,
-     * constant volume/envelope flag, and volume/envelope divider period
-     *
-     * The duty cycle is changed, but the sequencer's current position isn't affected.  */
+    /* $4000    | ddLC.VVVV | Pulse channel 1 duty and volume/envelope (write)
+     * $4004    | ddLC.VVVV | Pulse channel 2 duty and volume/envelope (write)
+     * $400C    | --LC.VVVV | Noise channel volume/envelope (write)
+     * bit 5    | --L- ---- | APU Length Counter halt flag/envelope loop flag
+     * bit 4    | ---C ---- | Constant volume flag (0: use volume from envelope;
+     *                                              1: use constant volume)
+     * bits 3-0 | ---- VVVV | Used as the volume in constant volume (C set) mode.
+     *                      | Also used as the reload value for the envelope's divider
+     *                      | (the period becomes V + 1 quarter frames). */
     pulse->duty = (data >> 6) & 0x03;
-    pulse->envelope.loop = (data >> 5) & 0x01;
+    pulse->length_halt = (data >> 5) & 0x01;
+    pulse->envelope.loop = pulse->length_halt;
     pulse->envelope.constant = (data >> 4) & 0x01;
     pulse->envelope.volume = (data & 0x0F);
 }
@@ -58,8 +64,6 @@ static void write_pulse_hi(struct pulse_channel *pulse, uint8_t data)
      * The envelope is also restarted. The period divider is not reset.  */
     pulse->length = length_table[data >> 3];
     pulse->timer_period = ((data & 0x07) << 8) | (pulse->timer_period & 0x00FF);
-    /* XXX reset timer here? */
-    pulse->timer = pulse->timer_period;
     pulse->sequence_pos = 0;
     pulse->envelope.start = 1;
 
@@ -73,7 +77,8 @@ static void write_triangle_linear(struct triangle_channel *tri, uint8_t data)
     /* $4008    | CRRR.RRRR | Linear counter setup (write)
      * bit 7    | C---.---- | Control flag (this bit is also the length counter halt flag)
      * bits 6-0 | -RRR RRRR | Counter reload value */
-    tri->control = (data >> 7) & 0x01;
+    tri->length_halt = (data >> 7) & 0x01;
+    tri->control = tri->length_halt;
     tri->reload = (data & 0x7F);
 }
 
@@ -246,12 +251,16 @@ static void clock_timers(struct APU *apu)
     clock_pulse_timer(&apu->pulse2);
 }
 
-static void clock_length_counter(struct APU *apu)
+static void clock_length_counters(struct APU *apu)
 {
-    if (apu->pulse1.length > 0)
+    if (apu->pulse1.length > 0 && !apu->pulse1.length_halt)
         apu->pulse1.length--;
-    if (apu->pulse2.length > 0)
+
+    if (apu->pulse2.length > 0 && !apu->pulse1.length_halt)
         apu->pulse2.length--;
+
+    if (apu->triangle.length > 0 && !apu->triangle.length_halt)
+        apu->triangle.length--;
 }
 
 static void calculate_target_period(struct pulse_channel *pulse)
@@ -339,7 +348,7 @@ static void clock_sequencer(struct APU *apu)
 
     case 7457:
         clock_envelopes(apu);
-        clock_length_counter(apu);
+        clock_length_counters(apu);
         clock_sweeps(apu);
         break;
 
@@ -349,7 +358,7 @@ static void clock_sequencer(struct APU *apu)
 
     case 14915:
         clock_envelopes(apu);
-        clock_length_counter(apu);
+        clock_length_counters(apu);
         clock_sweeps(apu);
         break;
 

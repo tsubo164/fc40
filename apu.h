@@ -26,6 +26,7 @@ struct pulse_channel {
     uint8_t id;
     uint8_t enabled;
     uint8_t length;
+    uint8_t length_halt;
 
     uint16_t timer;
     uint16_t timer_period;
@@ -40,6 +41,7 @@ struct pulse_channel {
 struct triangle_channel {
     uint8_t enabled;
     uint8_t length;
+    uint8_t length_halt;
 
     uint8_t control;
     uint8_t reload;
