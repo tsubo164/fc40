@@ -4,6 +4,13 @@
 #include "apu.h"
 #include "sound.h"
 
+static const uint8_t length_table[] = {
+     10, 254,  20,   2,  40,   4,  80,   6,
+    160,   8,  60,  10,  14,  12,  26,  14,
+     12,  16,  24,  18,  48,  20,  96,  22,
+    192,  24,  72,  26,  16,  28,  32,  30
+};
+
 static void calculate_target_period(struct pulse_channel *pulse);
 
 static void write_pulse_volume(struct pulse_channel *pulse, uint8_t data)
@@ -45,13 +52,6 @@ static void write_pulse_lo(struct pulse_channel *pulse, uint8_t data)
 
 static void write_pulse_hi(struct pulse_channel *pulse, uint8_t data)
 {
-    static uint8_t length_table[] = {
-         10, 254,  20,   2,  40,   4,  80,   6,
-        160,   8,  60,  10,  14,  12,  26,  14,
-         12,  16,  24,  18,  48,  20,  96,  22,
-        192,  24,  72,  26,  16,  28,  32,  30
-    };
-
     /* $4003/$4007 | llll.lHHH | Pulse 1/2 length counter load and timer High 3 bits
      *
      * The sequencer is immediately restarted at the first value of the current sequence.
@@ -68,6 +68,31 @@ static void write_pulse_hi(struct pulse_channel *pulse, uint8_t data)
     calculate_target_period(pulse);
 }
 
+static void write_triangle_linear(struct triangle_channel *tri, uint8_t data)
+{
+    /* $4008    | CRRR.RRRR | Linear counter setup (write)
+     * bit 7    | C---.---- | Control flag (this bit is also the length counter halt flag)
+     * bits 6-0 | -RRR RRRR | Counter reload value */
+    tri->control = (data >> 7) & 0x01;
+    tri->reload = (data & 0x7F);
+}
+
+static void write_triangle_lo(struct triangle_channel *tri, uint8_t data)
+{
+    /* $400A    | LLLL.LLLL | Timer low (write)
+     * bits 7-0 | LLLL LLLL | Timer low 8 bits */
+    tri->timer_period = (tri->timer_period & 0xFF00) | data;
+}
+
+static void write_triangle_hi(struct triangle_channel *tri, uint8_t data)
+{
+    /* $400B     | llll.lHHH | Length counter load and timer high (write)
+     * bits 2-0  | ---- -HHH | Timer high 3 bits
+     * Side effects | Sets the linear counter reload flag */
+    tri->length = length_table[data >> 3];
+    tri->timer_period = ((data & 0x07) << 8) | (tri->timer_period & 0x00FF);
+}
+
 void write_apu_status(struct APU *apu, uint8_t data)
 {
 
@@ -80,6 +105,10 @@ void write_apu_status(struct APU *apu, uint8_t data)
     apu->pulse2.enabled = (data >> 1) & 0x01;
     if (!apu->pulse2.enabled)
         apu->pulse2.length = 0;
+
+    apu->triangle.enabled = (data >> 2) & 0x01;
+    if (!apu->triangle.enabled)
+        apu->triangle.length = 0;
 }
 
 void write_apu_square1_volume(struct APU *apu, uint8_t data)
@@ -120,6 +149,21 @@ void write_apu_square2_lo(struct APU *apu, uint8_t data)
 void write_apu_square2_hi(struct APU *apu, uint8_t data)
 {
     write_pulse_hi(&apu->pulse2, data);
+}
+
+void write_apu_triangle_linear(struct APU *apu, uint8_t data)
+{
+    write_triangle_linear(&apu->triangle, data);
+}
+
+void write_apu_triangle_lo(struct APU *apu, uint8_t data)
+{
+    write_triangle_lo(&apu->triangle, data);
+}
+
+void write_apu_triangle_hi(struct APU *apu, uint8_t data)
+{
+    write_triangle_hi(&apu->triangle, data);
 }
 
 void power_up_apu(struct APU *apu)

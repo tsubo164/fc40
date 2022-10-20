@@ -37,12 +37,23 @@ struct pulse_channel {
     struct envelope_unit envelope;
 };
 
+struct triangle_channel {
+    uint8_t enabled;
+    uint8_t length;
+
+    uint8_t control;
+    uint8_t reload;
+
+    uint16_t timer_period;
+};
+
 struct APU {
     double audio_time;
     uint32_t clock;
     uint32_t cycle;
 
     struct pulse_channel pulse1, pulse2;
+    struct triangle_channel triangle;
 };
 
 /* write registers */
@@ -57,6 +68,10 @@ extern void write_apu_square2_volume(struct APU *apu, uint8_t data);
 extern void write_apu_square2_sweep(struct APU *apu, uint8_t data);
 extern void write_apu_square2_lo(struct APU *apu, uint8_t data);
 extern void write_apu_square2_hi(struct APU *apu, uint8_t data);
+
+extern void write_apu_triangle_linear(struct APU *apu, uint8_t data);
+extern void write_apu_triangle_lo(struct APU *apu, uint8_t data);
+extern void write_apu_triangle_hi(struct APU *apu, uint8_t data);
 
 /* read registers */
 

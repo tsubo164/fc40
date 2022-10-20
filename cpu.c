@@ -72,6 +72,15 @@ static void write_byte(struct CPU *cpu, uint16_t addr, uint8_t data)
     else if (addr == 0x4007) {
         write_apu_square2_hi(&cpu->apu, data);
     }
+    else if (addr == 0x4008) {
+        write_apu_triangle_linear(&cpu->apu, data);
+    }
+    else if (addr == 0x400A) {
+        write_apu_triangle_lo(&cpu->apu, data);
+    }
+    else if (addr == 0x400B) {
+        write_apu_triangle_hi(&cpu->apu, data);
+    }
     else if (addr == 0x4014) {
         /* DMA */
         cpu->suspended = 1;
