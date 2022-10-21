@@ -45,6 +45,7 @@ struct triangle_channel {
 
     uint8_t control;
     uint8_t linear_counter;
+    uint8_t linear_period;
     uint8_t linear_reload;
 
     uint16_t timer;

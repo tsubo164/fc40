@@ -79,7 +79,7 @@ static void write_triangle_linear(struct triangle_channel *tri, uint8_t data)
      * bits 6-0 | -RRR RRRR | Counter reload value */
     tri->length_halt = (data >> 7) & 0x01;
     tri->control = tri->length_halt;
-    tri->linear_reload = (data & 0x7F);
+    tri->linear_period = (data & 0x7F);
 }
 
 static void write_triangle_lo(struct triangle_channel *tri, uint8_t data)
@@ -206,6 +206,17 @@ static float calculate_pulse_level(uint8_t value)
     return output_table[value & 0x1F];
 }
 
+static float calculate_tnd_level(uint8_t triangle, uint8_t noise, uint8_t dmc)
+{
+    return 0.00851 * triangle + 0.00494 * noise + 0.00335 * dmc;
+
+    if (triangle == 0 && noise == 0 && dmc == 0)
+        return 0.;
+
+    const float tnd = triangle / 8227. + noise / 12241. + dmc / 22638.;
+    return 159.79 / (1. / tnd + 100.);
+}
+
 static uint8_t sample_pulse(struct pulse_channel *pulse)
 {
     const static uint8_t sequence_table[][8] = {
@@ -215,7 +226,7 @@ static uint8_t sample_pulse(struct pulse_channel *pulse)
         {1, 0, 0, 1, 1, 1, 1, 1}  /* (25% negated) */
     };
 
-    const uint16_t sample = sequence_table[pulse->duty][pulse->sequence_pos];
+    const uint8_t sample = sequence_table[pulse->duty][pulse->sequence_pos];
 
     if (sample == 0)
         return 0;
@@ -235,6 +246,35 @@ static uint8_t sample_pulse(struct pulse_channel *pulse)
         return pulse->envelope.decay;
 }
 
+static uint8_t sample_triangle(struct triangle_channel *tri)
+{
+    const static uint8_t sequence_table[32] = {
+        15, 14, 13, 12, 11, 10,  9,  8,  7,  6,  5,  4,  3,  2,  1,  0,
+         0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15
+    };
+
+    const uint8_t sample = sequence_table[tri->sequence_pos];
+
+    if (sample == 0)
+        return 0;
+
+    if (tri->enabled == 0)
+        return 0;
+
+    if (tri->length == 0)
+        return 0;
+
+        /*
+    if (tri->timer_period < 8)
+        return 0;
+        */
+
+    if (tri->linear_counter == 0)
+        return 0;
+
+    return sample;
+}
+
 static void clock_pulse_timer(struct pulse_channel *pulse)
 {
     if (pulse->timer == 0) {
@@ -250,7 +290,8 @@ static void clock_triangle_timer(struct triangle_channel *tri)
 {
     if (tri->timer == 0) {
         tri->timer = tri->timer_period;
-        tri->sequence_pos = (tri->sequence_pos + 1) % 32;
+        if (tri->length > 0 && tri->linear_counter > 0)
+            tri->sequence_pos = (tri->sequence_pos + 1) % 32;
     }
     else {
         tri->timer--;
@@ -355,25 +396,44 @@ static void clock_envelopes(struct APU *apu)
     clock_envelope(&apu->pulse2.envelope);
 }
 
+static void clock_linear_counter(struct APU *apu)
+{
+    struct triangle_channel *tri = &apu->triangle;
+
+    if (tri->linear_reload) {
+        tri->linear_counter = tri->linear_period;
+    }
+    else if (tri->linear_counter > 0) {
+        tri->linear_counter--;
+    }
+
+    if (!tri->control)
+        tri->linear_reload = 0;
+}
+
 static void clock_sequencer(struct APU *apu)
 {
     switch (apu->cycle) {
     case 3729:
         clock_envelopes(apu);
+        clock_linear_counter(apu);
         break;
 
     case 7457:
         clock_envelopes(apu);
+        clock_linear_counter(apu);
         clock_length_counters(apu);
         clock_sweeps(apu);
         break;
 
     case 11186:
         clock_envelopes(apu);
+        clock_linear_counter(apu);
         break;
 
     case 14915:
         clock_envelopes(apu);
+        clock_linear_counter(apu);
         clock_length_counters(apu);
         clock_sweeps(apu);
         break;
@@ -410,7 +470,12 @@ void clock_apu(struct APU *apu)
         const uint8_t p2 = sample_pulse(&apu->pulse2);
         const float pulse_out = calculate_pulse_level(p1 + p2);
 
+        const uint8_t t = sample_triangle(&apu->triangle);
+        const float tnd_out = calculate_tnd_level(t, 0, 0);
+
+        if (0)
         push_sample(0xFFFF * pulse_out);
+        push_sample(0xFFFF * tnd_out);
     }
 
     apu->clock++;
