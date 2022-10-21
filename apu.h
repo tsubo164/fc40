@@ -44,9 +44,13 @@ struct triangle_channel {
     uint8_t length_halt;
 
     uint8_t control;
-    uint8_t reload;
+    uint8_t linear_counter;
+    uint8_t linear_reload;
 
+    uint16_t timer;
     uint16_t timer_period;
+
+    uint8_t sequence_pos;
 };
 
 struct APU {

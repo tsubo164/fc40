@@ -79,7 +79,7 @@ static void write_triangle_linear(struct triangle_channel *tri, uint8_t data)
      * bits 6-0 | -RRR RRRR | Counter reload value */
     tri->length_halt = (data >> 7) & 0x01;
     tri->control = tri->length_halt;
-    tri->reload = (data & 0x7F);
+    tri->linear_reload = (data & 0x7F);
 }
 
 static void write_triangle_lo(struct triangle_channel *tri, uint8_t data)
@@ -96,6 +96,7 @@ static void write_triangle_hi(struct triangle_channel *tri, uint8_t data)
      * Side effects | Sets the linear counter reload flag */
     tri->length = length_table[data >> 3];
     tri->timer_period = ((data & 0x07) << 8) | (tri->timer_period & 0x00FF);
+    tri->linear_reload = 1;
 }
 
 void write_apu_status(struct APU *apu, uint8_t data)
@@ -245,10 +246,25 @@ static void clock_pulse_timer(struct pulse_channel *pulse)
     }
 }
 
+static void clock_triangle_timer(struct triangle_channel *tri)
+{
+    if (tri->timer == 0) {
+        tri->timer = tri->timer_period;
+        tri->sequence_pos = (tri->sequence_pos + 1) % 32;
+    }
+    else {
+        tri->timer--;
+    }
+}
+
 static void clock_timers(struct APU *apu)
 {
-    clock_pulse_timer(&apu->pulse1);
-    clock_pulse_timer(&apu->pulse2);
+    if (apu->clock % 2 == 0) {
+        clock_pulse_timer(&apu->pulse1);
+        clock_pulse_timer(&apu->pulse2);
+    }
+
+    clock_triangle_timer(&apu->triangle);
 }
 
 static void clock_length_counters(struct APU *apu)
@@ -379,11 +395,10 @@ static void clock_sequencer(struct APU *apu)
 void clock_apu(struct APU *apu)
 {
     /* apu clocked every other cpu cycles */
-    if (apu->clock++ % 2 == 0)
+    if (apu->clock % 2 == 0)
         clock_sequencer(apu);
 
-    if (apu->clock % 2 == 0)
-        clock_timers(apu);
+    clock_timers(apu);
 
     apu->audio_time += APU_TIME_STEP;
 
@@ -397,4 +412,6 @@ void clock_apu(struct APU *apu)
 
         push_sample(0xFFFF * pulse_out);
     }
+
+    apu->clock++;
 }
