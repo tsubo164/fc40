@@ -89,9 +89,12 @@ static void write_byte(struct CPU *cpu, uint16_t addr, uint8_t data)
     else if (addr == 0x4015) {
         write_apu_status(&cpu->apu, data);
     }
-    else if (addr >= 0x4016 && addr <= 0x4017) {
+    else if (addr == 0x4016) {
         const int id = addr & 0x001;
         cpu->controller_state[id] = cpu->controller_input[id];
+    }
+    else if (addr == 0x4017) {
+        write_apu_frame_counter(&cpu->apu, data);
     }
 }
 

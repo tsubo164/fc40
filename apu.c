@@ -117,6 +117,21 @@ void write_apu_status(struct APU *apu, uint8_t data)
         apu->triangle.length = 0;
 }
 
+void write_apu_frame_counter(struct APU *apu, uint8_t data)
+{
+    /* $4017 | MI--.---- | Set mode and interrupt (write)
+     * Bit 7 | M--- ---- | Sequencer mode: 0 selects 4-step sequence,
+     *       |           | 1 selects 5-step sequence
+     * Bit 6 | -I-- ---- | Interrupt inhibit flag. If set, the frame interrupt flag
+     *       |           | is cleared, otherwise it is unaffected.
+     * Side effects | After 3 or 4 CPU clock cycles*, the timer is reset.
+     *              | If the mode flag is set, then both "quarter frame" and
+     *              | "half frame" signals are also generated. */
+    apu->mode = (data >> 7) & 0x01;
+    if ((data >> 6) & 0x01)
+        apu->interrupt = 0;
+}
+
 void write_apu_square1_volume(struct APU *apu, uint8_t data)
 {
     write_pulse_volume(&apu->pulse1, data);
@@ -264,10 +279,8 @@ static uint8_t sample_triangle(struct triangle_channel *tri)
     if (tri->length == 0)
         return 0;
 
-        /*
-    if (tri->timer_period < 8)
+    if (tri->timer_period < 2)
         return 0;
-        */
 
     if (tri->linear_counter == 0)
         return 0;
@@ -411,7 +424,7 @@ static void clock_linear_counter(struct APU *apu)
         tri->linear_reload = 0;
 }
 
-static void clock_sequencer(struct APU *apu)
+static void clock_sequencer_step4(struct APU *apu)
 {
     switch (apu->cycle) {
     case 3729:
@@ -448,6 +461,54 @@ static void clock_sequencer(struct APU *apu)
         apu->cycle++;
 }
 
+static void clock_sequencer_step5(struct APU *apu)
+{
+    switch (apu->cycle) {
+    case 3729:
+        clock_envelopes(apu);
+        clock_linear_counter(apu);
+        break;
+
+    case 7457:
+        clock_envelopes(apu);
+        clock_linear_counter(apu);
+        clock_length_counters(apu);
+        clock_sweeps(apu);
+        break;
+
+    case 11186:
+        clock_envelopes(apu);
+        clock_linear_counter(apu);
+        break;
+
+    case 14915:
+        break;
+
+    case 18641:
+        clock_envelopes(apu);
+        clock_linear_counter(apu);
+        clock_length_counters(apu);
+        clock_sweeps(apu);
+        break;
+
+    default:
+        break;
+    }
+
+    if (apu->cycle == 18641)
+        apu->cycle = 0;
+    else
+        apu->cycle++;
+}
+
+static void clock_sequencer(struct APU *apu)
+{
+    if (apu->mode == 0)
+        clock_sequencer_step4(apu);
+    else
+        clock_sequencer_step5(apu);
+}
+
 #define CPU_CLOCK_FREQ 1789773
 #define APU_TIME_STEP (1. / CPU_CLOCK_FREQ)
 #define AUDIO_SAMPLE_STEP (1. / 44100)
@@ -473,9 +534,17 @@ void clock_apu(struct APU *apu)
         const uint8_t t = sample_triangle(&apu->triangle);
         const float tnd_out = calculate_tnd_level(t, 0, 0);
 
+        if (t > 0 && 0) {
+            printf("%02d: ", t);
+            int i;
+            for (i = 0; i < t; i ++)
+                printf("-");
+            printf("\n");
+        }
+
         if (0)
-        push_sample(0xFFFF * pulse_out);
         push_sample(0xFFFF * tnd_out);
+        push_sample(0xFFFF * (pulse_out + tnd_out));
     }
 
     apu->clock++;

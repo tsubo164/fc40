@@ -59,12 +59,16 @@ struct APU {
     uint32_t clock;
     uint32_t cycle;
 
+    uint8_t mode;
+    uint8_t interrupt;
+
     struct pulse_channel pulse1, pulse2;
     struct triangle_channel triangle;
 };
 
 /* write registers */
 extern void write_apu_status(struct APU *apu, uint8_t data);
+extern void write_apu_frame_counter(struct APU *apu, uint8_t data);
 
 extern void write_apu_square1_volume(struct APU *apu, uint8_t data);
 extern void write_apu_square1_sweep(struct APU *apu, uint8_t data);
