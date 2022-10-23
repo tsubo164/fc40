@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <math.h>
 #include "apu.h"
 #include "sound.h"
 
@@ -17,7 +16,6 @@ static void write_pulse_volume(struct pulse_channel *pulse, uint8_t data)
 {
     /* $4000    | ddLC.VVVV | Pulse channel 1 duty and volume/envelope (write)
      * $4004    | ddLC.VVVV | Pulse channel 2 duty and volume/envelope (write)
-     * $400C    | --LC.VVVV | Noise channel volume/envelope (write)
      * bit 5    | --L- ---- | APU Length Counter halt flag/envelope loop flag
      * bit 4    | ---C ---- | Constant volume flag (0: use volume from envelope;
      *                                              1: use constant volume)
@@ -99,6 +97,44 @@ static void write_triangle_hi(struct triangle_channel *tri, uint8_t data)
     tri->linear_reload = 1;
 }
 
+static void write_noise_volume(struct noise_channel *noise, uint8_t data)
+{
+    /* $400C    | --LC.VVVV | Noise channel volume/envelope (write)
+     * bit 5    | --L- ---- | APU Length Counter halt flag/envelope loop flag
+     * bit 4    | ---C ---- | Constant volume flag (0: use volume from envelope;
+     *                                              1: use constant volume)
+     * bits 3-0 | ---- VVVV | Used as the volume in constant volume (C set) mode.
+     *                      | Also used as the reload value for the envelope's divider
+     *                      | (the period becomes V + 1 quarter frames). */
+    noise->length_halt = (data >> 5) & 0x01;
+    noise->envelope.loop = noise->length_halt;
+    noise->envelope.constant = (data >> 4) & 0x01;
+    noise->envelope.volume = (data & 0x0F);
+}
+
+static void write_noise_lo(struct noise_channel *noise, uint8_t data)
+{
+    /* $400E    | M---.PPPP | Mode and period (write)
+     * bit 7    | M--- ---- | Mode flag
+     * bits 3-0 | ---- PPPP | The timer period is set to entry P of the following:
+     * Rate  $0 $1  $2  $3  $4  $5   $6   $7   $8   $9   $A   $B   $C    $D    $E    $F
+     * --------------------------------------------------------------------------
+     * NTSC   4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068
+     * PAL    4, 8, 14, 30, 60, 88, 118, 148, 188, 236, 354, 472, 708,  944, 1890, 3778 */
+    static const uint16_t period_table[] = {
+        4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068
+    };
+    noise->mode = (data >> 7) & 0x01;
+    noise->timer_period = period_table[data & 0x0F];
+}
+
+static void write_noise_hi(struct noise_channel *noise, uint8_t data)
+{
+    /* $400F | llll.l--- | Length counter load and envelope restart (write) */
+    noise->length = length_table[data >> 3];
+    noise->envelope.start = 1;
+}
+
 void write_apu_status(struct APU *apu, uint8_t data)
 {
 
@@ -115,6 +151,10 @@ void write_apu_status(struct APU *apu, uint8_t data)
     apu->triangle.enabled = (data >> 2) & 0x01;
     if (!apu->triangle.enabled)
         apu->triangle.length = 0;
+
+    apu->noise.enabled = (data >> 3) & 0x01;
+    if (!apu->noise.enabled)
+        apu->noise.length = 0;
 }
 
 void write_apu_frame_counter(struct APU *apu, uint8_t data)
@@ -185,6 +225,21 @@ void write_apu_triangle_lo(struct APU *apu, uint8_t data)
 void write_apu_triangle_hi(struct APU *apu, uint8_t data)
 {
     write_triangle_hi(&apu->triangle, data);
+}
+
+void write_apu_noise_volume(struct APU *apu, uint8_t data)
+{
+    write_noise_volume(&apu->noise, data);
+}
+
+void write_apu_noise_lo(struct APU *apu, uint8_t data)
+{
+    write_noise_lo(&apu->noise, data);
+}
+
+void write_apu_noise_hi(struct APU *apu, uint8_t data)
+{
+    write_noise_hi(&apu->noise, data);
 }
 
 void power_up_apu(struct APU *apu)
@@ -542,9 +597,14 @@ void clock_apu(struct APU *apu)
             printf("\n");
         }
 
-        if (0)
-        push_sample(0xFFFF * tnd_out);
-        push_sample(0xFFFF * (pulse_out + tnd_out));
+        static float lpf = 0;
+        const float raw_data = pulse_out + tnd_out;
+        const float k = .5;
+
+        /* Lowpass Filter: lpf = (1 - k) * prev_lpf + k * raw_data */
+        lpf += k * (raw_data - lpf);
+
+        push_sample(0xFFFF * lpf);
     }
 
     apu->clock++;

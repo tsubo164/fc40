@@ -81,6 +81,15 @@ static void write_byte(struct CPU *cpu, uint16_t addr, uint8_t data)
     else if (addr == 0x400B) {
         write_apu_triangle_hi(&cpu->apu, data);
     }
+    else if (addr == 0x400C) {
+        write_apu_noise_volume(&cpu->apu, data);
+    }
+    else if (addr == 0x400E) {
+        write_apu_noise_lo(&cpu->apu, data);
+    }
+    else if (addr == 0x400F) {
+        write_apu_noise_hi(&cpu->apu, data);
+    }
     else if (addr == 0x4014) {
         /* DMA */
         cpu->suspended = 1;

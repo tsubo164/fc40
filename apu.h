@@ -54,6 +54,17 @@ struct triangle_channel {
     uint8_t sequence_pos;
 };
 
+struct noise_channel {
+    uint8_t enabled;
+    uint8_t length;
+    uint8_t length_halt;
+
+    uint8_t mode;
+    uint16_t timer_period;
+
+    struct envelope_unit envelope;
+};
+
 struct APU {
     double audio_time;
     uint32_t clock;
@@ -64,6 +75,7 @@ struct APU {
 
     struct pulse_channel pulse1, pulse2;
     struct triangle_channel triangle;
+    struct noise_channel noise;
 };
 
 /* write registers */
@@ -83,6 +95,10 @@ extern void write_apu_square2_hi(struct APU *apu, uint8_t data);
 extern void write_apu_triangle_linear(struct APU *apu, uint8_t data);
 extern void write_apu_triangle_lo(struct APU *apu, uint8_t data);
 extern void write_apu_triangle_hi(struct APU *apu, uint8_t data);
+
+extern void write_apu_noise_volume(struct APU *apu, uint8_t data);
+extern void write_apu_noise_lo(struct APU *apu, uint8_t data);
+extern void write_apu_noise_hi(struct APU *apu, uint8_t data);
 
 /* read registers */
 
