@@ -249,6 +249,9 @@ void power_up_apu(struct APU *apu)
 
     apu->pulse1.id = 1;
     apu->pulse2.id = 2;
+
+    /* On power-up, the shift register is loaded with the value 1. */
+    apu->noise.shift = 1;
 }
 
 void reset_apu(struct APU *apu)
@@ -260,8 +263,11 @@ void reset_apu(struct APU *apu)
     apu->pulse2.id = 2;
 }
 
-static float calculate_pulse_level(uint8_t value)
+static float calculate_pulse_level(uint8_t pulse1, uint8_t pulse2)
 {
+    /* Linear Approximation sounds less cracking/popping */
+    return 0.00752 * (pulse1 + pulse2);
+
     static float output_table[32] = {0.f};
     static int table_built = 0;
 
@@ -273,11 +279,12 @@ static float calculate_pulse_level(uint8_t value)
         table_built = 1;
     }
 
-    return output_table[value & 0x1F];
+    return output_table[(pulse1 + pulse2) & 0x1F];
 }
 
 static float calculate_tnd_level(uint8_t triangle, uint8_t noise, uint8_t dmc)
 {
+    /* Linear Approximation sounds less cracking/popping */
     return 0.00851 * triangle + 0.00494 * noise + 0.00335 * dmc;
 
     if (triangle == 0 && noise == 0 && dmc == 0)
@@ -343,6 +350,23 @@ static uint8_t sample_triangle(struct triangle_channel *tri)
     return sample;
 }
 
+static uint8_t sample_noise(struct noise_channel *noise)
+{
+    if (noise->enabled == 0)
+        return 0;
+
+    if (noise->length == 0)
+        return 0;
+
+    if ((noise->shift & 0x0001) == 1)
+        return 0;
+
+    if (noise->envelope.constant)
+        return noise->envelope.volume;
+    else
+        return noise->envelope.decay;
+}
+
 static void clock_pulse_timer(struct pulse_channel *pulse)
 {
     if (pulse->timer == 0) {
@@ -366,11 +390,36 @@ static void clock_triangle_timer(struct triangle_channel *tri)
     }
 }
 
+static void clock_noise_timer(struct noise_channel *noise)
+{
+    /* The shift register is 15 bits wide, with bits numbered
+     * 14 - 13 - 12 - 11 - 10 - 9 - 8 - 7 - 6 - 5 - 4 - 3 - 2 - 1 - 0
+     * When the timer clocks the shift register, the following actions occur in order:
+     * 1. Feedback is calculated as the exclusive-OR of bit 0 and one other bit:
+     *    bit 6 if Mode flag is set, otherwise bit 1.
+     * 2. The shift register is shifted right by one bit.
+     * 3. Bit 14, the leftmost bit, is set to the feedback calculated earlier. */
+    if (noise->timer == 0) {
+        noise->timer = noise->timer_period;
+
+        const uint8_t bit = noise->mode == 1 ? 6 : 1;
+        const uint16_t other = (noise->shift >> bit) & 0x01;
+        const uint16_t feedback = (noise->shift & 0x01) ^ other;
+
+        noise->shift >>= 1;
+        noise->shift |= (feedback << 14);
+    }
+    else {
+        noise->timer--;
+    }
+}
+
 static void clock_timers(struct APU *apu)
 {
     if (apu->clock % 2 == 0) {
         clock_pulse_timer(&apu->pulse1);
         clock_pulse_timer(&apu->pulse2);
+        clock_noise_timer(&apu->noise);
     }
 
     clock_triangle_timer(&apu->triangle);
@@ -386,6 +435,9 @@ static void clock_length_counters(struct APU *apu)
 
     if (apu->triangle.length > 0 && !apu->triangle.length_halt)
         apu->triangle.length--;
+
+    if (apu->noise.length > 0 && !apu->noise.length_halt)
+        apu->noise.length--;
 }
 
 static void calculate_target_period(struct pulse_channel *pulse)
@@ -462,6 +514,7 @@ static void clock_envelopes(struct APU *apu)
 {
     clock_envelope(&apu->pulse1.envelope);
     clock_envelope(&apu->pulse2.envelope);
+    clock_envelope(&apu->noise.envelope);
 }
 
 static void clock_linear_counter(struct APU *apu)
@@ -483,22 +536,12 @@ static void clock_sequencer_step4(struct APU *apu)
 {
     switch (apu->cycle) {
     case 3729:
-        clock_envelopes(apu);
-        clock_linear_counter(apu);
-        break;
-
-    case 7457:
-        clock_envelopes(apu);
-        clock_linear_counter(apu);
-        clock_length_counters(apu);
-        clock_sweeps(apu);
-        break;
-
     case 11186:
         clock_envelopes(apu);
         clock_linear_counter(apu);
         break;
 
+    case 7457:
     case 14915:
         clock_envelopes(apu);
         clock_linear_counter(apu);
@@ -520,25 +563,12 @@ static void clock_sequencer_step5(struct APU *apu)
 {
     switch (apu->cycle) {
     case 3729:
-        clock_envelopes(apu);
-        clock_linear_counter(apu);
-        break;
-
-    case 7457:
-        clock_envelopes(apu);
-        clock_linear_counter(apu);
-        clock_length_counters(apu);
-        clock_sweeps(apu);
-        break;
-
     case 11186:
         clock_envelopes(apu);
         clock_linear_counter(apu);
         break;
 
-    case 14915:
-        break;
-
+    case 7457:
     case 18641:
         clock_envelopes(apu);
         clock_linear_counter(apu);
@@ -584,10 +614,11 @@ void clock_apu(struct APU *apu)
 
         const uint8_t p1 = sample_pulse(&apu->pulse1);
         const uint8_t p2 = sample_pulse(&apu->pulse2);
-        const float pulse_out = calculate_pulse_level(p1 + p2);
+        const float pulse_out = calculate_pulse_level(p1, p2);
 
         const uint8_t t = sample_triangle(&apu->triangle);
-        const float tnd_out = calculate_tnd_level(t, 0, 0);
+        const uint8_t n = sample_noise(&apu->noise);
+        const float tnd_out = calculate_tnd_level(t, n, 0);
 
         if (t > 0 && 0) {
             printf("%02d: ", t);

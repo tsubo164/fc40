@@ -59,7 +59,10 @@ struct noise_channel {
     uint8_t length;
     uint8_t length_halt;
 
+    uint16_t shift;
+
     uint8_t mode;
+    uint16_t timer;
     uint16_t timer_period;
 
     struct envelope_unit envelope;
