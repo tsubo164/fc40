@@ -260,6 +260,9 @@ void reset_apu(struct APU *apu)
 
     apu->pulse1.id = 1;
     apu->pulse2.id = 2;
+
+    /* On power-up, the shift register is loaded with the value 1. */
+    apu->noise.shift = 1;
 }
 
 void clear_irq(struct APU *apu)
