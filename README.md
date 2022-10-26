@@ -17,7 +17,7 @@
 - Show tile pattern
 - Show tile grid
 - Show sprite grid
-- No audio supoprt yet
+- Four audio channels supoprted
 - No multi player supoprt yet
 
 ## Build
