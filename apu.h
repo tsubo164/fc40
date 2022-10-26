@@ -74,7 +74,8 @@ struct APU {
     uint32_t cycle;
 
     uint8_t mode;
-    uint8_t interrupt;
+    uint8_t frame_interrupt;
+    uint8_t irq_generated;
 
     struct pulse_channel pulse1, pulse2;
     struct triangle_channel triangle;
@@ -104,6 +105,10 @@ extern void write_apu_noise_lo(struct APU *apu, uint8_t data);
 extern void write_apu_noise_hi(struct APU *apu, uint8_t data);
 
 /* read registers */
+
+/* interruptions */
+extern void clear_irq(struct APU *apu);
+extern int is_irq_generated(const struct APU *apu);
 
 extern void power_up_apu(struct APU *apu);
 extern void reset_apu(struct APU *apu);

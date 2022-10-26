@@ -1016,6 +1016,22 @@ void reset_cpu(struct CPU *cpu)
     reset_apu(&cpu->apu);
 }
 
+void irq(struct CPU *cpu)
+{
+    if (get_flag(cpu, I))
+        /* interrupt is not allowed */
+        return;
+
+    push_word(cpu, cpu->pc);
+
+    set_flag(cpu, B, 0);
+    set_flag(cpu, I, 1);
+    push(cpu, cpu->p);
+
+    set_pc(cpu, read_word(cpu, 0xFFFE));
+    cpu->cycles = 7;
+}
+
 void nmi(struct CPU *cpu)
 {
     push_word(cpu, cpu->pc);

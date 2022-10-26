@@ -127,6 +127,11 @@ void update_frame(struct NES *nes)
             nmi(&nes->cpu);
         }
 
+        if (is_irq_generated(&nes->cpu.apu)) {
+            clear_irq(&nes->cpu.apu);
+            irq(&nes->cpu);
+        }
+
         nes->clock++;
 
     } while (!is_frame_ready(&nes->ppu));

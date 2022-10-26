@@ -168,8 +168,7 @@ void write_apu_frame_counter(struct APU *apu, uint8_t data)
      *              | If the mode flag is set, then both "quarter frame" and
      *              | "half frame" signals are also generated. */
     apu->mode = (data >> 7) & 0x01;
-    if ((data >> 6) & 0x01)
-        apu->interrupt = 0;
+    apu->frame_interrupt = ((data >> 6) & 0x01) == 0;
 }
 
 void write_apu_square1_volume(struct APU *apu, uint8_t data)
@@ -261,6 +260,16 @@ void reset_apu(struct APU *apu)
 
     apu->pulse1.id = 1;
     apu->pulse2.id = 2;
+}
+
+void clear_irq(struct APU *apu)
+{
+    apu->irq_generated = 0;
+}
+
+int is_irq_generated(const struct APU *apu)
+{
+    return apu->irq_generated;
 }
 
 static float calculate_pulse_level(uint8_t pulse1, uint8_t pulse2)
@@ -532,6 +541,12 @@ static void clock_linear_counter(struct APU *apu)
         tri->linear_reload = 0;
 }
 
+static void clock_frame_interrupt(struct APU *apu)
+{
+    if (apu->frame_interrupt)
+        apu->irq_generated = 1;
+}
+
 static void clock_sequencer_step4(struct APU *apu)
 {
     switch (apu->cycle) {
@@ -553,10 +568,12 @@ static void clock_sequencer_step4(struct APU *apu)
         break;
     }
 
-    if (apu->cycle == 14915)
+    if (apu->cycle == 14915) {
+        clock_frame_interrupt(apu);
         apu->cycle = 0;
-    else
+    } else {
         apu->cycle++;
+    }
 }
 
 static void clock_sequencer_step5(struct APU *apu)

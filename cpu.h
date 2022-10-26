@@ -34,6 +34,7 @@ struct CPU {
 
 extern void power_up_cpu(struct CPU *cpu);
 extern void reset_cpu(struct CPU *cpu);
+extern void irq(struct CPU *cpu);
 extern void nmi(struct CPU *cpu);
 extern void clock_cpu(struct CPU *cpu);
 
