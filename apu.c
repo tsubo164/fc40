@@ -640,14 +640,6 @@ void clock_apu(struct APU *apu)
         const uint8_t n = sample_noise(&apu->noise);
         const float tnd_out = calculate_tnd_level(t, n, 0);
 
-        if (t > 0 && 0) {
-            printf("%02d: ", t);
-            int i;
-            for (i = 0; i < t; i ++)
-                printf("-");
-            printf("\n");
-        }
-
         static float lpf = 0;
         const float raw_data = pulse_out + tnd_out;
         const float k = .5;
@@ -655,7 +647,7 @@ void clock_apu(struct APU *apu)
         /* Lowpass Filter: lpf = (1 - k) * prev_lpf + k * raw_data */
         lpf += k * (raw_data - lpf);
 
-        push_sample(0xFFFF * lpf);
+        push_sample(lpf);
     }
 
     apu->clock++;

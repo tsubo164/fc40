@@ -6,6 +6,8 @@
 #include "sound.h"
 #include "debug.h"
 
+#define AUDIO_DELAY_FRAME 2
+
 void power_up_nes(struct NES *nes)
 {
     const int RESX = 256;
@@ -47,12 +49,21 @@ void insert_cartridge(struct NES *nes, struct cartridge *cart)
     nes->ppu.cart = nes->cart;
 }
 
+static void send_initial_samples(void)
+{
+    const int N = AUDIO_DELAY_FRAME * 44100 / 60;
+    int i;
+    for (i = 0; i < N; i++)
+        push_sample(0.);
+    send_samples();
+}
+
 void play_game(struct NES *nes)
 {
     struct display disp = {0};
 
     init_sound();
-    play_sound();
+    send_initial_samples();
 
     disp.nes = nes;
     disp.fb = nes->fbuf;
@@ -104,11 +115,9 @@ static void clock_dma(struct NES *nes)
 
 void update_frame(struct NES *nes)
 {
-    /*
-    static uint64_t f = 0;
-    if (f % 3 == 0)
-        play_samples__();
-    */
+    static uint64_t frame = 0;
+    if (frame % AUDIO_DELAY_FRAME == 0)
+        play_samples();
 
     do {
         clock_ppu(&nes->ppu);
@@ -136,11 +145,9 @@ void update_frame(struct NES *nes)
 
     } while (!is_frame_ready(&nes->ppu));
 
-    /*
-    if (f % 3 == 0)
-        send_samples__();
-    f++;
-    */
+    if (frame % AUDIO_DELAY_FRAME == 0)
+        send_samples();
+    frame++;
 }
 
 void input_controller(struct NES *nes, uint8_t id, uint8_t input)
