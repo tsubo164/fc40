@@ -33,8 +33,8 @@ static void load_pattern(struct framebuffer *fb, const struct cartridge *cart, i
 
     for (y = Y0; y < Y1; y++) {
         const uint8_t fine_y = y - Y0;
-        const uint8_t lo = read_chr_rom(cart, id * 16 + fine_y + 0);
-        const uint8_t hi = read_chr_rom(cart, id * 16 + fine_y + 8);
+        const uint8_t lo = read_char_rom(cart, id * 16 + fine_y + 0);
+        const uint8_t hi = read_char_rom(cart, id * 16 + fine_y + 8);
         int mask = 1 << 7;
 
         for (x = X0; x < X1; x++) {

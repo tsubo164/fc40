@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include "mapper.h"
 
 struct cartridge {
     uint8_t *prog_rom;
@@ -11,15 +12,17 @@ struct cartridge {
     size_t char_size;
 
     uint8_t mirroring;
-    uint8_t mapper;
+    uint8_t mapper_id;
     uint8_t nbanks;
+
+    struct mapper mapper;
 };
 
 extern struct cartridge *open_cartridge(const char *filename);
 extern void close_cartridge(struct cartridge *cart);
 
-extern uint8_t rom_read(const struct cartridge *cart, uint16_t addr);
-extern uint8_t read_chr_rom(const struct cartridge *cart, uint16_t addr);
+extern uint8_t read_prog_rom(const struct cartridge *cart, uint16_t addr);
+extern uint8_t read_char_rom(const struct cartridge *cart, uint16_t addr);
 
 extern int is_vertical_mirroring(const struct cartridge *cart);
 

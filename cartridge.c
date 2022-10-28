@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "cartridge.h"
+#include "mapper.h"
 
 static uint8_t *read_program(FILE *fp, size_t size)
 {
@@ -39,10 +40,15 @@ struct cartridge *open_cartridge(const char *filename)
     cart->prog_size = header[4] * 16 * 1024;
     cart->char_size = header[5] * 8 * 1024;
     cart->mirroring = header[6] & 0x01;
-    cart->mapper = header[6] >> 4;
+    cart->mapper_id = header[6] >> 4;
     cart->nbanks = header[4] == 1 ? 1 : 2;
     cart->prog_rom = read_program(fp, cart->prog_size);
     cart->char_rom = read_character(fp, cart->char_size);
+
+    const int err = open_mapper(&cart->mapper, cart->mapper_id,
+            cart->prog_size, cart->char_size);
+    if (err)
+        fprintf(stderr, "error: mapper %d is not supported.\n", cart->mapper_id);
 
     fclose(fp);
     return cart;
@@ -52,34 +58,36 @@ void close_cartridge(struct cartridge *cart)
 {
     if (!cart)
         return;
+
+    close_mapper(&cart->mapper);
+
     free(cart->prog_rom);
     free(cart->char_rom);
     free(cart);
 }
 
-uint8_t rom_read(const struct cartridge *cart, uint16_t addr)
+uint8_t read_prog_rom(const struct cartridge *cart, uint16_t addr)
 {
-    if (addr >= 0x8000 && addr <= 0xFFFF) {
-        uint16_t mapped;
+    uint32_t mapped = 0;
 
-        if (cart->mapper == 0)
-            mapped = addr & (cart->nbanks == 1 ? 0x3FFF : 0x7FFF);
-        else
-            mapped = addr;
-
+    if (map_prog_addr(&cart->mapper, addr, &mapped)) {
         return cart->prog_rom[mapped];
     }
-
-    return 0;
+    else {
+        return 0;
+    }
 }
 
-uint8_t read_chr_rom(const struct cartridge *cart, uint16_t addr)
+uint8_t read_char_rom(const struct cartridge *cart, uint16_t addr)
 {
-    if (addr >= 0x0000 && addr <= 0x1FFF) {
-        return cart->char_rom[addr];
-    }
+    uint32_t mapped = 0;
 
-    return 0xFF;
+    if (map_char_addr(&cart->mapper, addr, &mapped)) {
+        return cart->char_rom[mapped];
+    }
+    else {
+        return 0xFF;
+    }
 }
 
 int is_vertical_mirroring(const struct cartridge *cart)
