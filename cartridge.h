@@ -16,6 +16,7 @@ struct cartridge {
     uint8_t nbanks;
 
     struct mapper mapper;
+    uint8_t mapper_supported;
 };
 
 extern struct cartridge *open_cartridge(const char *filename);

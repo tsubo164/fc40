@@ -47,8 +47,11 @@ struct cartridge *open_cartridge(const char *filename)
 
     const int err = open_mapper(&cart->mapper, cart->mapper_id,
             cart->prog_size, cart->char_size);
+
     if (err)
-        fprintf(stderr, "error: mapper %d is not supported.\n", cart->mapper_id);
+        cart->mapper_supported = 0;
+    else
+        cart->mapper_supported = 1;
 
     fclose(fp);
     return cart;

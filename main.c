@@ -30,6 +30,12 @@ int main(int argc, char **argv)
         return -1;
     }
 
+    if (!cart->mapper_supported) {
+        fprintf(stderr, "mapper %d is not supported.\n", cart->mapper_id);
+        close_cartridge(cart);
+        return -1;
+    }
+
     insert_cartridge(&nes, cart);
     power_up_nes(&nes);
 

@@ -7,7 +7,8 @@ CFLAGS  := $(DEF) $(OPT) $(INCLUDE) -Wall --pedantic-errors -c
 LDFLAGS := -lglfw -framework Cocoa -framework OpenGL -framework IOKit $(LIBRARY)
 RM      := rm -f
 
-SRCS    := apu cartridge cpu debug display framebuffer log main mapper nes ppu sound
+SRCS    := apu cartridge cpu debug display framebuffer log main mapper mapper_002 \
+           nes ppu sound
 
 .PHONY: clean test
 

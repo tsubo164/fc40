@@ -50,6 +50,9 @@ static void open_mapper_0(struct mapper *m, size_t prog_size, size_t char_size)
 
 int open_mapper(struct mapper *m, int id, size_t prog_size, size_t char_size)
 {
+    /* initialize with mapper 0 */
+    open_mapper_0(m, prog_size, char_size);
+
     switch (id) {
     case 0:
         open_mapper_0(m, prog_size, char_size);
@@ -59,21 +62,28 @@ int open_mapper(struct mapper *m, int id, size_t prog_size, size_t char_size)
         return -1;
     }
 
-    m->init_func();
+    if (m->init_func)
+        m->init_func();
+
     return 0;
 }
 
 void close_mapper(struct mapper *m)
 {
-    m->finish_func();
+    if (m->finish_func)
+        m->finish_func();
 }
 
 int map_prog_addr(const struct mapper *m, uint16_t addr, uint32_t *mapped)
 {
+    if (!m->map_prog_addr_func)
+        return 0;
     return m->map_prog_addr_func(addr, mapped);
 }
 
 int map_char_addr(const struct mapper *m, uint16_t addr, uint32_t *mapped)
 {
+    if (!m->map_char_addr_func)
+        return 0;
     return m->map_char_addr_func(addr, mapped);
 }
