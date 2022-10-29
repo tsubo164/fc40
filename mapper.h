@@ -5,8 +5,8 @@
 #include <stdint.h>
 
 struct mapper {
-    int (*map_prog_addr_func)(uint16_t addr, uint32_t *mapped);
-    int (*map_char_addr_func)(uint16_t addr, uint32_t *mapped);
+    int32_t (*map_prog_addr_func)(uint16_t addr);
+    int32_t (*map_char_addr_func)(uint16_t addr);
 
     void (*init_func)(void);
     void (*finish_func)(void);
@@ -15,7 +15,7 @@ struct mapper {
 extern int open_mapper(struct mapper *m, int id, size_t prog_size, size_t char_size);
 extern void close_mapper(struct mapper *m);
 
-extern int map_prog_addr(const struct mapper *m, uint16_t addr, uint32_t *mapped);
-extern int map_char_addr(const struct mapper *m, uint16_t addr, uint32_t *mapped);
+extern int32_t map_prog_addr(const struct mapper *m, uint16_t addr);
+extern int32_t map_char_addr(const struct mapper *m, uint16_t addr);
 
 #endif /* _H */

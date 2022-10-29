@@ -4,37 +4,28 @@
 static int prog_nbanks = 1;
 static int char_nbanks = 1;
 
-static int map_prog_addr_0(uint16_t addr, uint32_t *mapped)
+static int32_t map_prog_addr_0(uint16_t addr)
 {
-    if (addr >= 0x8000 && addr <= 0xFFFF) {
-        *mapped = addr & (prog_nbanks == 1 ? 0x3FFF : 0x7FFF);
-        return 1;
-    }
-    else {
-        return 0;
-    }
+    if (addr >= 0x8000 && addr <= 0xFFFF)
+        return addr & (prog_nbanks == 1 ? 0x3FFF : 0x7FFF);
+    else
+        return -1;
 }
 
-static int map_char_addr_0(uint16_t addr, uint32_t *mapped)
+static int32_t map_char_addr_0(uint16_t addr)
 {
-    if (addr >= 0x0000 && addr <= 0x1FFF) {
-        *mapped = addr;
-        return 1;
-    }
-    else {
-        *mapped = 0xFF;
-        return 0;
-    }
+    if (addr >= 0x0000 && addr <= 0x1FFF)
+        return addr;
+    else
+        return -1;
 }
 
 static void init_mapper_0(void)
 {
-    /* does nothing */
 }
 
 static void finish_mapper_0(void)
 {
-    /* does nothing */
 }
 
 static void open_mapper_0(struct mapper *m, size_t prog_size, size_t char_size)
@@ -74,16 +65,16 @@ void close_mapper(struct mapper *m)
         m->finish_func();
 }
 
-int map_prog_addr(const struct mapper *m, uint16_t addr, uint32_t *mapped)
+int32_t map_prog_addr(const struct mapper *m, uint16_t addr)
 {
     if (!m->map_prog_addr_func)
         return 0;
-    return m->map_prog_addr_func(addr, mapped);
+    return m->map_prog_addr_func(addr);
 }
 
-int map_char_addr(const struct mapper *m, uint16_t addr, uint32_t *mapped)
+int32_t map_char_addr(const struct mapper *m, uint16_t addr)
 {
     if (!m->map_char_addr_func)
         return 0;
-    return m->map_char_addr_func(addr, mapped);
+    return m->map_char_addr_func(addr);
 }

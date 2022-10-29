@@ -4,27 +4,20 @@
 static int prog_nbanks = 1;
 static int char_nbanks = 1;
 
-static int map_prog_addr_002(uint16_t addr, uint32_t *mapped)
+static int32_t map_prog_addr_002(uint16_t addr)
 {
-    if (addr >= 0x8000 && addr <= 0xFFFF) {
-        *mapped = addr & (prog_nbanks == 1 ? 0x3FFF : 0x7FFF);
-        return 1;
-    }
-    else {
-        return 0;
-    }
+    if (addr >= 0x8000 && addr <= 0xFFFF)
+        return addr & (prog_nbanks == 1 ? 0x3FFF : 0x7FFF);
+    else
+        return -1;
 }
 
-static int map_char_addr_002(uint16_t addr, uint32_t *mapped)
+static int32_t map_char_addr_002(uint16_t addr)
 {
-    if (addr >= 0x0000 && addr <= 0x1FFF) {
-        *mapped = addr;
-        return 1;
-    }
-    else {
-        *mapped = 0xFF;
-        return 0;
-    }
+    if (addr >= 0x0000 && addr <= 0x1FFF)
+        return addr;
+    else
+        return -1;
 }
 
 static void init_mapper_002(void)

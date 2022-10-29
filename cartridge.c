@@ -71,26 +71,22 @@ void close_cartridge(struct cartridge *cart)
 
 uint8_t read_prog_rom(const struct cartridge *cart, uint16_t addr)
 {
-    uint32_t mapped = 0;
+    const int32_t mapped = map_prog_addr(&cart->mapper, addr);
 
-    if (map_prog_addr(&cart->mapper, addr, &mapped)) {
+    if (mapped >= 0)
         return cart->prog_rom[mapped];
-    }
-    else {
+    else
         return 0;
-    }
 }
 
 uint8_t read_char_rom(const struct cartridge *cart, uint16_t addr)
 {
-    uint32_t mapped = 0;
+    const int32_t mapped = map_char_addr(&cart->mapper, addr);
 
-    if (map_char_addr(&cart->mapper, addr, &mapped)) {
+    if (mapped >= 0)
         return cart->char_rom[mapped];
-    }
-    else {
+    else
         return 0xFF;
-    }
 }
 
 int is_vertical_mirroring(const struct cartridge *cart)
