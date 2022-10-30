@@ -150,7 +150,7 @@ static uint8_t read_byte(struct CPU *cpu, uint16_t addr)
         return data;
     }
     else if (addr >= 0x8000 && addr <= 0xFFFF) {
-        return read_prog_rom(cpu->cart, addr);
+        return read_cartridge(cpu->cart, addr);
     }
     return 0;
 }

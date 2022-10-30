@@ -73,16 +73,6 @@ void close_cartridge(struct cartridge *cart)
     free(cart);
 }
 
-uint8_t read_prog_rom(const struct cartridge *cart, uint16_t addr)
-{
-    const int32_t mapped = map_prog_addr(&cart->mapper, addr);
-
-    if (mapped >= 0)
-        return cart->prog_rom[mapped];
-    else
-        return 0;
-}
-
 uint8_t read_cartridge(const struct cartridge *cart, uint16_t addr)
 {
     return read_mapper(&cart->mapper, addr);
