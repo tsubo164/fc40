@@ -45,6 +45,10 @@ struct cartridge *open_cartridge(const char *filename)
     cart->prog_rom = read_program(fp, cart->prog_size);
     cart->char_rom = read_character(fp, cart->char_size);
 
+    cart->mapper.prog_size = cart->prog_size;
+    cart->mapper.char_size = cart->char_size;
+    cart->mapper.prog_rom = cart->prog_rom;
+    cart->mapper.char_rom = cart->char_rom;
     const int err = open_mapper(&cart->mapper, cart->mapper_id,
             cart->prog_size, cart->char_size);
 
@@ -89,7 +93,12 @@ uint8_t read_char_rom(const struct cartridge *cart, uint16_t addr)
         return 0xFF;
 }
 
-void write_cartridge(const struct cartridge *cart, uint16_t addr, uint8_t data)
+uint8_t read_cartridge(const struct cartridge *cart, uint16_t addr)
+{
+    return read_mapper(&cart->mapper, addr);
+}
+
+void write_cartridge(struct cartridge *cart, uint16_t addr, uint8_t data)
 {
     write_mapper(&cart->mapper, addr, data);
 }
