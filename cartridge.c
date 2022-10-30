@@ -89,6 +89,11 @@ uint8_t read_char_rom(const struct cartridge *cart, uint16_t addr)
         return 0xFF;
 }
 
+void write_cartridge(const struct cartridge *cart, uint16_t addr, uint8_t data)
+{
+    write_mapper(&cart->mapper, addr, data);
+}
+
 int is_vertical_mirroring(const struct cartridge *cart)
 {
     return cart->mirroring == 1;

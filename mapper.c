@@ -20,6 +20,10 @@ static int32_t map_char_addr_0(uint16_t addr)
         return -1;
 }
 
+static void write_000(uint16_t addr, uint8_t data)
+{
+}
+
 static void init_mapper_0(void)
 {
 }
@@ -32,6 +36,7 @@ static void open_mapper_0(struct mapper *m, size_t prog_size, size_t char_size)
 {
     m->map_char_addr_func = map_char_addr_0;
     m->map_prog_addr_func = map_prog_addr_0;
+    m->write_func = write_000;
     m->init_func = init_mapper_0;
     m->finish_func = finish_mapper_0;
 
@@ -77,4 +82,11 @@ int32_t map_char_addr(const struct mapper *m, uint16_t addr)
     if (!m->map_char_addr_func)
         return 0;
     return m->map_char_addr_func(addr);
+}
+
+void write_mapper(const struct mapper *m, uint16_t addr, uint8_t data)
+{
+    if (!m->write_func)
+        return;
+    m->write_func(addr, data);
 }
