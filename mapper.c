@@ -26,7 +26,7 @@ static uint8_t read_000(const struct mapper *m, uint16_t addr)
     if (addr >= 0x0000 && addr <= 0x1FFF)
         return m->char_rom[addr];
 
-    return 0;
+    return 0xFF;
 }
 
 static void write_000(struct mapper *m, uint16_t addr, uint8_t data)

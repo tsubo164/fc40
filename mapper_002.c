@@ -32,7 +32,7 @@ static uint8_t read_002(const struct mapper *m, uint16_t addr)
 	if (addr >= 0x0000 && addr <= 0x1FFF)
 		return char_ram[addr];
 
-    return 0;
+    return 0xFF;
 }
 
 static void write_002(struct mapper *m, uint16_t addr, uint8_t data)

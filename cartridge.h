@@ -23,7 +23,6 @@ extern struct cartridge *open_cartridge(const char *filename);
 extern void close_cartridge(struct cartridge *cart);
 
 extern uint8_t read_prog_rom(const struct cartridge *cart, uint16_t addr);
-extern uint8_t read_char_rom(const struct cartridge *cart, uint16_t addr);
 extern uint8_t read_cartridge(const struct cartridge *cart, uint16_t addr);
 extern void write_cartridge(struct cartridge *cart, uint16_t addr, uint8_t data);
 
