@@ -104,10 +104,10 @@ static const uint8_t palette_2C02[][3] = {
     {160, 214, 228}, {160, 162, 160}, {  0,   0,   0}, {  0,   0,   0}
 };
 
-static struct color get_color(int index)
+static struct Color get_color(int index)
 {
     const uint8_t *c = palette_2C02[index];
-    const struct color col = {c[0], c[1], c[2]};
+    const struct Color col = {c[0], c[1], c[2]};
     return col;
 }
 
@@ -676,7 +676,7 @@ static uint8_t fetch_palette_value(const struct PPU *ppu, uint8_t palette_id, ui
     return read_byte(ppu, addr);
 }
 
-static struct color lookup_pixel_color(const struct PPU *ppu, struct pixel pix)
+static struct Color lookup_pixel_color(const struct PPU *ppu, struct pixel pix)
 {
     const uint8_t index = fetch_palette_value(ppu, pix.palette, pix.value);
     return get_color(index);
@@ -685,7 +685,7 @@ static struct color lookup_pixel_color(const struct PPU *ppu, struct pixel pix)
 static void render_pixel(struct PPU *ppu, int x, int y)
 {
     struct pixel bg = {0}, fg = {0}, final = {0};
-    struct color col = {0};
+    struct Color col = {0};
 
     if (is_rendering_bg(ppu))
         bg = get_pixel_bg(ppu);

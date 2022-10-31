@@ -43,7 +43,7 @@ static void load_pattern(FrameBuffer *fb, const struct cartridge *cart, int id)
             const uint8_t l = (lo & mask) > 0;
             const uint8_t h = (hi & mask) > 0;
             const uint8_t val = (h << 1) | l;
-            const struct color col = {
+            const struct Color col = {
                 (uint8_t) (val / 3. * 255),
                 (uint8_t) (val / 3. * 255),
                 (uint8_t) (val / 3. * 255)
