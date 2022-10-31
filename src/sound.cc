@@ -30,7 +30,7 @@ void init_sound(void)
     alGenBuffers(BUFFER_COUNT, buffer_list);
     alGenSources(1, &source);
 
-    sample_data = calloc(SAMPLINGRATE, sizeof(int16_t));
+    sample_data = (int16_t*) calloc(SAMPLINGRATE, sizeof(int16_t));
 }
 
 void finish_sound(void)

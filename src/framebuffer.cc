@@ -3,8 +3,8 @@
 
 struct framebuffer *new_framebuffer(int width, int height)
 {
-    struct framebuffer *fb = malloc(sizeof(struct framebuffer));
-    uint8_t *data = calloc(width * height * 3, sizeof(uint8_t));
+    struct framebuffer *fb = (struct framebuffer*) malloc(sizeof(struct framebuffer));
+    uint8_t *data = (uint8_t*) calloc(width * height * 3, sizeof(uint8_t));
 
     fb->width = width;
     fb->height = height;

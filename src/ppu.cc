@@ -11,7 +11,7 @@ enum ppu_status {
     STAT_UNUSED          = 0x1F,
     STAT_SPRITE_OVERFLOW = 1 << 5,
     STAT_SPRITE_ZERO_HIT = 1 << 6,
-    STAT_VERTICAL_BLANK  = 1 << 7,
+    STAT_VERTICAL_BLANK  = 1 << 7
 };
 
 enum ppu_control {

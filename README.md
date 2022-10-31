@@ -4,7 +4,7 @@
 
 ## Overview
 - A NES Emulator
-- Written in C
+- Written in C++
 - Requires GLFW and OpenAL
 - Supports mapper 0 (200+ games)
 

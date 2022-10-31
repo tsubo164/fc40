@@ -5,7 +5,7 @@
 
 static uint8_t *read_program(FILE *fp, size_t size)
 {
-    uint8_t *prog = calloc(size, sizeof(uint8_t));
+    uint8_t *prog = (uint8_t*) calloc(size, sizeof(uint8_t));
 
     fread(prog, sizeof(uint8_t), size, fp);
 
@@ -14,7 +14,7 @@ static uint8_t *read_program(FILE *fp, size_t size)
 
 static uint8_t *read_character(FILE *fp, size_t size)
 {
-    uint8_t *chr = calloc(size, sizeof(uint8_t));
+    uint8_t *chr = (uint8_t*) calloc(size, sizeof(uint8_t));
 
     fread(chr, sizeof(uint8_t), size, fp);
 
@@ -35,7 +35,7 @@ struct cartridge *open_cartridge(const char *filename)
         header[3] != 0x1a)
         return NULL;
 
-    cart = malloc(sizeof(struct cartridge));
+    cart = (struct cartridge*) malloc(sizeof(struct cartridge));
 
     cart->prog_size = header[4] * 16 * 1024;
     cart->char_size = header[5] * 8 * 1024;
