@@ -22,11 +22,11 @@ void power_up_nes(struct NES *nes)
     nes->dma_data = 0x00;
 
     /* framebuffer */
-    nes->fbuf = new_framebuffer(RESX, RESY);
-    nes->ppu.fbuf = nes->fbuf;
+    nes->fbuf.Resize(RESX, RESY);
+    nes->ppu.fbuf = &nes->fbuf;
 
     /* pattern table */
-    nes->patt = new_framebuffer(16 * 8 * 2, 16 * 8);
+    nes->patt.Resize(16 * 8 * 2, 16 * 8);
     load_pattern_table(nes->patt, nes->cart);
 
     /* CPU and PPU */
@@ -37,11 +37,6 @@ void power_up_nes(struct NES *nes)
 
 void shut_down_nes(struct NES *nes)
 {
-    free_framebuffer(nes->fbuf);
-    free_framebuffer(nes->patt);
-
-    nes->fbuf = NULL;
-    nes->patt = NULL;
 }
 
 void insert_cartridge(struct NES *nes, struct cartridge *cart)
@@ -68,8 +63,8 @@ void play_game(struct NES *nes)
     send_initial_samples();
 
     disp.nes = nes;
-    disp.fb = nes->fbuf;
-    disp.pattern_table = nes->patt;
+    disp.fb = &nes->fbuf;
+    disp.pattern_table = &nes->patt;
     disp.update_frame_func = update_frame;
     disp.input_controller_func = input_controller;
     disp.ppu = &nes->ppu;

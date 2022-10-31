@@ -702,7 +702,7 @@ static void render_pixel(struct PPU *ppu, int x, int y)
         col = get_color(index);
     }
 
-    set_color(ppu->fbuf, x, y, col);
+    ppu->fbuf->SetColor(x, y, col);
 
     if (is_sprite_zero_hit(ppu, bg, fg, x))
         set_stat(ppu, STAT_SPRITE_ZERO_HIT, 1);

@@ -175,8 +175,8 @@ int open_display(const struct display *disp)
 static void transfer_texture(const FrameBuffer *fb)
 {
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, fb->width, fb->height,
-            0, GL_RGB, GL_UNSIGNED_BYTE, fb->data);
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, fb->Width(), fb->Height(),
+            0, GL_RGB, GL_UNSIGNED_BYTE, fb->GetData());
 }
 
 static void init_gl(const struct display *disp)
@@ -195,8 +195,8 @@ static void init_gl(const struct display *disp)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, disp->pattern_table->width, disp->pattern_table->height,
-            0, GL_RGB, GL_UNSIGNED_BYTE, disp->pattern_table->data);
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, disp->pattern_table->Width(), disp->pattern_table->Height(),
+            0, GL_RGB, GL_UNSIGNED_BYTE, disp->pattern_table->GetData());
 
     glBindTexture(GL_TEXTURE_2D, main_screen);
 
@@ -206,8 +206,8 @@ static void init_gl(const struct display *disp)
 
 static void render(const struct display *disp)
 {
-    const int W = disp->fb->width;
-    const int H = disp->fb->height;
+    const int W = disp->fb->Width();
+    const int H = disp->fb->Height();
 
     glClear(GL_COLOR_BUFFER_BIT);
 
@@ -296,8 +296,8 @@ static void render_grid(int width, int height)
 
 static void render_pattern_table(const FrameBuffer *patt)
 {
-    const int W = patt->width;
-    const int H = patt->height;
+    const int W = patt->Width();
+    const int H = patt->Height();
 
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, pattern_table);

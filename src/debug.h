@@ -9,7 +9,7 @@ struct CPU;
 
 extern void log_cpu_status(struct CPU *cpu, int max_lines);
 
-extern void load_pattern_table(FrameBuffer *fb, const struct cartridge *cart);
+extern void load_pattern_table(FrameBuffer &fb, const struct cartridge *cart);
 
 } // namespace
 

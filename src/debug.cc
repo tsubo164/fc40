@@ -21,7 +21,7 @@ void log_cpu_status(struct CPU *cpu, int max_lines)
     }
 }
 
-static void load_pattern(FrameBuffer *fb, const struct cartridge *cart, int id)
+static void load_pattern(FrameBuffer &fb, const struct cartridge *cart, int id)
 {
     const int tile_x = id < 256 ? id % 16 : id % 16 + 16;
     const int tile_y = id < 256 ? id / 16 : id / 16 - 16;
@@ -49,14 +49,14 @@ static void load_pattern(FrameBuffer *fb, const struct cartridge *cart, int id)
                 (uint8_t) (val / 3. * 255)
             };
 
-            set_color(fb, x, y, col);
+            fb.SetColor(x, y, col);
 
             mask >>= 1;
         }
     }
 }
 
-void load_pattern_table(FrameBuffer *fb, const struct cartridge *cart)
+void load_pattern_table(FrameBuffer &fb, const struct cartridge *cart)
 {
     int i;
 

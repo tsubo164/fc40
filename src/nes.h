@@ -5,6 +5,7 @@
 
 #include "cpu.h"
 #include "ppu.h"
+#include "framebuffer.h"
 
 namespace nes {
 
@@ -21,8 +22,8 @@ struct NES {
     uint8_t dma_page;
     uint8_t dma_data;
 
-    FrameBuffer *fbuf;
-    FrameBuffer *patt;
+    FrameBuffer fbuf;
+    FrameBuffer patt;
     struct cartridge *cart;
 };
 

@@ -12,25 +12,20 @@ struct Color {
 
 class FrameBuffer {
 public:
-    FrameBuffer() : data_(width * height) {}
+    FrameBuffer();
     ~FrameBuffer() {}
-
-    int width = 1, height = 1;
-    uint8_t *data;
 
     void Resize(int w, int h);
     void SetColor(int x, int y, Color col);
-    void Clear();
+
+    int Width() const { return width_; }
+    int Height() const { return height_; }
+    const uint8_t *GetData() const { return &data_[0]; }
 
 private:
+    int width_, height_;
     std::vector<uint8_t> data_;
 };
-
-extern FrameBuffer *new_framebuffer(int width, int height);
-extern void free_framebuffer(FrameBuffer *fb);
-
-extern void set_color(FrameBuffer *fb, int x, int y, struct Color col);
-extern void clear_color(FrameBuffer *fb);
 
 } // namespace
 
