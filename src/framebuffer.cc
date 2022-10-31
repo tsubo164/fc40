@@ -3,9 +3,9 @@
 
 namespace nes {
 
-struct framebuffer *new_framebuffer(int width, int height)
+FrameBuffer *new_framebuffer(int width, int height)
 {
-    struct framebuffer *fb = (struct framebuffer*) malloc(sizeof(struct framebuffer));
+    FrameBuffer *fb = (FrameBuffer*) malloc(sizeof(FrameBuffer));
     uint8_t *data = (uint8_t*) calloc(width * height * 3, sizeof(uint8_t));
 
     fb->width = width;
@@ -15,7 +15,7 @@ struct framebuffer *new_framebuffer(int width, int height)
     return fb;
 }
 
-void free_framebuffer(struct framebuffer *fb)
+void free_framebuffer(FrameBuffer *fb)
 {
     if (!fb)
         return;
@@ -23,7 +23,7 @@ void free_framebuffer(struct framebuffer *fb)
     free(fb);
 }
 
-void set_color(struct framebuffer *fb, int x, int y, struct color col)
+void set_color(FrameBuffer *fb, int x, int y, struct color col)
 {
     uint8_t *p = fb->data + y * fb->width * 3 + x * 3;
 
@@ -32,7 +32,7 @@ void set_color(struct framebuffer *fb, int x, int y, struct color col)
     p[2] = col.b;
 }
 
-void clear_color(struct framebuffer *fb)
+void clear_color(FrameBuffer *fb)
 {
     const struct color black = {0};
     int x, y;

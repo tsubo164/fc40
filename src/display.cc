@@ -20,12 +20,12 @@ struct key_state {
     int g, p, r;
 };
 
-static void transfer_texture(const struct framebuffer *fb);
+static void transfer_texture(const FrameBuffer *fb);
 static void resize(GLFWwindow *const window, int width, int height);
 static void init_gl(const struct display *disp);
 static void render(const struct display *disp);
 static void render_grid(int width, int height);
-static void render_pattern_table(const struct framebuffer *patt);
+static void render_pattern_table(const FrameBuffer *patt);
 static void render_sprite_box(const struct PPU *ppu, int width, int height);
 
 static const GLuint main_screen = 0;
@@ -172,7 +172,7 @@ int open_display(const struct display *disp)
     return 0;
 }
 
-static void transfer_texture(const struct framebuffer *fb)
+static void transfer_texture(const FrameBuffer *fb)
 {
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glTexImage2D(GL_TEXTURE_2D, 0, 3, fb->width, fb->height,
@@ -294,7 +294,7 @@ static void render_grid(int width, int height)
     glPopAttrib();
 }
 
-static void render_pattern_table(const struct framebuffer *patt)
+static void render_pattern_table(const FrameBuffer *patt)
 {
     const int W = patt->width;
     const int H = patt->height;

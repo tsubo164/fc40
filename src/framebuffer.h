@@ -1,24 +1,32 @@
 #ifndef FRAMEBUFFER_H
 #define FRAMEBUFFER_H
 
-#include <stdint.h>
+#include <cstdint>
+#include <vector>
 
 namespace nes {
 
-struct framebuffer {
+class FrameBuffer {
+public:
+    FrameBuffer() {}
+    ~FrameBuffer() {}
+
     int width, height;
     uint8_t *data;
+
+private:
+    std::vector<uint8_t> data_;
 };
 
-extern struct framebuffer *new_framebuffer(int width, int height);
-extern void free_framebuffer(struct framebuffer *fb);
+extern FrameBuffer *new_framebuffer(int width, int height);
+extern void free_framebuffer(FrameBuffer *fb);
 
 struct color {
     uint8_t r, g, b;
 };
 
-extern void set_color(struct framebuffer *fb, int x, int y, struct color col);
-extern void clear_color(struct framebuffer *fb);
+extern void set_color(FrameBuffer *fb, int x, int y, struct color col);
+extern void clear_color(FrameBuffer *fb);
 
 } // namespace
 

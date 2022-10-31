@@ -9,7 +9,7 @@
 namespace nes {
 
 struct cartridge;
-struct framebuffer;
+class FrameBuffer;
 
 struct NES {
     struct CPU cpu;
@@ -21,8 +21,8 @@ struct NES {
     uint8_t dma_page;
     uint8_t dma_data;
 
-    struct framebuffer *fbuf;
-    struct framebuffer *patt;
+    FrameBuffer *fbuf;
+    FrameBuffer *patt;
     struct cartridge *cart;
 };
 

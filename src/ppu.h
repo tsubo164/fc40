@@ -5,7 +5,7 @@
 
 namespace nes {
 
-struct framebuffer;
+class FrameBuffer;
 struct cartridge;
 
 struct pattern_row {
@@ -58,7 +58,7 @@ struct PPU {
     int cycle;
     int scanline;
     uint64_t frame;
-    struct framebuffer *fbuf;
+    FrameBuffer *fbuf;
 
     uint8_t nmi_generated;
 };

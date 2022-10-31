@@ -5,15 +5,15 @@
 
 namespace nes {
 
-struct framebuffer;
+class FrameBuffer;
 struct PPU;
 struct NES;
 
 struct display {
     struct NES *nes;
 
-    struct framebuffer *fb;
-    struct framebuffer *pattern_table;
+    FrameBuffer *fb;
+    FrameBuffer *pattern_table;
 
     void (*update_frame_func)(struct NES *nes);
     void (*input_controller_func)(struct NES *nes, uint8_t id, uint8_t input);
