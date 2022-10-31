@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+namespace nes {
+
 struct mapper {
     const uint8_t *prog_rom;
     const uint8_t *char_rom;
@@ -23,4 +25,6 @@ extern void close_mapper(struct mapper *m);
 extern uint8_t read_mapper(const struct mapper *m, uint16_t addr);
 extern void write_mapper(struct mapper *m, uint16_t addr, uint8_t data);
 
-#endif /* _H */
+} // namespace
+
+#endif // _H

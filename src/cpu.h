@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include "apu.h"
 
+namespace nes {
+
 struct cartridge;
 struct PPU;
 
@@ -58,4 +60,6 @@ struct cpu_status {
 extern void get_cpu_status(const struct CPU *cpu, struct cpu_status *stat);
 extern uint8_t peek_cpu_data(const struct CPU *cpu, uint16_t addr);
 
-#endif /* _H */
+} // namespace
+
+#endif // _H

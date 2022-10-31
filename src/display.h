@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+namespace nes {
+
 struct framebuffer;
 struct PPU;
 struct NES;
@@ -22,4 +24,6 @@ struct display {
 
 extern int open_display(const struct display *disp);
 
-#endif /* _H */
+} // namespace
+
+#endif // _H

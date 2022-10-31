@@ -5,6 +5,8 @@
 #include "cartridge.h"
 #include "debug.h"
 
+using namespace nes;
+
 int main(int argc, char **argv)
 {
     struct NES nes = {{0}};

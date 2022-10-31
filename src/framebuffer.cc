@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include "framebuffer.h"
 
+namespace nes {
+
 struct framebuffer *new_framebuffer(int width, int height)
 {
     struct framebuffer *fb = (struct framebuffer*) malloc(sizeof(struct framebuffer));
@@ -39,3 +41,5 @@ void clear_color(struct framebuffer *fb)
         for (x=0; x < fb->width; x++)
             set_color(fb, x, y, black);
 }
+
+} // namespace

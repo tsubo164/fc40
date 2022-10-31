@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+namespace nes {
+
 struct framebuffer {
     int width, height;
     uint8_t *data;
@@ -18,4 +20,6 @@ struct color {
 extern void set_color(struct framebuffer *fb, int x, int y, struct color col);
 extern void clear_color(struct framebuffer *fb);
 
-#endif /* _H */
+} // namespace
+
+#endif // _H

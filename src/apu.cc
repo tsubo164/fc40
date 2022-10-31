@@ -3,6 +3,8 @@
 #include "apu.h"
 #include "sound.h"
 
+namespace nes {
+
 static const uint8_t length_table[] = {
      10, 254,  20,   2,  40,   4,  80,   6,
     160,   8,  60,  10,  14,  12,  26,  14,
@@ -652,3 +654,5 @@ void clock_apu(struct APU *apu)
 
     apu->clock++;
 }
+
+} // namespace

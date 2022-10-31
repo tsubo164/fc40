@@ -6,6 +6,8 @@
 #include "nes.h"
 #include "ppu.h"
 
+namespace nes {
+
 const int MARGIN = 8;
 const int SCALE = 2;
 const int RESX = 256;
@@ -369,3 +371,5 @@ static void render_sprite_box(const struct PPU *ppu, int width, int height)
 
     glPopAttrib();
 }
+
+} // namespace

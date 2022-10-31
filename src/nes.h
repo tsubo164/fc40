@@ -6,6 +6,8 @@
 #include "cpu.h"
 #include "ppu.h"
 
+namespace nes {
+
 struct cartridge;
 struct framebuffer;
 
@@ -35,4 +37,6 @@ extern void push_reset_button(struct NES *nes);
 extern void update_frame(struct NES *nes);
 extern void input_controller(struct NES *nes, uint8_t id, uint8_t input);
 
-#endif /* _H */
+} // namespace
+
+#endif // _H

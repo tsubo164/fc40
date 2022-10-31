@@ -2,6 +2,8 @@
 #include "mapper.h"
 #include "mapper_002.h"
 
+namespace nes {
+
 static int prog_nbanks = 1;
 static int char_nbanks = 1;
 
@@ -85,3 +87,5 @@ void write_mapper(struct mapper *m, uint16_t addr, uint8_t data)
         return;
     m->write_func(m, addr, data);
 }
+
+} // namespace

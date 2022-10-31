@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include "mapper.h"
 
+namespace nes {
+
 struct cartridge {
     uint8_t *prog_rom;
     uint8_t *char_rom;
@@ -27,4 +29,6 @@ extern void write_cartridge(struct cartridge *cart, uint16_t addr, uint8_t data)
 
 extern int is_vertical_mirroring(const struct cartridge *cart);
 
-#endif /* _H */
+} // namespace
+
+#endif // _H

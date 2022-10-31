@@ -5,6 +5,8 @@
 #include "cpu.h"
 #include "log.h"
 
+namespace nes {
+
 void log_cpu_status(struct CPU *cpu, int max_lines)
 {
     uint16_t log_line = 0;
@@ -61,3 +63,5 @@ void load_pattern_table(struct framebuffer *fb, const struct cartridge *cart)
     for (i = 0; i < 256 * 2; i++)
         load_pattern(fb, cart, i);
 }
+
+} // namespace

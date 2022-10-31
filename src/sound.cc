@@ -10,6 +10,8 @@
 #define MAX_SAMPLE_COUNT (8 * 44100 / 60)
 #define BUFFER_COUNT 32
 
+namespace nes {
+
 static const int SAMPLINGRATE = 44100;
 static ALCdevice *device = NULL;
 static ALCcontext *context = NULL;
@@ -120,3 +122,5 @@ void play_samples(void)
             printf("Sound Play: Queued Count: %d\n", queued_count);
     }
 }
+
+} // namespace

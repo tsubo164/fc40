@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+namespace nes {
+
 struct sweep_unit {
     uint8_t enabled;
     uint8_t period;
@@ -114,4 +116,6 @@ extern void power_up_apu(struct APU *apu);
 extern void reset_apu(struct APU *apu);
 extern void clock_apu(struct APU *apu);
 
-#endif /* _H */
+} // namespace
+
+#endif // _H

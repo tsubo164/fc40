@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include "mapper_002.h"
 
+namespace nes {
+
 static int prog_nbanks = 1;
 static int char_nbanks = 1;
 
@@ -58,3 +60,5 @@ void open_mapper_002(struct mapper *m, size_t prog_size, size_t char_size)
     prog_bank = 0;
     prog_fixed = prog_nbanks - 1;
 }
+
+} // namespace

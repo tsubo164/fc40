@@ -3,6 +3,8 @@
 #include "log.h"
 #include "cpu.h"
 
+namespace nes {
+
 static uint16_t abs_indirect(const struct CPU *cpu, uint16_t abs)
 {
     if ((abs & 0x00FF) == 0x00FF)
@@ -121,3 +123,5 @@ void print_cpu_status(const struct CPU *cpu)
     printf("A:%02X X:%02X Y:%02X P:%02X SP:%02X", a, x, y, p, s);
     printf("\n");
 }
+
+} // namespace

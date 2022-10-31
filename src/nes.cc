@@ -8,6 +8,8 @@
 
 #define AUDIO_DELAY_FRAME 2
 
+namespace nes {
+
 void power_up_nes(struct NES *nes)
 {
     const int RESX = 256;
@@ -154,3 +156,5 @@ void input_controller(struct NES *nes, uint8_t id, uint8_t input)
 {
     set_controller_input(&nes->cpu, 0, input);
 }
+
+} // namespace

@@ -4,6 +4,8 @@
 #include "ppu.h"
 #include "cartridge.h"
 
+namespace nes {
+
 enum status_flag {
     C = 1 << 0, /* carry */
     Z = 1 << 1, /* zero */
@@ -1111,3 +1113,5 @@ uint8_t peek_cpu_data(const struct CPU *cpu, uint16_t addr)
 {
     return peek_byte(cpu, addr);
 }
+
+} // namespace

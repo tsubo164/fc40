@@ -3,6 +3,8 @@
 #include "cartridge.h"
 #include "mapper.h"
 
+namespace nes {
+
 static uint8_t *read_program(FILE *fp, size_t size)
 {
     uint8_t *prog = (uint8_t*) calloc(size, sizeof(uint8_t));
@@ -87,3 +89,5 @@ int is_vertical_mirroring(const struct cartridge *cart)
 {
     return cart->mirroring == 1;
 }
+
+} // namespace

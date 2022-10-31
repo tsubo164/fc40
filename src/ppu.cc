@@ -4,6 +4,8 @@
 #include "framebuffer.h"
 #include "cartridge.h"
 
+namespace nes {
+
 /* -------------------------------------------------------------------------- */
 /* status */
 
@@ -997,3 +999,5 @@ struct object_attribute read_oam(const struct PPU *ppu, int index)
 {
     return get_sprite(ppu, index);
 }
+
+} // namespace
