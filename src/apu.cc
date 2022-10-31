@@ -649,7 +649,7 @@ void clock_apu(struct APU *apu)
         /* Lowpass Filter: lpf = (1 - k) * prev_lpf + k * raw_data */
         lpf += k * (raw_data - lpf);
 
-        push_sample(lpf);
+        PushSample(lpf);
     }
 
     apu->clock++;

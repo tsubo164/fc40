@@ -1,57 +1,84 @@
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <math.h>
+#include <algorithm>
+#include <vector>
 #include <al.h>
 #include <alc.h>
 
 #include "sound.h"
 
-#define MAX_SAMPLE_COUNT (8 * 44100 / 60)
-#define BUFFER_COUNT 32
-
 namespace nes {
 
-static const int SAMPLINGRATE = 44100;
-static ALCdevice *device = NULL;
-static ALCcontext *context = NULL;
+constexpr int SAMPLING_RATE = 44100;
+constexpr int MAX_SAMPLE_COUNT = 8 * SAMPLING_RATE / 60;
+constexpr int BUFFER_COUNT = 32;
+
+static ALCdevice *device = nullptr;
+static ALCcontext *context = nullptr;
 
 static ALuint source = 0;
 static ALuint buffer_list[BUFFER_COUNT] = {0};
 static ALuint *pbuffer = buffer_list;
 
-static int16_t *sample_data = NULL;
-static int32_t sample_count = 0;
+class SampleBuffer {
+public:
+    SampleBuffer() {}
+    ~SampleBuffer() {}
 
-void init_sound(void)
+    void Resize(int size)
+    {
+        data_.resize(size, 0);
+        count_ = 0;
+    }
+
+    void Push(int32_t sample)
+    {
+        data_[count_++] = sample;
+        if (count_ == data_.size())
+            count_ = 0;
+    }
+
+    void Clear()
+    {
+        std::fill(data_.begin(), data_.end(), 0);
+        count_ = 0;
+    }
+
+    const int16_t *Data() const { return &data_[0]; }
+    int Size() const { return count_ * sizeof(data_[0]); }
+
+private:
+    std::vector<int16_t> data_;
+    int count_;
+};
+
+static SampleBuffer sample_data;
+
+void InitSound()
 {
-    device = alcOpenDevice(NULL);
-    context = alcCreateContext(device, NULL);
+    device = alcOpenDevice(nullptr);
+    context = alcCreateContext(device, nullptr);
     alcMakeContextCurrent(context);
 
     alGenBuffers(BUFFER_COUNT, buffer_list);
     alGenSources(1, &source);
 
-    sample_data = (int16_t*) calloc(SAMPLINGRATE, sizeof(int16_t));
+    sample_data.Resize(MAX_SAMPLE_COUNT);
 }
 
-void finish_sound(void)
+void FinishSound()
 {
     alSourceStop(source);
 
     alDeleteBuffers(BUFFER_COUNT, buffer_list);
     alDeleteSources(1, &source);
 
-    alcMakeContextCurrent(NULL);
+    alcMakeContextCurrent(nullptr);
     alcDestroyContext(context);
     alcCloseDevice(device);
 
-    free(sample_data);
-    sample_data = NULL;
-    sample_count = 0;
+    sample_data.Clear();
 }
 
-static void unqueue_buffer(void)
+static void unqueue_buffer()
 {
     for (;;) {
         ALuint unqueued_buff[8] = {0};
@@ -65,7 +92,7 @@ static void unqueue_buffer(void)
     }
 }
 
-static void switch_buffer(void)
+static void switch_buffer()
 {
     if (pbuffer == &buffer_list[BUFFER_COUNT - 1])
         pbuffer = buffer_list;
@@ -73,41 +100,31 @@ static void switch_buffer(void)
         pbuffer++;
 }
 
-static void clear_buffer(int16_t *data, int count)
+static void queue_buffer(const SampleBuffer &buff)
 {
-    memset(data, 0, sizeof(*data) * count);
-}
+    // copy sample buff
+    alBufferData(*pbuffer, AL_FORMAT_MONO16, buff.Data(), buff.Size(), SAMPLING_RATE);
 
-static void queue_buffer(int16_t *data, int count)
-{
-    /* copy sample data */
-    alBufferData(*pbuffer, AL_FORMAT_MONO16,
-            data, count * sizeof(*data), SAMPLINGRATE);
-
-    /* queue buffer */
+    // queue buffer
     alSourceQueueBuffers(source, 1, pbuffer);
 
     switch_buffer();
 }
 
-void push_sample(float sample)
+void PushSample(float sample)
 {
-    sample_data[sample_count++] = INT16_MAX * sample;
-
-    if (sample_count == MAX_SAMPLE_COUNT)
-        sample_count = 0;
+    sample_data.Push(INT16_MAX * sample);
 }
 
-void send_samples(void)
+void SendSamples()
 {
     unqueue_buffer();
-    queue_buffer(sample_data, sample_count);
-    clear_buffer(sample_data, sample_count);
+    queue_buffer(sample_data);
 
-    sample_count = 0;
+    sample_data.Clear();
 }
 
-void play_samples(void)
+void PlaySamples()
 {
     ALint queued_count = 0;
     ALint stat = 0;

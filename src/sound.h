@@ -1,16 +1,16 @@
 #ifndef SOUND_H
 #define SOUND_H
 
-#include <stdint.h>
+#include <cstdint>
 
 namespace nes {
 
-extern void init_sound(void);
-extern void finish_sound(void);
+extern void InitSound();
+extern void FinishSound();
 
-extern void push_sample(float sample);
-extern void send_samples(void);
-extern void play_samples(void);
+extern void PushSample(float sample);
+extern void SendSamples();
+extern void PlaySamples();
 
 } // namespace
 

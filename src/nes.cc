@@ -51,15 +51,15 @@ static void send_initial_samples(void)
     const int N = AUDIO_DELAY_FRAME * 44100 / 60;
     int i;
     for (i = 0; i < N; i++)
-        push_sample(0.);
-    send_samples();
+        PushSample(0.);
+    SendSamples();
 }
 
 void play_game(struct NES *nes)
 {
     struct display disp = {0};
 
-    init_sound();
+    InitSound();
     send_initial_samples();
 
     disp.nes = nes;
@@ -71,7 +71,7 @@ void play_game(struct NES *nes)
 
     open_display(&disp);
 
-    finish_sound();
+    FinishSound();
 }
 
 void push_reset_button(struct NES *nes)
@@ -114,7 +114,7 @@ void update_frame(struct NES *nes)
 {
     static uint64_t frame = 0;
     if (frame % AUDIO_DELAY_FRAME == 0)
-        play_samples();
+        PlaySamples();
 
     do {
         clock_ppu(&nes->ppu);
@@ -143,7 +143,7 @@ void update_frame(struct NES *nes)
     } while (!is_frame_ready(&nes->ppu));
 
     if (frame % AUDIO_DELAY_FRAME == 0)
-        send_samples();
+        SendSamples();
     frame++;
 }
 
