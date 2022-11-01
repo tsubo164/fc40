@@ -5,7 +5,7 @@ namespace nes {
 
 struct CPU;
 
-extern void print_cpu_status(const struct CPU *cpu);
+extern void PrintCpuStatus(const struct CPU *cpu);
 
 } // namespace
 

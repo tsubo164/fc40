@@ -14,7 +14,7 @@ void LogCpuStatus(struct CPU *cpu, int max_lines)
 
     while (log_line < max_lines) {
         if (cpu->cycles == 0) {
-            print_cpu_status(cpu);
+            PrintCpuStatus(cpu);
             log_line++;
         }
         clock_cpu(cpu);
