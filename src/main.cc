@@ -1,6 +1,5 @@
-#include <stdio.h>
-#include <string.h>
-
+#include <iostream>
+#include <string>
 #include "nes.h"
 #include "cartridge.h"
 #include "debug.h"
@@ -10,11 +9,11 @@ using namespace nes;
 int main(int argc, char **argv)
 {
     struct NES nes = {{0}};
-    struct cartridge *cart = NULL;
-    const char *filename = NULL;
+    struct cartridge *cart = nullptr;
+    const char *filename = nullptr;
     int log_mode = 0;
 
-    if (argc == 3 && !strcmp(argv[1], "--log-mode")) {
+    if (argc == 3 && std::string(argv[1]) == "--log-mode") {
         log_mode = 1;
         filename = argv[2];
     }
@@ -22,18 +21,19 @@ int main(int argc, char **argv)
         filename = argv[1];
     }
     else {
-        fprintf(stderr, "missing file name\n");
+        std::cerr << "missing file name" << std::endl;
         return -1;
     }
 
     cart = open_cartridge(filename);
     if (!cart) {
-        fprintf(stderr, "not a *.nes file\n");
+        std::cerr << "not a *.nes file" << std::endl;
         return -1;
     }
 
     if (!cart->mapper_supported) {
-        fprintf(stderr, "mapper %d is not supported.\n", cart->mapper_id);
+        std::cerr << "mapper " << static_cast<int>(cart->mapper_id)
+                  << " is not supported." << std::endl;
         close_cartridge(cart);
         return -1;
     }
