@@ -27,7 +27,7 @@ void power_up_nes(struct NES *nes)
 
     /* pattern table */
     nes->patt.Resize(16 * 8 * 2, 16 * 8);
-    load_pattern_table(nes->patt, nes->cart);
+    LoadPatternTable(nes->patt, nes->cart);
 
     /* CPU and PPU */
     nes->cpu.ppu = &nes->ppu;

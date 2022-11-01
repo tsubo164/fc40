@@ -42,7 +42,7 @@ int main(int argc, char **argv)
     power_up_nes(&nes);
 
     if (log_mode)
-        log_cpu_status(&nes.cpu, 8980);
+        LogCpuStatus(&nes.cpu, 8980);
     else
         play_game(&nes);
 

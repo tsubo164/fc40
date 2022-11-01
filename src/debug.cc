@@ -1,4 +1,4 @@
-#include <stdint.h>
+#include <cstdint>
 #include "debug.h"
 #include "framebuffer.h"
 #include "cartridge.h"
@@ -7,7 +7,7 @@
 
 namespace nes {
 
-void log_cpu_status(struct CPU *cpu, int max_lines)
+void LogCpuStatus(struct CPU *cpu, int max_lines)
 {
     uint16_t log_line = 0;
     cpu->pc = 0xC000;
@@ -31,22 +31,20 @@ static void load_pattern(FrameBuffer &fb, const struct cartridge *cart, int id)
     const int Y0 = tile_y * 8;
     const int Y1 = Y0 + 8;
 
-    int x, y;
-
-    for (y = Y0; y < Y1; y++) {
+    for (int y = Y0; y < Y1; y++) {
         const uint8_t fine_y = y - Y0;
         const uint8_t lo = read_cartridge(cart, id * 16 + fine_y + 0);
         const uint8_t hi = read_cartridge(cart, id * 16 + fine_y + 8);
         int mask = 1 << 7;
 
-        for (x = X0; x < X1; x++) {
+        for (int x = X0; x < X1; x++) {
             const uint8_t l = (lo & mask) > 0;
             const uint8_t h = (hi & mask) > 0;
             const uint8_t val = (h << 1) | l;
-            const struct Color col = {
-                (uint8_t) (val / 3. * 255),
-                (uint8_t) (val / 3. * 255),
-                (uint8_t) (val / 3. * 255)
+            const Color col = {
+                static_cast<uint8_t>(val / 3. * 255),
+                static_cast<uint8_t>(val / 3. * 255),
+                static_cast<uint8_t>(val / 3. * 255)
             };
 
             fb.SetColor(x, y, col);
@@ -56,11 +54,9 @@ static void load_pattern(FrameBuffer &fb, const struct cartridge *cart, int id)
     }
 }
 
-void load_pattern_table(FrameBuffer &fb, const struct cartridge *cart)
+void LoadPatternTable(FrameBuffer &fb, const struct cartridge *cart)
 {
-    int i;
-
-    for (i = 0; i < 256 * 2; i++)
+    for (int i = 0; i < 256 * 2; i++)
         load_pattern(fb, cart, i);
 }
 
