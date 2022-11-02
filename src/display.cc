@@ -12,13 +12,11 @@ const int SCALE = 2;
 const int RESX = 256;
 const int RESY = 240;
 
-static int show_guide = 0;
-static int show_patt = 0;
-
 struct KeyState {
     int g = 0, p = 0, r = 0;
 };
 
+static void init_gl();
 static void transfer_texture(const FrameBuffer &fb);
 static void resize(GLFWwindow *const window, int width, int height);
 static void render_grid(int width, int height);
@@ -28,7 +26,7 @@ static void render_sprite_box(const struct PPU &ppu, int width, int height);
 static const GLuint main_screen = 0;
 static GLuint pattern_table_id = 0;
 
-int Display::Open() const
+int Display::Open()
 {
     // MacOS Retina display has twice res
     const int WIN_MARGIN = 2 * MARGIN;
@@ -67,8 +65,8 @@ int Display::Open() const
         }
 
         // Update framebuffer
-        update_frame_func(nes);
-        transfer_texture(nes->fbuf);
+        update_frame_func(&nes_);
+        transfer_texture(nes_.fbuf);
 
         // Render here
         render();
@@ -97,25 +95,25 @@ int Display::Open() const
             input |= 1 << 1; // left
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
             input |= 1 << 0; // right
-        input_controller_func(nes, 0, input);
+        input_controller_func(&nes_, 0, input);
 
         // Keys
         if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS && key.g == 0) {
-            show_guide = !show_guide;
+            show_guide_ = !show_guide_;
             key.g = 1;
         }
         else if (glfwGetKey(window, GLFW_KEY_G) == GLFW_RELEASE && key.g == 1) {
             key.g = 0;
         }
         else if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS && key.p == 0) {
-            show_patt = !show_patt;
+            show_patt_ = !show_patt_;
             key.p = 1;
         }
         else if (glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE && key.p == 1) {
             key.p = 0;
         }
         else if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && key.r == 0) {
-            push_reset_button(nes);
+            push_reset_button(&nes_);
             key.r = 1;
         }
         else if (glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE && key.r == 1) {
@@ -147,7 +145,7 @@ int Display::Open() const
             if (state.axes[GLFW_GAMEPAD_AXIS_LEFT_X] == 1)
                 input |= 1 << 0; // right
             if (input)
-                input_controller_func(nes, 0, input);
+                input_controller_func(&nes_, 0, input);
         }
 
         f++;
@@ -157,7 +155,38 @@ int Display::Open() const
     return 0;
 }
 
-void Display::init_gl() const
+void Display::render() const
+{
+    const int W = nes_.fbuf.Width();
+    const int H = nes_.fbuf.Height();
+
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    glBindTexture(GL_TEXTURE_2D, main_screen);
+    glEnable(GL_TEXTURE_2D);
+    glBegin(GL_QUADS);
+        glTexCoord2f(0, 0); glVertex2f(-W/2,  H/2);
+        glTexCoord2f(1, 0); glVertex2f( W/2,  H/2);
+        glTexCoord2f(1, 1); glVertex2f( W/2, -H/2);
+        glTexCoord2f(0, 1); glVertex2f(-W/2, -H/2);
+    glEnd();
+    glDisable(GL_TEXTURE_2D);
+
+    if (show_guide_) {
+        render_grid(W, H);
+        render_sprite_box(nes_.ppu, W, H);
+    }
+
+    if (show_patt_)
+        render_pattern_table(nes_.patt);
+
+    glFlush();
+}
+
+static void init_gl()
 {
     // main screen
     glBindTexture(GL_TEXTURE_2D, main_screen);
@@ -170,43 +199,10 @@ void Display::init_gl() const
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-    transfer_texture(nes->patt);
-
     glBindTexture(GL_TEXTURE_2D, main_screen);
-
     // bg color
     constexpr float bg = .25;
     glClearColor(bg, bg, bg, 0);
-}
-
-void Display::render() const
-{
-    const int W = nes->fbuf.Width();
-    const int H = nes->fbuf.Height();
-
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-
-    glEnable(GL_TEXTURE_2D);
-    glBegin(GL_QUADS);
-        glTexCoord2f(0, 0); glVertex2f(-W/2,  H/2);
-        glTexCoord2f(1, 0); glVertex2f( W/2,  H/2);
-        glTexCoord2f(1, 1); glVertex2f( W/2, -H/2);
-        glTexCoord2f(0, 1); glVertex2f(-W/2, -H/2);
-    glEnd();
-    glDisable(GL_TEXTURE_2D);
-
-    if (show_guide) {
-        render_grid(W, H);
-        render_sprite_box(nes->ppu, W, H);
-    }
-
-    if (show_patt)
-        render_pattern_table(nes->patt);
-
-    glFlush();
 }
 
 static void transfer_texture(const FrameBuffer &fb)
@@ -282,6 +278,8 @@ static void render_pattern_table(const FrameBuffer &patt)
 
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, pattern_table_id);
+    transfer_texture(patt);
+
     glBegin(GL_QUADS);
         glTexCoord2f(0, 0); glVertex2f(-W/2,  H/2);
         glTexCoord2f(1, 0); glVertex2f( W/2,  H/2);
@@ -289,9 +287,6 @@ static void render_pattern_table(const FrameBuffer &patt)
         glTexCoord2f(0, 1); glVertex2f(-W/2, -H/2);
     glEnd();
     glDisable(GL_TEXTURE_2D);
-
-    // switch texture back to default
-    glBindTexture(GL_TEXTURE_2D, main_screen);
 
     glPushAttrib(GL_CURRENT_BIT);
 

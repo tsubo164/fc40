@@ -57,22 +57,15 @@ static void send_initial_samples(void)
 
 void play_game(struct NES *nes)
 {
-    Display disp = {0};
+    Display disp(*nes);
 
     InitSound();
     send_initial_samples();
 
-    disp.nes = nes;
-    disp.fb = &nes->fbuf;
-    disp.pattern_table = &nes->patt;
     disp.update_frame_func = update_frame;
     disp.input_controller_func = input_controller;
-    disp.ppu = &nes->ppu;
 
-    //open_display(&disp);
-    const int err = disp.Open();
-    if (err) {
-    }
+    disp.Open();
 
     FinishSound();
 }
