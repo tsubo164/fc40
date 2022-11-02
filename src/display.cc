@@ -1,6 +1,5 @@
-#include <stdio.h>
+#include <cstdio>
 #include <GLFW/glfw3.h>
-
 #include "display.h"
 #include "framebuffer.h"
 #include "nes.h"
@@ -16,51 +15,47 @@ const int RESY = 240;
 static int show_guide = 0;
 static int show_patt = 0;
 
-struct key_state {
-    int g, p, r;
+struct KeyState {
+    int g = 0, p = 0, r = 0;
 };
 
-static void transfer_texture(const FrameBuffer *fb);
+static void transfer_texture(const FrameBuffer &fb);
 static void resize(GLFWwindow *const window, int width, int height);
-static void init_gl(const struct display *disp);
-static void render(const struct display *disp);
 static void render_grid(int width, int height);
-static void render_pattern_table(const FrameBuffer *patt);
-static void render_sprite_box(const struct PPU *ppu, int width, int height);
+static void render_pattern_table(const FrameBuffer &patt);
+static void render_sprite_box(const struct PPU &ppu, int width, int height);
 
 static const GLuint main_screen = 0;
-static GLuint pattern_table = 0;
+static GLuint pattern_table_id = 0;
 
-int open_display(const struct display *disp)
+int Display::Open() const
 {
-    /* MacOS Retina display has twice res */
+    // MacOS Retina display has twice res
     const int WIN_MARGIN = 2 * MARGIN;
     const int WINX = RESX * SCALE + 2 * WIN_MARGIN;
     const int WINY = RESY * SCALE + 2 * WIN_MARGIN;
-
-    struct key_state key = {0};
     uint64_t f = 0;
-    GLFWwindow* window;
+    KeyState key;
 
-    /* Initialize the library */
+    // Initialize the library
     if (!glfwInit())
         return -1;
 
-    /* Create a windowed mode window and its OpenGL context */
-    window = glfwCreateWindow(WINX, WINY, "Famicom Emulator", NULL, NULL);
+    // Create a windowed mode window and its OpenGL context
+    GLFWwindow *window = glfwCreateWindow(WINX, WINY, "Famicom Emulator", nullptr, nullptr);
     if (!window) {
         glfwTerminate();
         return -1;
     }
 
-    /* Make the window's context current */
+    // Make the window's context current
     glfwMakeContextCurrent(window);
     glfwSetWindowSizeCallback(window, resize);
 
-    init_gl(disp);
+    init_gl();
     resize(window, WINX, WINY);
 
-    /* Loop until the user closes the window */
+    // Loop until the user closes the window
     while (!glfwWindowShouldClose(window)) {
         const double time = glfwGetTime();
         if (time > 1.) {
@@ -71,98 +66,88 @@ int open_display(const struct display *disp)
             f = 0;
         }
 
-        /* Update framebuffer */
-        disp->update_frame_func(disp->nes);
-        transfer_texture(disp->fb);
+        // Update framebuffer
+        update_frame_func(nes);
+        transfer_texture(nes->fbuf);
 
-        /* Render here */
-        render(disp);
+        // Render here
+        render();
 
-        /* Swap front and back buffers */
+        // Swap front and back buffers
         glfwSwapBuffers(window);
 
-        /* Poll for and process events */
+        // Poll for and process events
         glfwPollEvents();
 
-        {
-            uint8_t input = 0x00;
+        // Inputs
+        uint8_t input = 0x00;
+        if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS)
+            input |= 1 << 7; // A
+        if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS)
+            input |= 1 << 6; // B
+        if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS)
+            input |= 1 << 5; // select
+        if (glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS)
+            input |= 1 << 4; // start
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            input |= 1 << 3; // up
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            input |= 1 << 2; // down
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            input |= 1 << 1; // left
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            input |= 1 << 0; // right
+        input_controller_func(nes, 0, input);
 
-            if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS)
-                input |= 1 << 7; /* A */
-            if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS)
-                input |= 1 << 6; /* B */
-            if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS)
-                input |= 1 << 5; /* select */
-            if (glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS)
-                input |= 1 << 4; /* start */
-            if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-                input |= 1 << 3; /* up */
-            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-                input |= 1 << 2; /* down */
-            if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-                input |= 1 << 1; /* left */
-            if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-                input |= 1 << 0; /* right */
-
-            disp->input_controller_func(disp->nes, 0, input);
-        }
-
+        // Keys
         if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS && key.g == 0) {
             show_guide = !show_guide;
             key.g = 1;
         }
-        if (glfwGetKey(window, GLFW_KEY_G) == GLFW_RELEASE && key.g == 1) {
+        else if (glfwGetKey(window, GLFW_KEY_G) == GLFW_RELEASE && key.g == 1) {
             key.g = 0;
         }
-        if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS && key.p == 0) {
+        else if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS && key.p == 0) {
             show_patt = !show_patt;
             key.p = 1;
         }
-        if (glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE && key.p == 1) {
+        else if (glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE && key.p == 1) {
             key.p = 0;
         }
-        if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && key.r == 0) {
-            push_reset_button(disp->nes);
+        else if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && key.r == 0) {
+            push_reset_button(nes);
             key.r = 1;
         }
-        if (glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE && key.r == 1) {
+        else if (glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE && key.r == 1) {
             key.r = 0;
         }
-
-        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+        else if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
             break;
+        }
 
+        // Gamepad
         GLFWgamepadstate state;
         if (glfwGetGamepadState(GLFW_JOYSTICK_1, &state)) {
             uint8_t input = 0x00;
 
-            if (state.buttons[GLFW_GAMEPAD_BUTTON_B]) {
-                input |= 1 << 7; /* A */
-            }
-            if (state.buttons[GLFW_GAMEPAD_BUTTON_A]) {
-                input |= 1 << 6; /* B */
-            }
-            if (state.buttons[GLFW_GAMEPAD_BUTTON_BACK]) {
-                input |= 1 << 5; /* select */
-            }
-            if (state.buttons[GLFW_GAMEPAD_BUTTON_START]) {
-                input |= 1 << 4; /* start */
-            }
-            if (state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y] == -1) {
-                input |= 1 << 3; /* up */
-            }
-            if (state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y] == 1) {
-                input |= 1 << 2; /* down */
-            }
-            if (state.axes[GLFW_GAMEPAD_AXIS_LEFT_X] == -1) {
-                input |= 1 << 1; /* left */
-            }
-            if (state.axes[GLFW_GAMEPAD_AXIS_LEFT_X] == 1) {
-                input |= 1 << 0; /* right */
-            }
-
+            if (state.buttons[GLFW_GAMEPAD_BUTTON_B])
+                input |= 1 << 7; // A
+            if (state.buttons[GLFW_GAMEPAD_BUTTON_A])
+                input |= 1 << 6; // B
+            if (state.buttons[GLFW_GAMEPAD_BUTTON_BACK])
+                input |= 1 << 5; // select
+            if (state.buttons[GLFW_GAMEPAD_BUTTON_START])
+                input |= 1 << 4; // start
+            if (state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y] == -1)
+                input |= 1 << 3; // up
+            if (state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y] == 1)
+                input |= 1 << 2; // down
+            if (state.axes[GLFW_GAMEPAD_AXIS_LEFT_X] == -1)
+                input |= 1 << 1; // left
+            if (state.axes[GLFW_GAMEPAD_AXIS_LEFT_X] == 1)
+                input |= 1 << 0; // right
             if (input)
-                disp->input_controller_func(disp->nes, 0, input);
+                input_controller_func(nes, 0, input);
         }
 
         f++;
@@ -172,42 +157,32 @@ int open_display(const struct display *disp)
     return 0;
 }
 
-static void transfer_texture(const FrameBuffer *fb)
+void Display::init_gl() const
 {
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, fb->Width(), fb->Height(),
-            0, GL_RGB, GL_UNSIGNED_BYTE, fb->GetData());
-}
-
-static void init_gl(const struct display *disp)
-{
-    const float bg = .25;
-
-    /* main screen */
+    // main screen
     glBindTexture(GL_TEXTURE_2D, main_screen);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-    /* pattern table */
-    glGenTextures(1, &pattern_table);
-    glBindTexture(GL_TEXTURE_2D, pattern_table);
+    // pattern table
+    glGenTextures(1, &pattern_table_id);
+    glBindTexture(GL_TEXTURE_2D, pattern_table_id);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, disp->pattern_table->Width(), disp->pattern_table->Height(),
-            0, GL_RGB, GL_UNSIGNED_BYTE, disp->pattern_table->GetData());
+    transfer_texture(nes->patt);
 
     glBindTexture(GL_TEXTURE_2D, main_screen);
 
-    /* bg color */
+    // bg color
+    constexpr float bg = .25;
     glClearColor(bg, bg, bg, 0);
 }
 
-static void render(const struct display *disp)
+void Display::render() const
 {
-    const int W = disp->fb->Width();
-    const int H = disp->fb->Height();
+    const int W = nes->fbuf.Width();
+    const int H = nes->fbuf.Height();
 
     glClear(GL_COLOR_BUFFER_BIT);
 
@@ -225,25 +200,32 @@ static void render(const struct display *disp)
 
     if (show_guide) {
         render_grid(W, H);
-        render_sprite_box(disp->ppu, W, H);
+        render_sprite_box(nes->ppu, W, H);
     }
 
     if (show_patt)
-        render_pattern_table(disp->pattern_table);
+        render_pattern_table(nes->patt);
 
     glFlush();
 }
 
+static void transfer_texture(const FrameBuffer &fb)
+{
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, fb.Width(), fb.Height(),
+            0, GL_RGB, GL_UNSIGNED_BYTE, fb.GetData());
+}
+
 static void resize(GLFWwindow *const window, int width, int height)
 {
-    float win_w, win_h, aspect;
-    int fb_w, fb_h;
+    float win_w = 0., win_h = 0.;
+    int fb_w = 0, fb_h = 0;
 
-    /* MacOS Retina display has different fb size than window size */
+    // MacOS Retina display has different fb size than window size
     glfwGetFramebufferSize(window, &fb_w, &fb_h);
-    aspect = (float) fb_w / fb_h;
+    const float aspect = static_cast<float>(fb_w) / fb_h;
 
-    if (aspect > (float) RESX / RESY) {
+    if (aspect > static_cast<float>(RESX) / RESY) {
         win_w = RESY * aspect;
         win_h = RESY;
     } else {
@@ -264,11 +246,10 @@ static void render_grid(int width, int height)
 {
     const int W = width;
     const int H = height;
-    int i;
 
     glPushAttrib(GL_CURRENT_BIT);
     glBegin(GL_LINES);
-    for (i = 0; i <= W / 8; i++) {
+    for (int i = 0; i <= W / 8; i++) {
         if (i % 4 == 0)
             glColor3f(0, 1, 0);
         else
@@ -279,7 +260,7 @@ static void render_grid(int width, int height)
         glVertex3f(-W/2 + i * 8,  H/2, 0);
         glVertex3f(-W/2 + i * 8, -H/2, 0);
     }
-    for (i = 0; i <= H / 8; i++) {
+    for (int i = 0; i <= H / 8; i++) {
         if (i % 4 == 2 || i == 0)
             glColor3f(0, 1, 0);
         else
@@ -294,13 +275,13 @@ static void render_grid(int width, int height)
     glPopAttrib();
 }
 
-static void render_pattern_table(const FrameBuffer *patt)
+static void render_pattern_table(const FrameBuffer &patt)
 {
-    const int W = patt->Width();
-    const int H = patt->Height();
+    const int W = patt.Width();
+    const int H = patt.Height();
 
     glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, pattern_table);
+    glBindTexture(GL_TEXTURE_2D, pattern_table_id);
     glBegin(GL_QUADS);
         glTexCoord2f(0, 0); glVertex2f(-W/2,  H/2);
         glTexCoord2f(1, 0); glVertex2f( W/2,  H/2);
@@ -309,19 +290,18 @@ static void render_pattern_table(const FrameBuffer *patt)
     glEnd();
     glDisable(GL_TEXTURE_2D);
 
-    /* switch texture back to default */
+    // switch texture back to default
     glBindTexture(GL_TEXTURE_2D, main_screen);
 
     glPushAttrib(GL_CURRENT_BIT);
 
     glBegin(GL_LINES);
-    int i;
     glColor3f(0, .5, .5);
-    for (i = 0; i <= W / 8; i++) {
+    for (int i = 0; i <= W / 8; i++) {
         glVertex3f(-W/2 + i * 8,  H/2, 0);
         glVertex3f(-W/2 + i * 8, -H/2, 0);
     }
-    for (i = 0; i <= H / 8; i++) {
+    for (int i = 0; i <= H / 8; i++) {
         glVertex3f( W/2, -H/2 + i * 8, 0);
         glVertex3f(-W/2, -H/2 + i * 8, 0);
     }
@@ -342,20 +322,18 @@ static void render_pattern_table(const FrameBuffer *patt)
     glPopAttrib();
 }
 
-static void render_sprite_box(const struct PPU *ppu, int width, int height)
+static void render_sprite_box(const struct PPU &ppu, int width, int height)
 {
-    int i;
-
     glPushAttrib(GL_CURRENT_BIT);
 
-    for (i = 0; i < 64; i++) {
-        /* draw sprite zero last */
+    for (int i = 0; i < 64; i++) {
+        // draw sprite zero last
         const int index = 63 - i;
-        const struct object_attribute obj = read_oam(ppu, index);
+        const struct object_attribute obj = read_oam(&ppu, index);
         const int x = obj.x - width / 2;
         const int y = height / 2 - obj.y - 1;
 
-        /* sprite zero */
+        // sprite zero
         if (index == 0)
             glColor3f(1, 1, 0);
         else
