@@ -1,151 +1,146 @@
-#include <stdlib.h>
-
 #include "nes.h"
 #include "framebuffer.h"
 #include "display.h"
 #include "sound.h"
 #include "debug.h"
 
-#define AUDIO_DELAY_FRAME 2
-
 namespace nes {
 
-void power_up_nes(struct NES *nes)
+constexpr int AUDIO_DELAY_FRAME = 2;
+
+static void send_initial_samples();
+
+void NES::PowerUp()
 {
     const int RESX = 256;
     const int RESY = 240;
 
-    /* dma */
-    nes->dma_wait = 1;
-    nes->dma_addr = 0x00;
-    nes->dma_page = 0x00;
-    nes->dma_data = 0x00;
+    // dma
+    dma_wait_ = 1;
+    dma_addr_ = 0x00;
+    dma_page_ = 0x00;
+    dma_data_ = 0x00;
 
-    /* framebuffer */
-    nes->fbuf.Resize(RESX, RESY);
-    nes->ppu.fbuf = &nes->fbuf;
+    // framebuffer
+    fbuf.Resize(RESX, RESY);
+    ppu.fbuf = &fbuf;
 
-    /* pattern table */
-    nes->patt.Resize(16 * 8 * 2, 16 * 8);
-    LoadPatternTable(nes->patt, nes->cart);
+    // pattern table
+    patt.Resize(16 * 8 * 2, 16 * 8);
+    LoadPatternTable(patt, cart_);
 
-    /* CPU and PPU */
-    nes->cpu.ppu = &nes->ppu;
-    power_up_cpu(&nes->cpu);
-    power_up_ppu(&nes->ppu);
+    // CPU and PPU
+    cpu.ppu = &ppu;
+    power_up_cpu(&cpu);
+    power_up_ppu(&ppu);
 }
 
-void shut_down_nes(struct NES *nes)
+void NES::ShutDown()
 {
 }
 
-void insert_cartridge(struct NES *nes, struct cartridge *cart)
+void NES::InsertCartridge(struct cartridge *cart)
 {
-    nes->cart = cart;
-    nes->cpu.cart = nes->cart;
-    nes->ppu.cart = nes->cart;
+    cart_ = cart;
+    cpu.cart = cart_;
+    ppu.cart = cart_;
 }
 
-static void send_initial_samples(void)
+void NES::PushResetButton()
 {
-    const int N = AUDIO_DELAY_FRAME * 44100 / 60;
-    int i;
-    for (i = 0; i < N; i++)
-        PushSample(0.);
-    SendSamples();
+    reset_cpu(&cpu);
+    reset_ppu(&ppu);
 }
 
-void play_game(struct NES *nes)
+void NES::PlayGame()
 {
-    Display disp(*nes);
+    Display disp(*this);
 
     InitSound();
     send_initial_samples();
 
-    disp.update_frame_func = update_frame;
-    disp.input_controller_func = input_controller;
-
     disp.Open();
-
     FinishSound();
 }
 
-void push_reset_button(struct NES *nes)
+void NES::UpdateFrame()
 {
-    reset_cpu(&nes->cpu);
-    reset_ppu(&nes->ppu);
-}
-
-static void clock_dma(struct NES *nes)
-{
-    if (nes->dma_wait) {
-        if (nes->clock % 2 == 1) {
-            nes->dma_wait = 0;
-            nes->dma_addr = 0x00;
-            nes->dma_page = get_dma_page(&nes->cpu);
-        }
-        /* idle for this cpu cycle */
-        return;
-    }
-
-    if (nes->clock % 2 == 0) {
-        /* read */
-        nes->dma_data = read_cpu_data(&nes->cpu, (nes->dma_page << 8) | nes->dma_addr);
-    }
-    else {
-        /* write */
-        write_dma_sprite(&nes->ppu, nes->dma_addr, nes->dma_data);
-        nes->dma_addr++;
-
-        if (nes->dma_addr == 0x00) {
-            nes->dma_wait = 1;
-            nes->dma_page = 0x00;
-            nes->dma_addr = 0x00;
-            resume(&nes->cpu);
-        }
-    }
-}
-
-void update_frame(struct NES *nes)
-{
-    static uint64_t frame = 0;
-    if (frame % AUDIO_DELAY_FRAME == 0)
+    if (frame_ % AUDIO_DELAY_FRAME == 0)
         PlaySamples();
 
     do {
-        clock_ppu(&nes->ppu);
+        clock_ppu(&ppu);
 
-        if (nes->clock % 3 == 0) {
-            if (is_suspended(&nes->cpu))
-                clock_dma(nes);
+        if (clock_ % 3 == 0) {
+            if (is_suspended(&cpu))
+                clock_dma();
             else
-                clock_cpu(&nes->cpu);
+                clock_cpu(&cpu);
 
-            clock_apu(&nes->cpu.apu);
+            clock_apu(&cpu.apu);
         }
 
-        if (is_nmi_generated(&nes->ppu)) {
-            clear_nmi(&nes->ppu);
-            nmi(&nes->cpu);
+        if (is_nmi_generated(&ppu)) {
+            clear_nmi(&ppu);
+            nmi(&cpu);
         }
 
-        if (is_irq_generated(&nes->cpu.apu)) {
-            clear_irq(&nes->cpu.apu);
-            irq(&nes->cpu);
+        if (is_irq_generated(&cpu.apu)) {
+            clear_irq(&cpu.apu);
+            irq(&cpu);
         }
 
-        nes->clock++;
+        clock_++;
 
-    } while (!is_frame_ready(&nes->ppu));
+    } while (!is_frame_ready(&ppu));
 
-    if (frame % AUDIO_DELAY_FRAME == 0)
+    if (frame_ % AUDIO_DELAY_FRAME == 0)
         SendSamples();
-    frame++;
+
+    frame_++;
 }
 
-void input_controller(struct NES *nes, uint8_t id, uint8_t input)
+void NES::InputController(uint8_t id, uint8_t input)
 {
-    set_controller_input(&nes->cpu, 0, input);
+    set_controller_input(&cpu, id, input);
+}
+
+void NES::clock_dma()
+{
+    if (dma_wait_) {
+        if (clock_ % 2 == 1) {
+            dma_wait_ = 0;
+            dma_addr_ = 0x00;
+            dma_page_ = get_dma_page(&cpu);
+        }
+        // idle for this cpu cycle
+        return;
+    }
+
+    if (clock_ % 2 == 0) {
+        // read
+        dma_data_ = read_cpu_data(&cpu, (dma_page_ << 8) | dma_addr_);
+    }
+    else {
+        // write
+        write_dma_sprite(&ppu, dma_addr_, dma_data_);
+        dma_addr_++;
+
+        if (dma_addr_ == 0x00) {
+            dma_wait_ = 1;
+            dma_page_ = 0x00;
+            dma_addr_ = 0x00;
+            resume(&cpu);
+        }
+    }
+}
+
+static void send_initial_samples()
+{
+    const int N = AUDIO_DELAY_FRAME * 44100 / 60;
+    for (int i = 0; i < N; i++)
+        PushSample(0.);
+    SendSamples();
 }
 
 } // namespace

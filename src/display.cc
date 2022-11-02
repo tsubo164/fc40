@@ -65,7 +65,7 @@ int Display::Open()
         }
 
         // Update framebuffer
-        update_frame_func(&nes_);
+        nes_.UpdateFrame();
         transfer_texture(nes_.fbuf);
 
         // Render here
@@ -95,7 +95,7 @@ int Display::Open()
             input |= 1 << 1; // left
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
             input |= 1 << 0; // right
-        input_controller_func(&nes_, 0, input);
+        nes_.InputController(0, input);
 
         // Keys
         if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS && key.g == 0) {
@@ -113,7 +113,7 @@ int Display::Open()
             key.p = 0;
         }
         else if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && key.r == 0) {
-            push_reset_button(&nes_);
+            nes_.PushResetButton();
             key.r = 1;
         }
         else if (glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE && key.r == 1) {
@@ -145,7 +145,7 @@ int Display::Open()
             if (state.axes[GLFW_GAMEPAD_AXIS_LEFT_X] == 1)
                 input |= 1 << 0; // right
             if (input)
-                input_controller_func(&nes_, 0, input);
+                nes_.InputController(0, input);
         }
 
         f++;

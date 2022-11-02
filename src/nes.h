@@ -1,8 +1,7 @@
 #ifndef NES_H
 #define NES_H
 
-#include <stdint.h>
-
+#include <cstdint>
 #include "cpu.h"
 #include "ppu.h"
 #include "framebuffer.h"
@@ -12,31 +11,41 @@ namespace nes {
 struct cartridge;
 class FrameBuffer;
 
-struct NES {
-    struct CPU cpu;
-    struct PPU ppu;
-    uint64_t clock;
+class NES {
+public:
+    NES() {}
+    ~NES() {}
 
-    int dma_wait;
-    uint8_t dma_addr;
-    uint8_t dma_page;
-    uint8_t dma_data;
+    struct CPU cpu = {0};
+    struct PPU ppu = {0};
 
     FrameBuffer fbuf;
     FrameBuffer patt;
-    struct cartridge *cart;
+
+    void PowerUp();
+    void ShutDown();
+
+    void InsertCartridge(struct cartridge *c);
+    void PushResetButton();
+    void PlayGame();
+
+    void UpdateFrame();
+    void InputController(uint8_t id, uint8_t input);
+
+private:
+    uint64_t clock_ = 0;
+    uint64_t frame_ = 0;
+
+    struct cartridge *cart_ = nullptr;
+
+    // dma
+    int dma_wait_ = 0;
+    uint8_t dma_addr_ = 0;
+    uint8_t dma_page_ = 0;
+    uint8_t dma_data_ = 0;
+
+    void clock_dma();
 };
-
-extern void power_up_nes(struct NES *nes);
-extern void shut_down_nes(struct NES *nes);
-
-extern void insert_cartridge(struct NES *nes, struct cartridge *cart);
-extern void play_game(struct NES *nes);
-extern void push_reset_button(struct NES *nes);
-
-/* callback functions */
-extern void update_frame(struct NES *nes);
-extern void input_controller(struct NES *nes, uint8_t id, uint8_t input);
 
 } // namespace
 

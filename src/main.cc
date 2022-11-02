@@ -8,7 +8,7 @@ using namespace nes;
 
 int main(int argc, char **argv)
 {
-    struct NES nes = {{0}};
+    NES nes;
     struct cartridge *cart = nullptr;
     const char *filename = nullptr;
     int log_mode = 0;
@@ -38,15 +38,15 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    insert_cartridge(&nes, cart);
-    power_up_nes(&nes);
+    nes.InsertCartridge(cart);
+    nes.PowerUp();
 
     if (log_mode)
         LogCpuStatus(&nes.cpu, 8980);
     else
-        play_game(&nes);
+        nes.PlayGame();
 
-    shut_down_nes(&nes);
+    nes.ShutDown();
     close_cartridge(cart);
 
     return 0;
