@@ -15,6 +15,10 @@ Mapper::Mapper(const uint8_t *prog_rom, size_t prog_size,
     char_nbanks_ = char_size_ / 0x2000; // 8KB
 }
 
+Mapper::~Mapper()
+{
+}
+
 uint8_t Mapper::ReadProg(uint16_t addr) const
 {
     return do_read_prog(addr);
@@ -70,8 +74,8 @@ Mapper *open_mapper(int id,
     case 0:
         return new Mapper(prog_rom, prog_size, char_rom, char_size);
 
-    //case 2:
-    //    return open_mapper_002(prog_size, char_size);
+    case 2:
+        return new Mapper_002(prog_rom, prog_size, char_rom, char_size);
 
     default:
         return nullptr;

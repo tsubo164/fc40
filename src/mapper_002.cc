@@ -3,64 +3,54 @@
 
 namespace nes {
 
-static int prog_nbanks = 1;
-static int char_nbanks = 1;
-
-static int prog_bank = 0;
-static int prog_fixed = 0;
-
-/*
-static uint8_t char_ram[0x2000] = {0x00};
-
-static uint8_t read_002(const Mapper *m, uint16_t addr)
+Mapper_002::Mapper_002(const uint8_t *prog_rom, size_t prog_size,
+        const uint8_t *char_rom, size_t char_size) :
+    Mapper(prog_rom, prog_size, char_rom, char_size)
 {
-    if (addr >= 0x0000 && addr <= 0x1FFF) {
-        return char_ram[addr];
-    }
-    else if (addr >= 0x8000 && addr <= 0xBFFF) {
-        const uint32_t a = prog_bank * 0x4000 + (addr & 0x3FFF);
-        return m->prog_rom[a];
+    prog_nbanks_ = prog_size / 0x4000; // 16KB
+    char_nbanks_ = char_size / 0x2000; // 8KB
+
+    prog_bank_ = 0;
+    prog_fixed_ = prog_nbanks_ - 1;
+}
+
+Mapper_002::~Mapper_002()
+{
+}
+
+uint8_t Mapper_002::do_read_prog(uint16_t addr) const
+{
+    if (addr >= 0x8000 && addr <= 0xBFFF) {
+        const uint32_t a = prog_bank_ * 0x4000 + (addr & 0x3FFF);
+        return prog_rom_[a];
     }
     else if (addr >= 0xC000 && addr <= 0xFFFF) {
-        const uint32_t a = prog_fixed * 0x4000 + (addr & 0x3FFF);
-        return m->prog_rom[a];
+        const uint32_t a = prog_fixed_ * 0x4000 + (addr & 0x3FFF);
+        return prog_rom_[a];
     }
     else {
-        return 0xFF;
+        return 0;
     }
-
-    return 0xFF;
 }
 
-static void write_002(Mapper *m, uint16_t addr, uint8_t data)
+void Mapper_002::do_write_prog(uint16_t addr, uint8_t data)
+{
+    if (addr >= 0x8000 && addr <= 0xFFFF)
+        prog_bank_ = data & 0x0F;
+}
+
+uint8_t Mapper_002::do_read_char(uint16_t addr) const
 {
     if (addr >= 0x0000 && addr <= 0x1FFF)
-        char_ram[addr] = data;
-    else if (addr >= 0x8000 && addr <= 0xFFFF)
-        prog_bank = data & 0x0F;
+        return char_ram_[addr];
+    else
+        return 0xFF;
 }
 
-static void init_mapper_002(void)
+void Mapper_002::do_write_char(uint16_t addr, uint8_t data)
 {
-}
-
-static void finish_mapper_002(void)
-{
-}
-*/
-
-void open_mapper_002(Mapper *m, size_t prog_size, size_t char_size)
-{
-    //m->read_func = read_002;
-    //m->write_func = write_002;
-    //m->init_func = init_mapper_002;
-    //m->finish_func = finish_mapper_002;
-
-    prog_nbanks = prog_size / 0x4000; /* 16KB */
-    char_nbanks = char_size / 0x2000; /* 8KB */
-
-    prog_bank = 0;
-    prog_fixed = prog_nbanks - 1;
+    if (addr >= 0x0000 && addr <= 0x1FFF)
+        char_ram_[addr] = data;
 }
 
 } // namespace

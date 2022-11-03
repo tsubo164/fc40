@@ -10,7 +10,7 @@ class Mapper {
 public:
     Mapper(const uint8_t *prog_rom, size_t prog_size,
            const uint8_t *char_rom, size_t char_size);
-    virtual ~Mapper() {}
+    virtual ~Mapper();
 
     uint8_t ReadProg(uint16_t addr) const;
     void WriteProg(uint16_t addr, uint8_t data);
