@@ -111,7 +111,7 @@ static struct Color get_color(int index)
     return col;
 }
 
-static uint16_t name_table_index(const struct cartridge *cart, uint16_t addr)
+static uint16_t name_table_index(const Cartridge *cart, uint16_t addr)
 {
     const uint16_t index = addr - 0x2000;
 

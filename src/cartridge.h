@@ -1,13 +1,14 @@
 #ifndef CARTRIDGE_H
 #define CARTRIDGE_H
 
-#include <stdlib.h>
-#include <stdint.h>
+#include <cstdlib>
+#include <cstdint>
 #include "mapper.h"
 
 namespace nes {
 
-struct cartridge {
+class Cartridge {
+public:
     uint8_t *prog_rom;
     uint8_t *char_rom;
     size_t prog_size;
@@ -26,10 +27,10 @@ struct cartridge {
     void WriteChar(uint16_t addr, uint8_t data);
 };
 
-extern struct cartridge *open_cartridge(const char *filename);
-extern void close_cartridge(struct cartridge *cart);
+extern Cartridge *open_cartridge(const char *filename);
+extern void close_cartridge(Cartridge *cart);
 
-extern int is_vertical_mirroring(const struct cartridge *cart);
+extern int is_vertical_mirroring(const Cartridge *cart);
 
 } // namespace
 

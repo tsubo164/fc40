@@ -9,7 +9,7 @@ using namespace nes;
 int main(int argc, char **argv)
 {
     NES nes;
-    struct cartridge *cart = nullptr;
+    Cartridge *cart = nullptr;
     const char *filename = nullptr;
     int log_mode = 0;
 

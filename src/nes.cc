@@ -39,7 +39,7 @@ void NES::ShutDown()
 {
 }
 
-void NES::InsertCartridge(struct cartridge *cart)
+void NES::InsertCartridge(Cartridge *cart)
 {
     cart_ = cart;
     cpu.cart = cart_;

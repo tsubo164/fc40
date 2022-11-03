@@ -4,12 +4,12 @@
 namespace nes {
 
 class FrameBuffer;
-struct cartridge;
+class Cartridge;
 struct CPU;
 
 extern void LogCpuStatus(struct CPU *cpu, int max_lines);
 
-extern void LoadPatternTable(FrameBuffer &fb, const struct cartridge *cart);
+extern void LoadPatternTable(FrameBuffer &fb, const Cartridge *cart);
 
 } // namespace
 

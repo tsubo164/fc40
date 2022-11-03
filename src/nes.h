@@ -8,7 +8,7 @@
 
 namespace nes {
 
-struct cartridge;
+class Cartridge;
 class FrameBuffer;
 
 class NES {
@@ -25,7 +25,7 @@ public:
     void PowerUp();
     void ShutDown();
 
-    void InsertCartridge(struct cartridge *c);
+    void InsertCartridge(Cartridge *cart);
     void PushResetButton();
     void PlayGame();
 
@@ -36,7 +36,7 @@ private:
     uint64_t clock_ = 0;
     uint64_t frame_ = 0;
 
-    struct cartridge *cart_ = nullptr;
+    Cartridge *cart_ = nullptr;
 
     // dma
     int dma_wait_ = 0;

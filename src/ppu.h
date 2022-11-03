@@ -6,7 +6,7 @@
 namespace nes {
 
 class FrameBuffer;
-struct cartridge;
+class Cartridge;
 
 struct pattern_row {
     uint8_t id;
@@ -25,7 +25,7 @@ struct object_attribute {
 };
 
 struct PPU {
-    struct cartridge *cart;
+    Cartridge *cart;
 
     /* registers */
     uint8_t ctrl;

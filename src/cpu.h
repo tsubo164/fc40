@@ -6,11 +6,11 @@
 
 namespace nes {
 
-struct cartridge;
+class Cartridge;
 struct PPU;
 
 struct CPU {
-    struct cartridge *cart;
+    Cartridge *cart;
     struct PPU *ppu;
     struct APU apu;
     int cycles;

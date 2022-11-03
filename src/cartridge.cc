@@ -5,22 +5,22 @@
 
 namespace nes {
 
-uint8_t cartridge::ReadProg(uint16_t addr) const
+uint8_t Cartridge::ReadProg(uint16_t addr) const
 {
     return mapper->ReadProg(addr);
 }
 
-void cartridge::WriteProg(uint16_t addr, uint8_t data)
+void Cartridge::WriteProg(uint16_t addr, uint8_t data)
 {
     mapper->WriteProg(addr, data);
 }
 
-uint8_t cartridge::ReadChar(uint16_t addr) const
+uint8_t Cartridge::ReadChar(uint16_t addr) const
 {
     return mapper->ReadChar(addr);
 }
 
-void cartridge::WriteChar(uint16_t addr, uint8_t data)
+void Cartridge::WriteChar(uint16_t addr, uint8_t data)
 {
     mapper->WriteChar(addr, data);
 }
@@ -43,9 +43,9 @@ static uint8_t *read_character(FILE *fp, size_t size)
     return chr;
 }
 
-struct cartridge *open_cartridge(const char *filename)
+Cartridge *open_cartridge(const char *filename)
 {
-    struct cartridge *cart = NULL;
+    Cartridge *cart = NULL;
     FILE *fp = fopen(filename, "rb");
     char header[16] = {'\0'};
 
@@ -57,7 +57,7 @@ struct cartridge *open_cartridge(const char *filename)
         header[3] != 0x1a)
         return NULL;
 
-    cart = (struct cartridge*) malloc(sizeof(struct cartridge));
+    cart = (Cartridge*) malloc(sizeof(Cartridge));
 
     cart->prog_size = header[4] * 16 * 1024;
     cart->char_size = header[5] * 8 * 1024;
@@ -79,7 +79,7 @@ struct cartridge *open_cartridge(const char *filename)
     return cart;
 }
 
-void close_cartridge(struct cartridge *cart)
+void close_cartridge(Cartridge *cart)
 {
     if (!cart)
         return;
@@ -92,7 +92,7 @@ void close_cartridge(struct cartridge *cart)
     free(cart);
 }
 
-int is_vertical_mirroring(const struct cartridge *cart)
+int is_vertical_mirroring(const Cartridge *cart)
 {
     return cart->mirroring == 1;
 }

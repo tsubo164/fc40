@@ -21,7 +21,7 @@ void LogCpuStatus(struct CPU *cpu, int max_lines)
     }
 }
 
-static void load_pattern(FrameBuffer &fb, const struct cartridge *cart, int id)
+static void load_pattern(FrameBuffer &fb, const Cartridge *cart, int id)
 {
     const int tile_x = id < 256 ? id % 16 : id % 16 + 16;
     const int tile_y = id < 256 ? id / 16 : id / 16 - 16;
@@ -54,7 +54,7 @@ static void load_pattern(FrameBuffer &fb, const struct cartridge *cart, int id)
     }
 }
 
-void LoadPatternTable(FrameBuffer &fb, const struct cartridge *cart)
+void LoadPatternTable(FrameBuffer &fb, const Cartridge *cart)
 {
     for (int i = 0; i < 256 * 2; i++)
         load_pattern(fb, cart, i);
