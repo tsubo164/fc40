@@ -7,22 +7,22 @@ namespace nes {
 
 uint8_t cartridge::ReadProg(uint16_t addr) const
 {
-    return mapper.ReadProg(addr);
+    return mapper->ReadProg(addr);
 }
 
 void cartridge::WriteProg(uint16_t addr, uint8_t data)
 {
-    mapper.WriteProg(addr, data);
+    mapper->WriteProg(addr, data);
 }
 
 uint8_t cartridge::ReadChar(uint16_t addr) const
 {
-    return mapper.ReadChar(addr);
+    return mapper->ReadChar(addr);
 }
 
 void cartridge::WriteChar(uint16_t addr, uint8_t data)
 {
-    mapper.WriteChar(addr, data);
+    mapper->WriteChar(addr, data);
 }
 
 static uint8_t *read_program(FILE *fp, size_t size)
@@ -67,14 +67,10 @@ struct cartridge *open_cartridge(const char *filename)
     cart->prog_rom = read_program(fp, cart->prog_size);
     cart->char_rom = read_character(fp, cart->char_size);
 
-    cart->mapper.prog_size = cart->prog_size;
-    cart->mapper.char_size = cart->char_size;
-    cart->mapper.prog_rom = cart->prog_rom;
-    cart->mapper.char_rom = cart->char_rom;
-    const int err = open_mapper(&cart->mapper, cart->mapper_id,
-            cart->prog_size, cart->char_size);
-
-    if (err)
+    cart->mapper = open_mapper(cart->mapper_id,
+            cart->prog_rom, cart->prog_size,
+            cart->char_rom, cart->char_size);
+    if (!cart->mapper)
         cart->mapper_supported = 0;
     else
         cart->mapper_supported = 1;
@@ -88,7 +84,8 @@ void close_cartridge(struct cartridge *cart)
     if (!cart)
         return;
 
-    close_mapper(&cart->mapper);
+    close_mapper(cart->mapper);
+    cart->mapper = nullptr;
 
     free(cart->prog_rom);
     free(cart->char_rom);

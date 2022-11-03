@@ -17,7 +17,7 @@ struct cartridge {
     uint8_t mapper_id;
     uint8_t nbanks;
 
-    Mapper mapper;
+    Mapper *mapper = nullptr;
     uint8_t mapper_supported;
 
     uint8_t ReadProg(uint16_t addr) const;
