@@ -5,6 +5,26 @@
 
 namespace nes {
 
+uint8_t cartridge::ReadProg(uint16_t addr) const
+{
+    return mapper.ReadProg(addr);
+}
+
+void cartridge::WriteProg(uint16_t addr, uint8_t data)
+{
+    mapper.WriteProg(addr, data);
+}
+
+uint8_t cartridge::ReadChar(uint16_t addr) const
+{
+    return mapper.ReadChar(addr);
+}
+
+void cartridge::WriteChar(uint16_t addr, uint8_t data)
+{
+    mapper.WriteChar(addr, data);
+}
+
 static uint8_t *read_program(FILE *fp, size_t size)
 {
     uint8_t *prog = (uint8_t*) calloc(size, sizeof(uint8_t));
@@ -73,16 +93,6 @@ void close_cartridge(struct cartridge *cart)
     free(cart->prog_rom);
     free(cart->char_rom);
     free(cart);
-}
-
-uint8_t read_cartridge(const struct cartridge *cart, uint16_t addr)
-{
-    return read_mapper(&cart->mapper, addr);
-}
-
-void write_cartridge(struct cartridge *cart, uint16_t addr, uint8_t data)
-{
-    write_mapper(&cart->mapper, addr, data);
 }
 
 int is_vertical_mirroring(const struct cartridge *cart)

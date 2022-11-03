@@ -33,8 +33,8 @@ static void load_pattern(FrameBuffer &fb, const struct cartridge *cart, int id)
 
     for (int y = Y0; y < Y1; y++) {
         const uint8_t fine_y = y - Y0;
-        const uint8_t lo = read_cartridge(cart, id * 16 + fine_y + 0);
-        const uint8_t hi = read_cartridge(cart, id * 16 + fine_y + 8);
+        const uint8_t lo = cart->ReadChar(id * 16 + fine_y + 0);
+        const uint8_t hi = cart->ReadChar(id * 16 + fine_y + 8);
         int mask = 1 << 7;
 
         for (int x = X0; x < X1; x++) {

@@ -133,7 +133,7 @@ static uint16_t name_table_index(const struct cartridge *cart, uint16_t addr)
 static uint8_t read_byte(const struct PPU *ppu, uint16_t addr)
 {
     if (addr >= 0x0000 && addr <= 0x1FFF) {
-        return read_cartridge(ppu->cart, addr);
+        return ppu->cart->ReadChar(addr);
     }
     else if (addr >= 0x2000 && addr <= 0x2FFF) {
         const uint16_t index = name_table_index(ppu->cart, addr);
@@ -161,7 +161,7 @@ static uint8_t read_byte(const struct PPU *ppu, uint16_t addr)
 static void write_byte(struct PPU *ppu, uint16_t addr, uint8_t data)
 {
     if (addr >= 0x0000 && addr <= 0x1FFF) {
-        write_cartridge(ppu->cart, addr, data);
+        ppu->cart->WriteChar(addr, data);
     }
     else if (addr >= 0x2000 && addr <= 0x2FFF) {
         const uint16_t index = name_table_index(ppu->cart, addr);

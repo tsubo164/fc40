@@ -11,7 +11,7 @@ static int prog_fixed = 0;
 
 static uint8_t char_ram[0x2000] = {0x00};
 
-static uint8_t read_002(const struct mapper *m, uint16_t addr)
+static uint8_t read_002(const Mapper *m, uint16_t addr)
 {
     if (addr >= 0x0000 && addr <= 0x1FFF) {
         return char_ram[addr];
@@ -31,7 +31,7 @@ static uint8_t read_002(const struct mapper *m, uint16_t addr)
     return 0xFF;
 }
 
-static void write_002(struct mapper *m, uint16_t addr, uint8_t data)
+static void write_002(Mapper *m, uint16_t addr, uint8_t data)
 {
     if (addr >= 0x0000 && addr <= 0x1FFF)
         char_ram[addr] = data;
@@ -47,7 +47,7 @@ static void finish_mapper_002(void)
 {
 }
 
-void open_mapper_002(struct mapper *m, size_t prog_size, size_t char_size)
+void open_mapper_002(Mapper *m, size_t prog_size, size_t char_size)
 {
     m->read_func = read_002;
     m->write_func = write_002;

@@ -107,8 +107,8 @@ static void write_byte(struct CPU *cpu, uint16_t addr, uint8_t data)
     else if (addr == 0x4017) {
         write_apu_frame_counter(&cpu->apu, data);
     }
-    else if (addr >= 0x8000 && addr <= 0xFFFF) {
-        write_cartridge(cpu->cart, addr, data);
+    else {
+        cpu->cart->WriteProg(addr, data);
     }
 }
 
@@ -151,9 +151,10 @@ static uint8_t read_byte(struct CPU *cpu, uint16_t addr)
         cpu->controller_state[id] <<= 1;
         return data;
     }
-    else if (addr >= 0x8000 && addr <= 0xFFFF) {
-        return read_cartridge(cpu->cart, addr);
+    else {
+        return cpu->cart->ReadProg(addr);
     }
+
     return 0;
 }
 
