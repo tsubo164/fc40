@@ -5,69 +5,69 @@
 
 namespace nes {
 
-struct sweep_unit {
-    uint8_t enabled;
-    uint8_t period;
-    uint16_t target_period;
-    uint8_t negate;
-    uint8_t shift;
-    uint8_t reload;
-    uint8_t divider;
+struct Sweep {
+    uint8_t enabled = 0;
+    uint8_t period = 0;
+    uint16_t target_period = 0;
+    uint8_t negate = 0;
+    uint8_t shift = 0;
+    uint8_t reload = 0;
+    uint8_t divider = 0;
 };
 
-struct envelope_unit {
-    uint8_t start;
-    uint8_t decay;
-    uint8_t divider;
-    uint8_t volume;
-    uint8_t loop;
-    uint8_t constant;
+struct Envelope {
+    uint8_t start = 0;
+    uint8_t decay = 0;
+    uint8_t divider = 0;
+    uint8_t volume = 0;
+    uint8_t loop = 0;
+    uint8_t constant = 0;
 };
 
-struct pulse_channel {
-    uint8_t id;
-    uint8_t enabled;
-    uint8_t length;
-    uint8_t length_halt;
+struct PulseChannel {
+    uint8_t id = 0;
+    uint8_t enabled = 0;
+    uint8_t length = 0;
+    uint8_t length_halt = 0;
 
-    uint16_t timer;
-    uint16_t timer_period;
+    uint16_t timer = 0;
+    uint16_t timer_period = 0;
 
-    uint8_t duty;
-    uint8_t sequence_pos;
+    uint8_t duty = 0;
+    uint8_t sequence_pos = 0;
 
-    struct sweep_unit sweep;
-    struct envelope_unit envelope;
+    Sweep sweep;
+    Envelope envelope;
 };
 
-struct triangle_channel {
-    uint8_t enabled;
-    uint8_t length;
-    uint8_t length_halt;
+struct TriangleChannel {
+    uint8_t enabled = 0;
+    uint8_t length = 0;
+    uint8_t length_halt = 0;
 
-    uint8_t control;
-    uint8_t linear_counter;
-    uint8_t linear_period;
-    uint8_t linear_reload;
+    uint8_t control = 0;
+    uint8_t linear_counter = 0;
+    uint8_t linear_period = 0;
+    uint8_t linear_reload = 0;
 
-    uint16_t timer;
-    uint16_t timer_period;
+    uint16_t timer = 0;
+    uint16_t timer_period = 0;
 
-    uint8_t sequence_pos;
+    uint8_t sequence_pos = 0;
 };
 
-struct noise_channel {
-    uint8_t enabled;
-    uint8_t length;
-    uint8_t length_halt;
+struct NoiseChannel {
+    uint8_t enabled = 0;
+    uint8_t length = 0;
+    uint8_t length_halt = 0;
 
-    uint16_t shift;
+    uint16_t shift = 1;
 
-    uint8_t mode;
-    uint16_t timer;
-    uint16_t timer_period;
+    uint8_t mode = 0;
+    uint16_t timer = 0;
+    uint16_t timer_period = 0;
 
-    struct envelope_unit envelope;
+    Envelope envelope;
 };
 
 struct APU {
@@ -79,9 +79,9 @@ struct APU {
     uint8_t frame_interrupt;
     uint8_t irq_generated;
 
-    struct pulse_channel pulse1, pulse2;
-    struct triangle_channel triangle;
-    struct noise_channel noise;
+    PulseChannel pulse1, pulse2;
+    TriangleChannel triangle;
+    NoiseChannel noise;
 };
 
 /* write registers */
