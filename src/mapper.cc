@@ -66,25 +66,26 @@ void Mapper::do_write_char(uint16_t addr, uint8_t data)
 {
 }
 
-Mapper *open_mapper(int id,
+std::shared_ptr<Mapper> new_mapper(int id,
         const uint8_t *prog_rom, size_t prog_size,
         const uint8_t *char_rom, size_t char_size)
 {
+    Mapper *m = nullptr;
+
     switch (id) {
     case 0:
-        return new Mapper(prog_rom, prog_size, char_rom, char_size);
+        m = new Mapper(prog_rom, prog_size, char_rom, char_size);
+        break;
 
     case 2:
-        return new Mapper_002(prog_rom, prog_size, char_rom, char_size);
+        m = new Mapper_002(prog_rom, prog_size, char_rom, char_size);
+        break;
 
     default:
-        return nullptr;
+        break;
     }
-}
 
-void close_mapper(Mapper *m)
-{
-    delete m;
+    return std::shared_ptr<Mapper>(m);
 }
 
 } // namespace

@@ -9,7 +9,7 @@ using namespace nes;
 int main(int argc, char **argv)
 {
     NES nes;
-    Cartridge *cart = nullptr;
+    Cartridge cart;
     const char *filename = nullptr;
     int log_mode = 0;
 
@@ -25,20 +25,18 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    cart = open_cartridge(filename);
-    if (!cart) {
+    if (!cart.Open(filename)) {
         std::cerr << "not a *.nes file" << std::endl;
         return -1;
     }
 
-    if (!cart->mapper_supported) {
-        std::cerr << "mapper " << static_cast<int>(cart->mapper_id)
+    if (!cart.IsMapperSupported()) {
+        std::cerr << "mapper " << static_cast<int>(cart.MapperID())
                   << " is not supported." << std::endl;
-        close_cartridge(cart);
         return -1;
     }
 
-    nes.InsertCartridge(cart);
+    nes.InsertCartridge(&cart);
     nes.PowerUp();
 
     if (log_mode)
@@ -47,7 +45,6 @@ int main(int argc, char **argv)
         nes.PlayGame();
 
     nes.ShutDown();
-    close_cartridge(cart);
 
     return 0;
 }

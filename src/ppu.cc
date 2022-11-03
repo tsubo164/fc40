@@ -116,7 +116,7 @@ static uint16_t name_table_index(const Cartridge *cart, uint16_t addr)
     const uint16_t index = addr - 0x2000;
 
     /* vertical mirroring */
-    if (is_vertical_mirroring(cart))
+    if (cart->IsVerticalMirroring())
         return index & 0x07FF;
 
     /* horizontal mirroring */

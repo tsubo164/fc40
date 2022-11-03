@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <memory>
 
 namespace nes {
 
@@ -33,10 +34,9 @@ private:
     virtual void do_write_char(uint16_t addr, uint8_t data);
 };
 
-extern Mapper *open_mapper(int id,
+extern std::shared_ptr<Mapper> new_mapper(int id,
         const uint8_t *prog_rom, size_t prog_size,
         const uint8_t *char_rom, size_t char_size);
-extern void close_mapper(Mapper *m);
 
 } // namespace
 

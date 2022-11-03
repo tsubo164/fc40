@@ -1,100 +1,62 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <iostream>
+#include <fstream>
 #include "cartridge.h"
 #include "mapper.h"
 
 namespace nes {
 
-uint8_t Cartridge::ReadProg(uint16_t addr) const
+static void read_data(std::ifstream &ifs, std::vector<uint8_t> &v, size_t count)
 {
-    return mapper->ReadProg(addr);
+    v.resize(count, 0);
+    ifs.read(reinterpret_cast<char*>(&v[0]), sizeof(v[0]) * count);
 }
 
-void Cartridge::WriteProg(uint16_t addr, uint8_t data)
+bool Cartridge::Open(const char *filename)
 {
-    mapper->WriteProg(addr, data);
-}
+    std::ifstream ifs(filename, std::ios::binary);
+    if (!ifs)
+        return false;
 
-uint8_t Cartridge::ReadChar(uint16_t addr) const
-{
-    return mapper->ReadChar(addr);
-}
-
-void Cartridge::WriteChar(uint16_t addr, uint8_t data)
-{
-    mapper->WriteChar(addr, data);
-}
-
-static uint8_t *read_program(FILE *fp, size_t size)
-{
-    uint8_t *prog = (uint8_t*) calloc(size, sizeof(uint8_t));
-
-    fread(prog, sizeof(uint8_t), size, fp);
-
-    return prog;
-}
-
-static uint8_t *read_character(FILE *fp, size_t size)
-{
-    uint8_t *chr = (uint8_t*) calloc(size, sizeof(uint8_t));
-
-    fread(chr, sizeof(uint8_t), size, fp);
-
-    return chr;
-}
-
-Cartridge *open_cartridge(const char *filename)
-{
-    Cartridge *cart = NULL;
-    FILE *fp = fopen(filename, "rb");
     char header[16] = {'\0'};
 
-    fread(header, sizeof(char), 16, fp);
-
+    ifs.read(header, sizeof(char) * 16);
     if (header[0] != 'N' ||
         header[1] != 'E' ||
         header[2] != 'S' ||
         header[3] != 0x1a)
-        return NULL;
+        return false;
 
-    cart = (Cartridge*) malloc(sizeof(Cartridge));
+    prog_size_ = header[4] * 16 * 1024;
+    char_size_ = header[5] * 8 * 1024;
+    mirroring_ = header[6] & 0x01;
+    mapper_id_ = header[6] >> 4;
+    read_data(ifs, prog_rom_, prog_size_);
+    read_data(ifs, char_rom_, char_size_);
 
-    cart->prog_size = header[4] * 16 * 1024;
-    cart->char_size = header[5] * 8 * 1024;
-    cart->mirroring = header[6] & 0x01;
-    cart->mapper_id = header[6] >> 4;
-    cart->nbanks = header[4] == 1 ? 1 : 2;
-    cart->prog_rom = read_program(fp, cart->prog_size);
-    cart->char_rom = read_character(fp, cart->char_size);
+    mapper_ = new_mapper(mapper_id_,
+            &prog_rom_[0], prog_size_, &char_rom_[0], char_size_);
 
-    cart->mapper = open_mapper(cart->mapper_id,
-            cart->prog_rom, cart->prog_size,
-            cart->char_rom, cart->char_size);
-    if (!cart->mapper)
-        cart->mapper_supported = 0;
-    else
-        cart->mapper_supported = 1;
-
-    fclose(fp);
-    return cart;
+    return true;
 }
 
-void close_cartridge(Cartridge *cart)
+uint8_t Cartridge::ReadProg(uint16_t addr) const
 {
-    if (!cart)
-        return;
-
-    close_mapper(cart->mapper);
-    cart->mapper = nullptr;
-
-    free(cart->prog_rom);
-    free(cart->char_rom);
-    free(cart);
+    return mapper_->ReadProg(addr);
 }
 
-int is_vertical_mirroring(const Cartridge *cart)
+void Cartridge::WriteProg(uint16_t addr, uint8_t data)
 {
-    return cart->mirroring == 1;
+    mapper_->WriteProg(addr, data);
+}
+
+uint8_t Cartridge::ReadChar(uint16_t addr) const
+{
+    return mapper_->ReadChar(addr);
+}
+
+void Cartridge::WriteChar(uint16_t addr, uint8_t data)
+{
+    mapper_->WriteChar(addr, data);
 }
 
 } // namespace
