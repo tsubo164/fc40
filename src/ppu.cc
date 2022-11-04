@@ -38,7 +38,7 @@ enum ppu_mask {
     MASK_EMPHASIZE_B      = 1 << 7
 };
 
-static void set_stat(struct PPU *ppu, uint8_t flag, uint8_t val)
+static void set_stat(PPU *ppu, uint8_t flag, uint8_t val)
 {
     if (val)
         ppu->stat |= flag;
@@ -46,22 +46,22 @@ static void set_stat(struct PPU *ppu, uint8_t flag, uint8_t val)
         ppu->stat &= ~flag;
 }
 
-static int get_ctrl(const struct PPU *ppu, uint8_t flag)
+static int get_ctrl(const PPU *ppu, uint8_t flag)
 {
     return (ppu->ctrl & flag) > 0;
 }
 
-static int is_rendering_bg(const struct PPU *ppu)
+static int is_rendering_bg(const PPU *ppu)
 {
     return ppu->mask & MASK_SHOW_BG;
 }
 
-static int is_rendering_sprite(const struct PPU *ppu)
+static int is_rendering_sprite(const PPU *ppu)
 {
     return ppu->mask & MASK_SHOW_SPRITE;
 }
 
-static void enter_vblank(struct PPU *ppu)
+static void enter_vblank(PPU *ppu)
 {
     set_stat(ppu, STAT_VERTICAL_BLANK, 1);
 
@@ -69,12 +69,12 @@ static void enter_vblank(struct PPU *ppu)
         ppu->nmi_generated = 1;
 }
 
-static void leave_vblank(struct PPU *ppu)
+static void leave_vblank(PPU *ppu)
 {
     set_stat(ppu, STAT_VERTICAL_BLANK, 0);
 }
 
-static void set_sprite_overflow(struct PPU *ppu)
+static void set_sprite_overflow(PPU *ppu)
 {
     set_stat(ppu, STAT_SPRITE_OVERFLOW, 1);
 }
@@ -130,7 +130,7 @@ static uint16_t name_table_index(const Cartridge *cart, uint16_t addr)
     return 0x0000;
 }
 
-static uint8_t read_byte(const struct PPU *ppu, uint16_t addr)
+static uint8_t read_byte(const PPU *ppu, uint16_t addr)
 {
     if (addr >= 0x0000 && addr <= 0x1FFF) {
         return ppu->cart->ReadChar(addr);
@@ -158,7 +158,7 @@ static uint8_t read_byte(const struct PPU *ppu, uint16_t addr)
     return 0xFF;
 }
 
-static void write_byte(struct PPU *ppu, uint16_t addr, uint8_t data)
+static void write_byte(PPU *ppu, uint16_t addr, uint8_t data)
 {
     if (addr >= 0x0000 && addr <= 0x1FFF) {
         ppu->cart->WriteChar(addr, data);
@@ -235,7 +235,7 @@ static uint16_t encode_address(struct vram_pointer v)
     return addr;
 }
 
-static void increment_scroll_x(struct PPU *ppu)
+static void increment_scroll_x(PPU *ppu)
 {
     struct vram_pointer v = decode_address(ppu->vram_addr);
 
@@ -250,7 +250,7 @@ static void increment_scroll_x(struct PPU *ppu)
     ppu->vram_addr = encode_address(v);
 }
 
-static void increment_scroll_y(struct PPU *ppu)
+static void increment_scroll_y(PPU *ppu)
 {
     struct vram_pointer v = decode_address(ppu->vram_addr);
 
@@ -272,7 +272,7 @@ static void increment_scroll_y(struct PPU *ppu)
     ppu->vram_addr = encode_address(v);
 }
 
-static void copy_address_x(struct PPU *ppu)
+static void copy_address_x(PPU *ppu)
 {
     const struct vram_pointer t = decode_address(ppu->temp_addr);
     struct vram_pointer v = decode_address(ppu->vram_addr);
@@ -283,7 +283,7 @@ static void copy_address_x(struct PPU *ppu)
     ppu->vram_addr = encode_address(v);
 }
 
-static void copy_address_y(struct PPU *ppu)
+static void copy_address_y(PPU *ppu)
 {
     const struct vram_pointer t = decode_address(ppu->temp_addr);
     struct vram_pointer v = decode_address(ppu->vram_addr);
@@ -295,7 +295,7 @@ static void copy_address_y(struct PPU *ppu)
     ppu->vram_addr = encode_address(v);
 }
 
-static int address_increment(const struct PPU *ppu)
+static int address_increment(const PPU *ppu)
 {
     return get_ctrl(ppu, CTRL_ADDR_INCREMENT) ? 32 : 1;
 }
@@ -303,12 +303,12 @@ static int address_increment(const struct PPU *ppu)
 /* -------------------------------------------------------------------------- */
 /* tile */
 
-static uint8_t fetch_tile_id(const struct PPU *ppu)
+static uint8_t fetch_tile_id(const PPU *ppu)
 {
     return read_byte(ppu, 0x2000 | (ppu->vram_addr & 0x0FFF));
 }
 
-static uint8_t fetch_tile_attr(const struct PPU *ppu)
+static uint8_t fetch_tile_attr(const PPU *ppu)
 {
     const struct vram_pointer v = decode_address(ppu->vram_addr);
     const uint16_t attr_x = v.tile_x / 4;
@@ -324,7 +324,7 @@ static uint8_t fetch_tile_attr(const struct PPU *ppu)
     return (attr >> (bit * 2)) & 0x03;
 }
 
-static uint8_t fetch_tile_row(const struct PPU *ppu, uint8_t tile_id, uint8_t plane)
+static uint8_t fetch_tile_row(const PPU *ppu, uint8_t tile_id, uint8_t plane)
 {
     const struct vram_pointer v = decode_address(ppu->vram_addr);
     const uint16_t base = get_ctrl(ppu, CTRL_PATTERN_BG) ? 0x1000 : 0x0000;
@@ -333,12 +333,12 @@ static uint8_t fetch_tile_row(const struct PPU *ppu, uint8_t tile_id, uint8_t pl
     return read_byte(ppu, addr);
 }
 
-static void clear_sprite_overflow(struct PPU *ppu)
+static void clear_sprite_overflow(PPU *ppu)
 {
     set_stat(ppu, STAT_SPRITE_OVERFLOW, 0);
 }
 
-static void load_next_tile(struct PPU *ppu, int cycle)
+static void load_next_tile(PPU *ppu, int cycle)
 {
     /* after rendering is done in a scanline,
      * it is necesarry to shift bits for whole row before loading new row */
@@ -355,7 +355,7 @@ static void shift_word(uint8_t *left, uint8_t *right)
     *right <<= 1;
 }
 
-static void shift_tile_data(struct PPU *ppu)
+static void shift_tile_data(PPU *ppu)
 {
     shift_word(&ppu->tile_queue[2].lo, &ppu->tile_queue[1].lo);
     shift_word(&ppu->tile_queue[2].hi, &ppu->tile_queue[1].hi);
@@ -363,15 +363,15 @@ static void shift_tile_data(struct PPU *ppu)
     shift_word(&ppu->tile_queue[2].palette_hi, &ppu->tile_queue[1].palette_hi);
 }
 
-static void set_tile_palette(struct pattern_row *patt, uint8_t palette)
+static void set_tile_palette(PatternRow *patt, uint8_t palette)
 {
     patt->palette_lo = (palette & 0x01) ? 0xFF : 0x00;
     patt->palette_hi = (palette & 0x02) ? 0xFF : 0x00;
 }
 
-static void fetch_tile_data(struct PPU *ppu, int cycle)
+static void fetch_tile_data(PPU *ppu, int cycle)
 {
-    struct pattern_row *next = &ppu->tile_queue[0];
+    PatternRow *next = &ppu->tile_queue[0];
 
     switch (cycle % 8) {
     case 1:
@@ -402,11 +402,11 @@ static void fetch_tile_data(struct PPU *ppu, int cycle)
 /* -------------------------------------------------------------------------- */
 /* sprite */
 
-static void clear_secondary_oam(struct PPU *ppu, int cycle)
+static void clear_secondary_oam(PPU *ppu, int cycle)
 {
     /* secondary oam crear occurs cycle 1 - 64 */
     if (cycle % 8 == 1) {
-        const struct object_attribute init = {0xFF, 0xFF, 0xFF, 0xFF};
+        const ObjectAttribute init = {0xFF, 0xFF, 0xFF, 0xFF};
         ppu->secondary_oam[cycle / 8] = init;
     }
 
@@ -414,9 +414,9 @@ static void clear_secondary_oam(struct PPU *ppu, int cycle)
         ppu->sprite_count = 0;
 }
 
-static struct object_attribute get_sprite(const struct PPU *ppu, int index)
+static ObjectAttribute get_sprite(const PPU *ppu, int index)
 {
-    struct object_attribute obj = {0xFF, 0xFF, 0xFF, 0xFF};
+    ObjectAttribute obj = {0xFF, 0xFF, 0xFF, 0xFF};
     uint8_t attr = 0;
 
     if (index < 0 || index > 63)
@@ -435,20 +435,20 @@ static struct object_attribute get_sprite(const struct PPU *ppu, int index)
     return obj;
 }
 
-static int is_sprite_visible(struct object_attribute obj, int scanline, int height)
+static int is_sprite_visible(ObjectAttribute obj, int scanline, int height)
 {
     const int diff = scanline - ((int) obj.y);
 
     return diff >= 0 && diff < height;
 }
 
-static void evaluate_sprite(struct PPU *ppu, int cycle, int scanline)
+static void evaluate_sprite(PPU *ppu, int cycle, int scanline)
 {
     /* secondary oam crear occurs cycle 65 - 256 */
     /* index = 0 .. 191 */
     const int index = cycle - 65;
     const int sprite_height = 8;
-    struct object_attribute obj;
+    ObjectAttribute obj;
 
     if (index > 63)
         return;
@@ -468,7 +468,7 @@ static void evaluate_sprite(struct PPU *ppu, int cycle, int scanline)
     }
 }
 
-static uint8_t fetch_sprite_row(const struct PPU *ppu, uint8_t tile_id, int y, uint8_t plane)
+static uint8_t fetch_sprite_row(const PPU *ppu, uint8_t tile_id, int y, uint8_t plane)
 {
     const uint16_t base = get_ctrl(ppu, CTRL_PATTERN_SPRITE) ? 0x1000 : 0x0000;
     const uint16_t addr = base + 16 * tile_id + plane + y;
@@ -490,7 +490,7 @@ static uint8_t flip_pattern_row(uint8_t bits)
     return dst;
 }
 
-static void fetch_sprite_data(struct PPU *ppu, int cycle, int scanline)
+static void fetch_sprite_data(PPU *ppu, int cycle, int scanline)
 {
     /* fetch sprite data occurs cycle 257 - 320 */
     /* index = (0 .. 63) / 8 => 0 .. 7 */
@@ -498,8 +498,8 @@ static void fetch_sprite_data(struct PPU *ppu, int cycle, int scanline)
     const int is_visible = index < ppu->sprite_count;
     const int sprite_id = ppu->secondary_oam[index].id;
     int sprite_y = scanline - ppu->secondary_oam[index].y;
-    struct pattern_row *patt = &ppu->rendering_sprite[index];
-    const struct object_attribute obj = ppu->rendering_oam[index];
+    PatternRow *patt = &ppu->rendering_sprite[index];
+    const ObjectAttribute obj = ppu->rendering_oam[index];
 
     switch (cycle % 8) {
     case 3:
@@ -545,13 +545,13 @@ static void fetch_sprite_data(struct PPU *ppu, int cycle, int scanline)
     }
 }
 
-static void shift_sprite_data(struct PPU *ppu)
+static void shift_sprite_data(PPU *ppu)
 {
     int i;
 
     for (i = 0; i < 8; i++) {
-        struct object_attribute *obj = &ppu->rendering_oam[i];
-        struct pattern_row *patt = &ppu->rendering_sprite[i];
+        ObjectAttribute *obj = &ppu->rendering_oam[i];
+        PatternRow *patt = &ppu->rendering_sprite[i];
 
         if (obj->x > 0) {
             obj->x--;
@@ -576,7 +576,7 @@ struct pixel {
 
 static const struct pixel BACKDROP = {0};
 
-static struct pixel get_pixel(struct pattern_row patt, uint8_t fine_x)
+static struct pixel get_pixel(PatternRow patt, uint8_t fine_x)
 {
     struct pixel pix = {0};
 
@@ -594,24 +594,24 @@ static struct pixel get_pixel(struct pattern_row patt, uint8_t fine_x)
     return pix;
 }
 
-static int is_sprite_zero(const struct PPU *ppu, struct object_attribute obj)
+static int is_sprite_zero(const PPU *ppu, ObjectAttribute obj)
 {
     const int sprite_zero_id = ppu->oam[1];
 
     return obj.id == sprite_zero_id;
 }
 
-static struct pixel get_pixel_bg(const struct PPU *ppu)
+static struct pixel get_pixel_bg(const PPU *ppu)
 {
     return get_pixel(ppu->tile_queue[2], ppu->fine_x);
 }
 
-static struct pixel get_pixel_fg(const struct PPU *ppu)
+static struct pixel get_pixel_fg(const PPU *ppu)
 {
     int i;
 
     for (i = 0; i < 8; i++) {
-        const struct object_attribute obj = ppu->rendering_oam[i];
+        const ObjectAttribute obj = ppu->rendering_oam[i];
 
         if (obj.x == 0) {
             struct pixel pix = get_pixel(ppu->rendering_sprite[i], 0);
@@ -640,13 +640,13 @@ static struct pixel composite_pixels(struct pixel bg, struct pixel fg)
         return fg.priority == 0 ? fg : bg;
 }
 
-static int is_clipping_left(const struct PPU *ppu)
+static int is_clipping_left(const PPU *ppu)
 {
     return !(ppu->mask & MASK_SHOW_BG_LEFT) ||
            !(ppu->mask & MASK_SHOW_SPRITE_LEFT);
 }
 
-static int is_sprite_zero_hit(const struct PPU *ppu, struct pixel bg, struct pixel fg, int x)
+static int is_sprite_zero_hit(const PPU *ppu, struct pixel bg, struct pixel fg, int x)
 {
     if (!fg.sprite_zero)
         return 0;
@@ -669,20 +669,20 @@ static int is_sprite_zero_hit(const struct PPU *ppu, struct pixel bg, struct pix
     return 1;
 }
 
-static uint8_t fetch_palette_value(const struct PPU *ppu, uint8_t palette_id, uint8_t pixel_val)
+static uint8_t fetch_palette_value(const PPU *ppu, uint8_t palette_id, uint8_t pixel_val)
 {
     const uint16_t addr = 0x3F00 + 4 * palette_id + pixel_val;
 
     return read_byte(ppu, addr);
 }
 
-static struct Color lookup_pixel_color(const struct PPU *ppu, struct pixel pix)
+static struct Color lookup_pixel_color(const PPU *ppu, struct pixel pix)
 {
     const uint8_t index = fetch_palette_value(ppu, pix.palette, pix.value);
     return get_color(index);
 }
 
-static void render_pixel(struct PPU *ppu, int x, int y)
+static void render_pixel(PPU *ppu, int x, int y)
 {
     struct pixel bg = {0}, fg = {0}, final = {0};
     struct Color col = {0};
@@ -711,170 +711,164 @@ static void render_pixel(struct PPU *ppu, int x, int y)
 /* -------------------------------------------------------------------------- */
 /* clock */
 
-void clear_nmi(struct PPU *ppu)
+void PPU::ClearNMI()
 {
-    ppu->nmi_generated = 0;
+    nmi_generated = 0;
 }
 
-int is_nmi_generated(const struct PPU *ppu)
+bool PPU::IsSetNMI() const
 {
-    return ppu->nmi_generated;
+    return nmi_generated;
 }
 
-int is_frame_ready(const struct PPU *ppu)
+bool PPU::IsFrameReady() const
 {
-    return ppu->cycle == 0 && ppu->scanline == 0;
+    return cycle == 0 && scanline == 0;
 }
 
-void clock_ppu(struct PPU *ppu)
+void PPU::Clock()
 {
-    const int cycle = ppu->cycle;
-    const int scanline = ppu->scanline;
-    const int is_rendering = is_rendering_bg(ppu) || is_rendering_sprite(ppu);
+    const bool is_rendering = is_rendering_bg(this) || is_rendering_sprite(this);
 
     if ((scanline >= 0 && scanline <= 239) || scanline == 261) {
 
-        /* fetch bg tile */
+        // fetch bg tile
         if ((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 337)) {
 
             if (cycle % 8 == 0)
                 if (is_rendering)
-                    increment_scroll_x(ppu);
+                    increment_scroll_x(this);
 
             if (cycle % 8 == 1)
-                load_next_tile(ppu, cycle);
+                load_next_tile(this, cycle);
 
-            fetch_tile_data(ppu, cycle);
+            fetch_tile_data(this, cycle);
         }
 
-        /* inc vert(v) */
+        // inc vert(v)
         if (cycle == 256)
             if (is_rendering)
-                increment_scroll_y(ppu);
+                increment_scroll_y(this);
 
-        /* hori(v) = hori(t) */
+        // hori(v) = hori(t)
         if (cycle == 257)
             if (is_rendering)
-                copy_address_x(ppu);
+                copy_address_x(this);
 
-        /* vert(v) = vert(t) */
+        // vert(v) = vert(t)
         if ((cycle >= 280 && cycle <= 304) && scanline == 261)
             if (is_rendering)
-                copy_address_y(ppu);
+                copy_address_y(this);
 
-        /* clear secondary oam */
+        // clear secondary oam
         if ((cycle >= 1 && cycle <= 64) && scanline != 261)
-            clear_secondary_oam(ppu, cycle);
+            clear_secondary_oam(this, cycle);
 
-        /* evaluate sprite for next scanline */
+        // evaluate sprite for next scanline
         if ((cycle >= 65 && cycle <= 256) && scanline != 261)
-            evaluate_sprite(ppu, cycle, scanline);
+            evaluate_sprite(this, cycle, scanline);
 
-        /* fetch sprite */
+        // fetch sprite
         if (cycle >= 257 && cycle <= 320)
-            fetch_sprite_data(ppu, cycle, scanline);
+            fetch_sprite_data(this, cycle, scanline);
     }
 
     if (scanline == 241)
         if (cycle == 1)
-            enter_vblank(ppu);
+            enter_vblank(this);
 
     if (scanline == 261) {
         if (cycle == 1) {
-            leave_vblank(ppu);
-            clear_sprite_overflow(ppu);
-            set_stat(ppu, STAT_SPRITE_ZERO_HIT, 0);
+            leave_vblank(this);
+            clear_sprite_overflow(this);
+            set_stat(this, STAT_SPRITE_ZERO_HIT, 0);
         }
     }
 
-    /* render pixel */
+    // render pixel
     if (scanline >= 0 && scanline <= 239) {
         if (cycle >= 1 && cycle <= 256) {
-            render_pixel(ppu, cycle - 1, scanline);
+            render_pixel(this, cycle - 1, scanline);
 
-            if (is_rendering_bg(ppu))
-                shift_tile_data(ppu);
+            if (is_rendering_bg(this))
+                shift_tile_data(this);
 
-            if (is_rendering_sprite(ppu))
-                shift_sprite_data(ppu);
+            if (is_rendering_sprite(this))
+                shift_sprite_data(this);
         }
     }
 
-    /* advance cycle and scanline */
+    // advance cycle and scanline
     if (cycle == 339) {
-        if (scanline == 261 && ppu->frame % 2 == 0) {
-            /* the end of the scanline for odd frames */
-            ppu->cycle = 0;
-            ppu->scanline = 0;
-            ppu->frame++;
+        if (scanline == 261 && frame % 2 == 0) {
+            // the end of the scanline for odd frames
+            cycle = 0;
+            scanline = 0;
+            frame++;
         }
         else {
-            ppu->cycle = cycle + 1;
+            cycle++;
         }
     }
     else if (cycle == 340) {
         if (scanline == 261) {
-            ppu->cycle = 0;
-            ppu->scanline = 0;
-            ppu->frame++;
+            cycle = 0;
+            scanline = 0;
+            frame++;
         }
         else {
-            ppu->cycle = 0;
-            ppu->scanline = scanline + 1;
+            cycle = 0;
+            scanline++;
         }
     }
     else {
-        ppu->cycle = cycle + 1;
+        cycle++;
     }
 }
 
-void power_up_ppu(struct PPU *ppu)
+void PPU::PowerUp()
 {
-    int i;
+    ctrl = 0x00;
+    mask = 0x00;
+    stat = 0xA0;
+    oam_addr = 0x00;
 
-    ppu->ctrl = 0x00;
-    ppu->mask = 0x00;
-    ppu->stat = 0xA0;
-    ppu->oam_addr = 0x00;
+    write_toggle = 0;
 
-    ppu->write_toggle = 0;
+    temp_addr = 0x0000;
+    vram_addr = 0x0000;
+    read_buffer = 0x00;
 
-    ppu->temp_addr = 0x0000;
-    ppu->vram_addr = 0x0000;
-    ppu->read_buffer = 0x00;
+    frame = 0;
 
-    ppu->frame = 0;
+    for (int i = 0; i < 256; i++)
+        oam[i] = 0xFF;
 
-    for (i = 0; i < 256; i++)
-        ppu->oam[i] = 0xFF;
+    for (int i = 0; i < 32; i++)
+        palette_ram[i] = 0xFF;
 
-    for (i = 0; i < 32; i++)
-        ppu->palette_ram[i] = 0xFF;
-
-    for (i = 0; i < 2048; i++)
-        ppu->name_table[i] = 0xFF;
+    for (int i = 0; i < 2048; i++)
+        name_table[i] = 0xFF;
 }
 
-void reset_ppu(struct PPU *ppu)
+void PPU::Reset()
 {
-    int i;
+    ctrl = 0x00;
+    mask = 0x00;
+    stat &= 0x80;
 
-    ppu->ctrl = 0x00;
-    ppu->mask = 0x00;
-    ppu->stat &= 0x80;
+    write_toggle = 0;
 
-    ppu->write_toggle = 0;
+    temp_addr   = 0x0000;
+    read_buffer = 0x00;
 
-    ppu->temp_addr   = 0x0000;
-    ppu->read_buffer = 0x00;
+    frame = 0;
 
-    ppu->frame = 0;
-
-    for (i = 0; i < 256; i++)
-        ppu->oam[i] = 0xFF;
+    for (int i = 0; i < 256; i++)
+        oam[i] = 0xFF;
 }
 
-void write_ppu_control(struct PPU *ppu, uint8_t data)
+void write_ppu_control(PPU *ppu, uint8_t data)
 {
     /* Nametable x and y from control
      * t: ...GH.. ........ <- d: ......GH
@@ -884,22 +878,22 @@ void write_ppu_control(struct PPU *ppu, uint8_t data)
     ppu->temp_addr = (ppu->temp_addr & 0xF3FF) | ((data & 0x03) << 10);
 }
 
-void write_ppu_mask(struct PPU *ppu, uint8_t data)
+void write_ppu_mask(PPU *ppu, uint8_t data)
 {
     ppu->mask = data;
 }
 
-void write_oam_address(struct PPU *ppu, uint8_t addr)
+void write_oam_address(PPU *ppu, uint8_t addr)
 {
     ppu->oam_addr = addr;
 }
 
-void write_oam_data(struct PPU *ppu, uint8_t data)
+void write_oam_data(PPU *ppu, uint8_t data)
 {
     ppu->oam[ppu->oam_addr] = data;
 }
 
-void write_ppu_scroll(struct PPU *ppu, uint8_t data)
+void write_ppu_scroll(PPU *ppu, uint8_t data)
 {
     if (ppu->write_toggle == 0) {
         /* Coarse X and fine x
@@ -921,7 +915,7 @@ void write_ppu_scroll(struct PPU *ppu, uint8_t data)
     }
 }
 
-void write_ppu_address(struct PPU *ppu, uint8_t addr)
+void write_ppu_address(PPU *ppu, uint8_t addr)
 {
     if (ppu->write_toggle == 0) {
         /* High byte
@@ -945,14 +939,14 @@ void write_ppu_address(struct PPU *ppu, uint8_t addr)
     }
 }
 
-void write_ppu_data(struct PPU *ppu, uint8_t data)
+void write_ppu_data(PPU *ppu, uint8_t data)
 {
     write_byte(ppu, ppu->vram_addr, data);
 
     ppu->vram_addr += address_increment(ppu);
 }
 
-uint8_t read_ppu_status(struct PPU *ppu)
+uint8_t read_ppu_status(PPU *ppu)
 {
     const uint8_t data = ppu->stat;
 
@@ -962,12 +956,12 @@ uint8_t read_ppu_status(struct PPU *ppu)
     return data;
 }
 
-uint8_t read_oam_data(const struct PPU *ppu)
+uint8_t read_oam_data(const PPU *ppu)
 {
     return ppu->oam[ppu->oam_addr];
 }
 
-uint8_t read_ppu_data(struct PPU *ppu)
+uint8_t read_ppu_data(PPU *ppu)
 {
     const uint16_t addr = ppu->vram_addr;
     uint8_t data = ppu->read_buffer;
@@ -982,12 +976,12 @@ uint8_t read_ppu_data(struct PPU *ppu)
     return data;
 }
 
-uint8_t peek_ppu_status(const struct PPU *ppu)
+uint8_t peek_ppu_status(const PPU *ppu)
 {
     return ppu->stat;
 }
 
-void write_dma_sprite(struct PPU *ppu, uint8_t addr, uint8_t data)
+void write_dma_sprite(PPU *ppu, uint8_t addr, uint8_t data)
 {
     ppu->oam[addr] = data;
 }
@@ -995,7 +989,7 @@ void write_dma_sprite(struct PPU *ppu, uint8_t addr, uint8_t data)
 /* -------------------------------------------------------------------------- */
 /* debug */
 
-struct object_attribute read_oam(const struct PPU *ppu, int index)
+ObjectAttribute read_oam(const PPU *ppu, int index)
 {
     return get_sprite(ppu, index);
 }

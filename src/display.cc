@@ -21,7 +21,7 @@ static void transfer_texture(const FrameBuffer &fb);
 static void resize(GLFWwindow *const window, int width, int height);
 static void render_grid(int width, int height);
 static void render_pattern_table(const FrameBuffer &patt);
-static void render_sprite_box(const struct PPU &ppu, int width, int height);
+static void render_sprite_box(const PPU &ppu, int width, int height);
 
 static const GLuint main_screen = 0;
 static GLuint pattern_table_id = 0;
@@ -317,14 +317,14 @@ static void render_pattern_table(const FrameBuffer &patt)
     glPopAttrib();
 }
 
-static void render_sprite_box(const struct PPU &ppu, int width, int height)
+static void render_sprite_box(const PPU &ppu, int width, int height)
 {
     glPushAttrib(GL_CURRENT_BIT);
 
     for (int i = 0; i < 64; i++) {
         // draw sprite zero last
         const int index = 63 - i;
-        const struct object_attribute obj = read_oam(&ppu, index);
+        const ObjectAttribute obj = read_oam(&ppu, index);
         const int x = obj.x - width / 2;
         const int y = height / 2 - obj.y - 1;
 

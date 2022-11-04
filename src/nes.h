@@ -17,7 +17,7 @@ public:
     ~NES() {}
 
     struct CPU cpu = {0};
-    struct PPU ppu = {0};
+    PPU ppu;
 
     FrameBuffer fbuf;
     FrameBuffer patt;

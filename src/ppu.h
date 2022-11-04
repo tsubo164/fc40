@@ -1,101 +1,104 @@
 #ifndef PPU_H
 #define PPU_H
 
-#include <stdint.h>
+#include <cstdint>
 
 namespace nes {
 
 class FrameBuffer;
 class Cartridge;
 
-struct pattern_row {
-    uint8_t id;
-    uint8_t lo, hi;
-    uint8_t palette_lo;
-    uint8_t palette_hi;
+struct PatternRow {
+    uint8_t id = 0;
+    uint8_t lo = 0, hi = 0;
+    uint8_t palette_lo = 0;
+    uint8_t palette_hi = 0;
 };
 
-struct object_attribute {
-    uint8_t id;
-    uint8_t x, y;
-    uint8_t palette;
-    uint8_t priority;
-    uint8_t flipped_h;
-    uint8_t flipped_v;
+struct ObjectAttribute {
+    uint8_t id = 0xFF;
+    uint8_t x, y = 0xFF;
+    uint8_t palette = 0xFF;
+    uint8_t priority = 0xFF;
+    uint8_t flipped_h = 0xFF;
+    uint8_t flipped_v = 0xFF;
 };
 
-struct PPU {
+class PPU {
+public:
+    PPU() {}
+    ~PPU() {}
+
     Cartridge *cart;
 
-    /* registers */
-    uint8_t ctrl;
-    uint8_t mask;
-    uint8_t stat;
+    // registers
+    uint8_t ctrl = 0;
+    uint8_t mask = 0;
+    uint8_t stat = 0;
 
-    /* vram and scroll */
-    uint8_t write_toggle;
-    uint16_t vram_addr;
-    uint16_t temp_addr;
-    uint8_t fine_x;
+    // vram and scroll
+    uint8_t write_toggle = 0;
+    uint16_t vram_addr = 0;
+    uint16_t temp_addr = 0;
+    uint8_t fine_x = 0;
 
-    /* vram */
-    uint8_t read_buffer;
-    uint8_t palette_ram[32];
-    uint8_t name_table[2048];
+    // vram
+    uint8_t read_buffer = 0;
+    uint8_t palette_ram[32] = {0};
+    uint8_t name_table[2048] = {0};
 
-    /* bg tile cache */
-    struct pattern_row tile_queue[3];
+    // bg tile cache
+    PatternRow tile_queue[3];
 
-    /* fg sprite */
-    uint8_t oam_addr;
-    uint8_t oam[256];
-    struct object_attribute secondary_oam[8];
-    /* 8 latches and 8 counters */
-    struct object_attribute rendering_oam[8];
-    struct pattern_row rendering_sprite[8];
-    int sprite_count;
+    // fg sprite
+    uint8_t oam_addr = 0;
+    uint8_t oam[256] = {0};
+    ObjectAttribute secondary_oam[8];
+    // 8 latches and 8 counters
+    ObjectAttribute rendering_oam[8];
+    PatternRow rendering_sprite[8];
+    int sprite_count = 0;
 
-    int cycle;
-    int scanline;
-    uint64_t frame;
-    FrameBuffer *fbuf;
+    int cycle = 0;
+    int scanline = 0;
+    uint64_t frame = 0;
+    FrameBuffer *fbuf = nullptr;
 
-    uint8_t nmi_generated;
+    uint8_t nmi_generated = 0;
+
+    // interruptions
+    void ClearNMI();
+    bool IsSetNMI() const;
+    bool IsFrameReady() const;
+
+    // clock
+    void Clock();
+    void PowerUp();
+    void Reset();
 };
 
-/* interruptions */
-extern void clear_nmi(struct PPU *ppu);
-extern int is_nmi_generated(const struct PPU *ppu);
-extern int is_frame_ready(const struct PPU *ppu);
+// write registers
+extern void write_ppu_control(PPU *ppu, uint8_t data);
+extern void write_ppu_mask(PPU *ppu, uint8_t data);
+extern void write_oam_address(PPU *ppu, uint8_t addr);
+extern void write_oam_data(PPU *ppu, uint8_t data);
+extern void write_ppu_scroll(PPU *ppu, uint8_t data);
+extern void write_ppu_address(PPU *ppu, uint8_t addr);
+extern void write_ppu_data(PPU *ppu, uint8_t data);
 
-/* clock */
-extern void clock_ppu(struct PPU *ppu);
+// read registers
+extern uint8_t read_ppu_status(PPU *ppu);
+extern uint8_t read_oam_data(const PPU *ppu);
+extern uint8_t read_ppu_data(PPU *ppu);
 
-extern void power_up_ppu(struct PPU *ppu);
-extern void reset_ppu(struct PPU *ppu);
+// peek registers
+extern uint8_t peek_ppu_status(const PPU *ppu);
 
-/* write registers */
-extern void write_ppu_control(struct PPU *ppu, uint8_t data);
-extern void write_ppu_mask(struct PPU *ppu, uint8_t data);
-extern void write_oam_address(struct PPU *ppu, uint8_t addr);
-extern void write_oam_data(struct PPU *ppu, uint8_t data);
-extern void write_ppu_scroll(struct PPU *ppu, uint8_t data);
-extern void write_ppu_address(struct PPU *ppu, uint8_t addr);
-extern void write_ppu_data(struct PPU *ppu, uint8_t data);
+// sprites
+extern void write_dma_sprite(PPU *ppu, uint8_t addr, uint8_t data);
 
-/* read registers */
-extern uint8_t read_ppu_status(struct PPU *ppu);
-extern uint8_t read_oam_data(const struct PPU *ppu);
-extern uint8_t read_ppu_data(struct PPU *ppu);
-
-/* peek registers */
-extern uint8_t peek_ppu_status(const struct PPU *ppu);
-
-/* sprites */
-extern void write_dma_sprite(struct PPU *ppu, uint8_t addr, uint8_t data);
-
-/* debug */
-extern struct object_attribute read_oam(const struct PPU *ppu, int index);
+// debug
+extern ObjectAttribute read_oam(const PPU *ppu, int index);
 
 } // namespace
 

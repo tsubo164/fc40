@@ -32,7 +32,7 @@ void NES::PowerUp()
     // CPU and PPU
     cpu.ppu = &ppu;
     power_up_cpu(&cpu);
-    power_up_ppu(&ppu);
+    ppu.PowerUp();
 }
 
 void NES::ShutDown()
@@ -49,7 +49,7 @@ void NES::InsertCartridge(Cartridge *cart)
 void NES::PushResetButton()
 {
     reset_cpu(&cpu);
-    reset_ppu(&ppu);
+    ppu.Reset();
 }
 
 void NES::PlayGame()
@@ -69,7 +69,7 @@ void NES::UpdateFrame()
         PlaySamples();
 
     do {
-        clock_ppu(&ppu);
+        ppu.Clock();
 
         if (clock_ % 3 == 0) {
             if (is_suspended(&cpu))
@@ -80,8 +80,8 @@ void NES::UpdateFrame()
             cpu.apu.Clock();
         }
 
-        if (is_nmi_generated(&ppu)) {
-            clear_nmi(&ppu);
+        if (ppu.IsSetNMI()) {
+            ppu.ClearNMI();
             nmi(&cpu);
         }
 
@@ -92,7 +92,7 @@ void NES::UpdateFrame()
 
         clock_++;
 
-    } while (!is_frame_ready(&ppu));
+    } while (!ppu.IsFrameReady());
 
     if (frame_ % AUDIO_DELAY_FRAME == 0)
         SendSamples();
