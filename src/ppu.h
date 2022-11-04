@@ -89,16 +89,14 @@ public:
     uint8_t ReadStatus();
     uint8_t ReadOamData() const;
     uint8_t ReadData();
+
+    // peek registers
+    uint8_t PeekStatus() const;
+    // sprites
+    void WriteDmaSprite(uint8_t addr, uint8_t data);
+    // debug
+    ObjectAttribute ReadOam(int index) const;
 };
-
-// peek registers
-extern uint8_t peek_ppu_status(const PPU *ppu);
-
-// sprites
-extern void write_dma_sprite(PPU *ppu, uint8_t addr, uint8_t data);
-
-// debug
-extern ObjectAttribute read_oam(const PPU *ppu, int index);
 
 } // namespace
 

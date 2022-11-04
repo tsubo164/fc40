@@ -123,7 +123,7 @@ void NES::clock_dma()
     }
     else {
         // write
-        write_dma_sprite(&ppu, dma_addr_, dma_data_);
+        ppu.WriteDmaSprite(dma_addr_, dma_data_);
         dma_addr_++;
 
         if (dma_addr_ == 0x00) {

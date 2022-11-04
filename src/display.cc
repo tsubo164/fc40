@@ -324,7 +324,7 @@ static void render_sprite_box(const PPU &ppu, int width, int height)
     for (int i = 0; i < 64; i++) {
         // draw sprite zero last
         const int index = 63 - i;
-        const ObjectAttribute obj = read_oam(&ppu, index);
+        const ObjectAttribute obj = ppu.ReadOam(index);
         const int x = obj.x - width / 2;
         const int y = height / 2 - obj.y - 1;
 

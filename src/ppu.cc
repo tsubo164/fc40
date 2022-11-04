@@ -970,22 +970,19 @@ uint8_t PPU::ReadData()
     return data;
 }
 
-uint8_t peek_ppu_status(const PPU *ppu)
+uint8_t PPU::PeekStatus() const
 {
-    return ppu->stat;
+    return stat;
 }
 
-void write_dma_sprite(PPU *ppu, uint8_t addr, uint8_t data)
+void PPU::WriteDmaSprite(uint8_t addr, uint8_t data)
 {
-    ppu->oam[addr] = data;
+    oam[addr] = data;
 }
 
-/* -------------------------------------------------------------------------- */
-/* debug */
-
-ObjectAttribute read_oam(const PPU *ppu, int index)
+ObjectAttribute PPU::ReadOam(int index) const
 {
-    return get_sprite(ppu, index);
+    return get_sprite(this, index);
 }
 
 } // namespace
