@@ -14,14 +14,14 @@ static void calculate_target_period(PulseChannel &pulse);
 
 static void write_pulse_volume(PulseChannel &pulse, uint8_t data)
 {
-    /* $4000    | ddLC.VVVV | Pulse channel 1 duty and volume/envelope (write)
-     * $4004    | ddLC.VVVV | Pulse channel 2 duty and volume/envelope (write)
-     * bit 5    | --L- ---- | APU Length Counter halt flag/envelope loop flag
-     * bit 4    | ---C ---- | Constant volume flag (0: use volume from envelope;
-     *                                              1: use constant volume)
-     * bits 3-0 | ---- VVVV | Used as the volume in constant volume (C set) mode.
-     *                      | Also used as the reload value for the envelope's divider
-     *                      | (the period becomes V + 1 quarter frames). */
+    // $4000    | ddLC.VVVV | Pulse channel 1 duty and volume/envelope (write)
+    // $4004    | ddLC.VVVV | Pulse channel 2 duty and volume/envelope (write)
+    // bit 5    | --L- ---- | APU Length Counter halt flag/envelope loop flag
+    // bit 4    | ---C ---- | Constant volume flag (0: use volume from envelope;
+    //                                              1: use constant volume)
+    // bits 3-0 | ---- VVVV | Used as the volume in constant volume (C set) mode.
+    //                      | Also used as the reload value for the envelope's divider
+    //                      | (the period becomes V + 1 quarter frames).
     pulse.duty = (data >> 6) & 0x03;
     pulse.length_halt = (data >> 5) & 0x01;
     pulse.envelope.loop = pulse.length_halt;
@@ -31,16 +31,16 @@ static void write_pulse_volume(PulseChannel &pulse, uint8_t data)
 
 static void write_pulse_sweep(PulseChannel &pulse, uint8_t data)
 {
-    /* $4001/$4005 | EPPP.NSSS | Pulse channel 1/2 sweep setup (write)
-     * bit 7    | E--- ---- | Enabled flag
-     * bits 6-4 | -PPP ---- | The divider's period is P + 1 half-frames
-     * bit 3    | ---- N--- | Negate flag
-     *          |           | 0: add to period, sweeping toward lower frequencies
-     *          |           | 1: subtract from period, sweeping toward higher frequencies
-     * bits 2-0 | ---- -SSS | Shift count (number of bits)
-     * Side effects | Sets the reload flag */
+    // $4001/$4005 | EPPP.NSSS | Pulse channel 1/2 sweep setup (write)
+    // bit 7    | E--- ---- | Enabled flag
+    // bits 6-4 | -PPP ---- | The divider's period is P + 1 half-frames
+    // bit 3    | ---- N--- | Negate flag
+    //          |           | 0: add to period, sweeping toward lower frequencies
+    //          |           | 1: subtract from period, sweeping toward higher frequencies
+    // bits 2-0 | ---- -SSS | Shift count (number of bits)
+    // Side effects | Sets the reload flag
     pulse.sweep.enabled = (data >> 7) & 0x01;
-    /* The divider's period is set to P + 1 */
+    // The divider's period is set to P + 1
     pulse.sweep.period = ((data >> 4) & 0x07) + 1;
     pulse.sweep.negate = (data >> 3) & 0x01;
     pulse.sweep.shift = (data & 0x07);
@@ -49,32 +49,32 @@ static void write_pulse_sweep(PulseChannel &pulse, uint8_t data)
 
 static void write_pulse_lo(PulseChannel &pulse, uint8_t data)
 {
-    /* $4002/$4006 | LLLL.LLLL | Pulse 1/2 timer Low 8 bits */
+    // $4002/$4006 | LLLL.LLLL | Pulse 1/2 timer Low 8 bits
     pulse.timer_period = (pulse.timer_period & 0xFF00) | data;
     calculate_target_period(pulse);
 }
 
 static void write_pulse_hi(PulseChannel &pulse, uint8_t data)
 {
-    /* $4003/$4007 | llll.lHHH | Pulse 1/2 length counter load and timer High 3 bits
-     *
-     * The sequencer is immediately restarted at the first value of the current sequence.
-     * The envelope is also restarted. The period divider is not reset.  */
+    // $4003/$4007 | llll.lHHH | Pulse 1/2 length counter load and timer High 3 bits
+    //
+    // The sequencer is immediately restarted at the first value of the current sequence.
+    // The envelope is also restarted. The period divider is not reset.
     pulse.length = length_table[data >> 3];
     pulse.timer_period = ((data & 0x07) << 8) | (pulse.timer_period & 0x00FF);
     pulse.sequence_pos = 0;
     pulse.envelope.start = true;
 
-    /* Whenever the current period changes for any reason, whether by $400x writes or
-     * by sweep, the target period also changes. */
+    // Whenever the current period changes for any reason, whether by $400x writes or
+    // by sweep, the target period also changes.
     calculate_target_period(pulse);
 }
 
 static void write_triangle_linear(TriangleChannel &tri, uint8_t data)
 {
-    /* $4008    | CRRR.RRRR | Linear counter setup (write)
-     * bit 7    | C---.---- | Control flag (this bit is also the length counter halt flag)
-     * bits 6-0 | -RRR RRRR | Counter reload value */
+    // $4008    | CRRR.RRRR | Linear counter setup (write)
+    // bit 7    | C---.---- | Control flag (this bit is also the length counter halt flag)
+    // bits 6-0 | -RRR RRRR | Counter reload value
     tri.length_halt = (data >> 7) & 0x01;
     tri.control = tri.length_halt;
     tri.linear_period = (data & 0x7F);
@@ -82,16 +82,16 @@ static void write_triangle_linear(TriangleChannel &tri, uint8_t data)
 
 static void write_triangle_lo(TriangleChannel &tri, uint8_t data)
 {
-    /* $400A    | LLLL.LLLL | Timer low (write)
-     * bits 7-0 | LLLL LLLL | Timer low 8 bits */
+    // $400A    | LLLL.LLLL | Timer low (write)
+    // bits 7-0 | LLLL LLLL | Timer low 8 bits
     tri.timer_period = (tri.timer_period & 0xFF00) | data;
 }
 
 static void write_triangle_hi(TriangleChannel &tri, uint8_t data)
 {
-    /* $400B     | llll.lHHH | Length counter load and timer high (write)
-     * bits 2-0  | ---- -HHH | Timer high 3 bits
-     * Side effects | Sets the linear counter reload flag */
+    // $400B     | llll.lHHH | Length counter load and timer high (write)
+    // bits 2-0  | ---- -HHH | Timer high 3 bits
+    // Side effects | Sets the linear counter reload flag
     tri.length = length_table[data >> 3];
     tri.timer_period = ((data & 0x07) << 8) | (tri.timer_period & 0x00FF);
     tri.linear_reload = 1;
@@ -99,13 +99,13 @@ static void write_triangle_hi(TriangleChannel &tri, uint8_t data)
 
 static void write_noise_volume(NoiseChannel &noise, uint8_t data)
 {
-    /* $400C    | --LC.VVVV | Noise channel volume/envelope (write)
-     * bit 5    | --L- ---- | APU Length Counter halt flag/envelope loop flag
-     * bit 4    | ---C ---- | Constant volume flag (0: use volume from envelope;
-     *                                              1: use constant volume)
-     * bits 3-0 | ---- VVVV | Used as the volume in constant volume (C set) mode.
-     *                      | Also used as the reload value for the envelope's divider
-     *                      | (the period becomes V + 1 quarter frames). */
+    // $400C    | --LC.VVVV | Noise channel volume/envelope (write)
+    // bit 5    | --L- ---- | APU Length Counter halt flag/envelope loop flag
+    // bit 4    | ---C ---- | Constant volume flag (0: use volume from envelope;
+    //                                              1: use constant volume)
+    // bits 3-0 | ---- VVVV | Used as the volume in constant volume (C set) mode.
+    //                      | Also used as the reload value for the envelope's divider
+    //                      | (the period becomes V + 1 quarter frames).
     noise.length_halt = (data >> 5) & 0x01;
     noise.envelope.loop = noise.length_halt;
     noise.envelope.constant = (data >> 4) & 0x01;
@@ -114,13 +114,13 @@ static void write_noise_volume(NoiseChannel &noise, uint8_t data)
 
 static void write_noise_lo(NoiseChannel &noise, uint8_t data)
 {
-    /* $400E    | M---.PPPP | Mode and period (write)
-     * bit 7    | M--- ---- | Mode flag
-     * bits 3-0 | ---- PPPP | The timer period is set to entry P of the following:
-     * Rate  $0 $1  $2  $3  $4  $5   $6   $7   $8   $9   $A   $B   $C    $D    $E    $F
-     * --------------------------------------------------------------------------
-     * NTSC   4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068
-     * PAL    4, 8, 14, 30, 60, 88, 118, 148, 188, 236, 354, 472, 708,  944, 1890, 3778 */
+    // $400E    | M---.PPPP | Mode and period (write)
+    // bit 7    | M--- ---- | Mode flag
+    // bits 3-0 | ---- PPPP | The timer period is set to entry P of the following:
+    // Rate  $0 $1  $2  $3  $4  $5   $6   $7   $8   $9   $A   $B   $C    $D    $E    $F
+    // --------------------------------------------------------------------------
+    // NTSC   4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068
+    // PAL    4, 8, 14, 30, 60, 88, 118, 148, 188, 236, 354, 472, 708,  944, 1890, 3778
     static const uint16_t period_table[] = {
         4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068
     };
@@ -130,7 +130,7 @@ static void write_noise_lo(NoiseChannel &noise, uint8_t data)
 
 static void write_noise_hi(NoiseChannel &noise, uint8_t data)
 {
-    /* $400F | llll.l--- | Length counter load and envelope restart (write) */
+    // $400F | llll.l--- | Length counter load and envelope restart (write)
     noise.length = length_table[data >> 3];
     noise.envelope.start = true;
 }
@@ -138,8 +138,8 @@ static void write_noise_hi(NoiseChannel &noise, uint8_t data)
 void APU::WriteStatus(uint8_t data)
 {
 
-    /* $4015 write | ---D NT21 | Enable DMC (D), noise (N), triangle (T),
-     * and pulse channels (2/1) */
+    // $4015 write | ---D NT21 | Enable DMC (D), noise (N), triangle (T),
+    // and pulse channels (2/1)
     pulse1_.enabled = (data & 0x01);
     if (!pulse1_.enabled)
         pulse1_.length = 0;
@@ -159,14 +159,14 @@ void APU::WriteStatus(uint8_t data)
 
 void APU::WriteFrameCounter(uint8_t data)
 {
-    /* $4017 | MI--.---- | Set mode and interrupt (write)
-     * Bit 7 | M--- ---- | Sequencer mode: 0 selects 4-step sequence,
-     *       |           | 1 selects 5-step sequence
-     * Bit 6 | -I-- ---- | Interrupt inhibit flag. If set, the frame interrupt flag
-     *       |           | is cleared, otherwise it is unaffected.
-     * Side effects | After 3 or 4 CPU clock cycles*, the timer is reset.
-     *              | If the mode flag is set, then both "quarter frame" and
-     *              | "half frame" signals are also generated. */
+    // $4017 | MI--.---- | Set mode and interrupt (write)
+    // Bit 7 | M--- ---- | Sequencer mode: 0 selects 4-step sequence,
+    //       |           | 1 selects 5-step sequence
+    // Bit 6 | -I-- ---- | Interrupt inhibit flag. If set, the frame interrupt flag
+    //       |           | is cleared, otherwise it is unaffected.
+    // Side effects | After 3 or 4 CPU clock cycles*, the timer is reset.
+    //              | If the mode flag is set, then both "quarter frame" and
+    //              | "half frame" signals are also generated.
     mode_ = (data >> 7) & 0x01;
     frame_interrupt_ = ((data >> 6) & 0x01) == 0;
 }
@@ -243,7 +243,7 @@ void APU::WriteNoiseHi(uint8_t data)
 
 static float calculate_pulse_level(uint8_t pulse1_, uint8_t pulse2_)
 {
-    /* Linear Approximation sounds less cracking/popping */
+    // Linear Approximation sounds less cracking/popping
     return 0.00752 * (pulse1_ + pulse2_);
 
     static float output_table[32] = {0.f};
@@ -262,7 +262,7 @@ static float calculate_pulse_level(uint8_t pulse1_, uint8_t pulse2_)
 
 static float calculate_tnd_level(uint8_t triangle, uint8_t noise, uint8_t dmc)
 {
-    /* Linear Approximation sounds less cracking/popping */
+    // Linear Approximation sounds less cracking/popping
     return 0.00851 * triangle + 0.00494 * noise + 0.00335 * dmc;
 
     if (triangle == 0 && noise == 0 && dmc == 0)
@@ -275,10 +275,10 @@ static float calculate_tnd_level(uint8_t triangle, uint8_t noise, uint8_t dmc)
 static uint8_t sample_pulse(PulseChannel &pulse)
 {
     const static uint8_t sequence_table[][8] = {
-        {0, 1, 0, 0, 0, 0, 0, 0}, /* (12.5%) */
-        {0, 1, 1, 0, 0, 0, 0, 0}, /* (25%) */
-        {0, 1, 1, 1, 1, 0, 0, 0}, /* (50%) */
-        {1, 0, 0, 1, 1, 1, 1, 1}  /* (25% negated) */
+        {0, 1, 0, 0, 0, 0, 0, 0}, // (12.5%)
+        {0, 1, 1, 0, 0, 0, 0, 0}, // (25%)
+        {0, 1, 1, 1, 1, 0, 0, 0}, // (50%)
+        {1, 0, 0, 1, 1, 1, 1, 1}  // (25% negated)
     };
 
     const uint8_t sample = sequence_table[pulse.duty][pulse.sequence_pos];
@@ -370,13 +370,13 @@ static void clock_triangle_timer(TriangleChannel &tri)
 
 static void clock_noise_timer(NoiseChannel &noise)
 {
-    /* The shift register is 15 bits wide, with bits numbered
-     * 14 - 13 - 12 - 11 - 10 - 9 - 8 - 7 - 6 - 5 - 4 - 3 - 2 - 1 - 0
-     * When the timer clocks the shift register, the following actions occur in order:
-     * 1. Feedback is calculated as the exclusive-OR of bit 0 and one other bit:
-     *    bit 6 if Mode flag is set, otherwise bit 1.
-     * 2. The shift register is shifted right by one bit.
-     * 3. Bit 14, the leftmost bit, is set to the feedback calculated earlier. */
+    // The shift register is 15 bits wide, with bits numbered
+    // 14 - 13 - 12 - 11 - 10 - 9 - 8 - 7 - 6 - 5 - 4 - 3 - 2 - 1 - 0
+    // When the timer clocks the shift register, the following actions occur in order:
+    // 1. Feedback is calculated as the exclusive-OR of bit 0 and one other bit:
+    //    bit 6 if Mode flag is set, otherwise bit 1.
+    // 2. The shift register is shifted right by one bit.
+    // 3. Bit 14, the leftmost bit, is set to the feedback calculated earlier.
     if (noise.timer == 0) {
         noise.timer = noise.timer_period;
 
@@ -436,7 +436,7 @@ static void clock_sweep(PulseChannel &pulse)
 static void clock_envelope(Envelope &env)
 {
     if (env.start == false) {
-        /* clock divider */
+        // clock divider
         if (env.divider == 0) {
             env.divider = env.volume;
 
@@ -586,7 +586,7 @@ constexpr double AUDIO_SAMPLE_STEP = 1. / 44100;
 
 void APU::Clock()
 {
-    /* apu clocked every other cpu cycles */
+    // apu clocked every other cpu cycles
     if (clock_ % 2 == 0)
         clock_sequencer();
 
@@ -595,7 +595,7 @@ void APU::Clock()
     audio_time_ += APU_TIME_STEP;
 
     if (audio_time_ > AUDIO_SAMPLE_STEP) {
-        /* generate a sample */
+        // generate a sample
         audio_time_ -= AUDIO_SAMPLE_STEP;
 
         const uint8_t p1 = sample_pulse(pulse1_);
@@ -610,7 +610,7 @@ void APU::Clock()
         const float raw_data = pulse_out + tnd_out;
         const float k = .5;
 
-        /* Lowpass Filter: lpf = (1 - k) * prev_lpf + k * raw_data */
+        // Lowpass Filter: lpf = (1 - k) * prev_lpf + k * raw_data
         lpf += k * (raw_data - lpf);
 
         PushSample(lpf);
