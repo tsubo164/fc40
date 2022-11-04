@@ -45,7 +45,7 @@ void PPU::set_stat(uint8_t flag, uint8_t val)
         stat &= ~flag;
 }
 
-int PPU::get_ctrl(uint8_t flag) const
+bool PPU::get_ctrl(uint8_t flag) const
 {
     return (ctrl & flag) > 0;
 }
@@ -71,11 +71,6 @@ void PPU::enter_vblank()
 void PPU::leave_vblank()
 {
     set_stat(STAT_VERTICAL_BLANK, 0);
-}
-
-void PPU::set_sprite_overflow()
-{
-    set_stat(STAT_SPRITE_OVERFLOW, 1);
 }
 
 // --------------------------------------------------------------------------
@@ -114,18 +109,18 @@ static uint16_t name_table_index(const Cartridge *cart, uint16_t addr)
 {
     const uint16_t index = addr - 0x2000;
 
-    /* vertical mirroring */
+    // vertical mirroring
     if (cart->IsVerticalMirroring())
         return index & 0x07FF;
 
-    /* horizontal mirroring */
+    // horizontal mirroring
     if (index >= 0x0000 && index <= 0x07FF)
         return index & 0x03FF;
 
     if (index >= 0x0800 && index <= 0x0FFF)
         return 0x400 | (index & 0x03FF);
 
-    /* unreachable */
+    // unreachable
     return 0x0000;
 }
 
@@ -139,15 +134,15 @@ uint8_t PPU::read_byte(uint16_t addr) const
         return name_table[index];
     }
     else if (addr >= 0x3000 && addr <= 0x3EFF) {
-        /* mirrors of 0x2000-0x2EFF */
+        // mirrors of 0x2000-0x2EFF
         return read_byte(addr - 0x1000);
     }
     else if (addr >= 0x3F00 && addr <= 0x3FFF) {
         const uint16_t a = 0x3F00 + (addr & 0x1F);
-        /* Addresses $3F04/$3F08/$3F0C can contain unique data,
-         * though these values are not used by the PPU when normally rendering
-         * (since the pattern values that would otherwise select those cells
-         * select the backdrop color instead). */
+        // Addresses $3F04/$3F08/$3F0C can contain unique data,
+        // though these values are not used by the PPU when normally rendering
+        // (since the pattern values that would otherwise select those cells
+        // select the backdrop color instead).
         if (a % 4 == 0)
             return palette_ram[0x00];
         else
@@ -167,15 +162,15 @@ void PPU::write_byte(uint16_t addr, uint8_t data)
         name_table[index] = data;
     }
     else if (addr >= 0x3000 && addr <= 0x3EFF) {
-        /* mirrors of 0x2000-0x2EFF */
+        // mirrors of 0x2000-0x2EFF
         write_byte(addr - 0x1000, data);
     }
     else if (addr >= 0x3F00 && addr <= 0x3FFF) {
-        /* $3F20-$3FFF -> Mirrors of $3F00-$3F1F */
+        // $3F20-$3FFF -> Mirrors of $3F00-$3F1F
         uint16_t a = 0x3F00 + (addr & 0x1F);
 
-        /* Addresses $3F10/$3F14/$3F18/$3F1C are mirrors of
-         * $3F00/$3F04/$3F08/$3F0C. */
+        // Addresses $3F10/$3F14/$3F18/$3F1C are mirrors of
+        // $3F00/$3F04/$3F08/$3F0C.
         if (addr == 0x3F10) a = 0x3F00;
         if (addr == 0x3F14) a = 0x3F04;
         if (addr == 0x3F18) a = 0x3F08;
@@ -185,8 +180,13 @@ void PPU::write_byte(uint16_t addr, uint8_t data)
     }
 }
 
-/* -------------------------------------------------------------------------- */
-/* address */
+int PPU::address_increment() const
+{
+    return get_ctrl(CTRL_ADDR_INCREMENT) ? 32 : 1;
+}
+
+// --------------------------------------------------------------------------
+// address
 
 struct vram_pointer {
     uint8_t table_x, table_y;
@@ -234,9 +234,9 @@ static uint16_t encode_address(struct vram_pointer v)
     return addr;
 }
 
-static void increment_scroll_x(PPU *ppu)
+static uint16_t increment_scroll_x(uint16_t vram_addr)
 {
-    struct vram_pointer v = decode_address(ppu->vram_addr);
+    struct vram_pointer v = decode_address(vram_addr);
 
     if (v.tile_x == 31) {
         v.tile_x = 0;
@@ -246,12 +246,12 @@ static void increment_scroll_x(PPU *ppu)
         v.tile_x++;
     }
 
-    ppu->vram_addr = encode_address(v);
+    return encode_address(v);
 }
 
-static void increment_scroll_y(PPU *ppu)
+static uint16_t increment_scroll_y(uint16_t vram_addr)
 {
-    struct vram_pointer v = decode_address(ppu->vram_addr);
+    struct vram_pointer v = decode_address(vram_addr);
 
     if (v.fine_y == 7) {
         v.fine_y = 0;
@@ -268,53 +268,48 @@ static void increment_scroll_y(PPU *ppu)
         v.fine_y++;
     }
 
-    ppu->vram_addr = encode_address(v);
+    return encode_address(v);
 }
 
-static void copy_address_x(PPU *ppu)
+static uint16_t copy_address_x(uint16_t vram_addr, uint16_t temp_addr)
 {
-    const struct vram_pointer t = decode_address(ppu->temp_addr);
-    struct vram_pointer v = decode_address(ppu->vram_addr);
+    const struct vram_pointer t = decode_address(temp_addr);
+    struct vram_pointer v = decode_address(vram_addr);
 
     v.table_x = t.table_x;
     v.tile_x  = t.tile_x;
 
-    ppu->vram_addr = encode_address(v);
+    return encode_address(v);
 }
 
-static void copy_address_y(PPU *ppu)
+static uint16_t copy_address_y(uint16_t vram_addr, uint16_t temp_addr)
 {
-    const struct vram_pointer t = decode_address(ppu->temp_addr);
-    struct vram_pointer v = decode_address(ppu->vram_addr);
+    const struct vram_pointer t = decode_address(temp_addr);
+    struct vram_pointer v = decode_address(vram_addr);
 
     v.table_y = t.table_y;
     v.tile_y  = t.tile_y;
     v.fine_y  = t.fine_y;
 
-    ppu->vram_addr = encode_address(v);
-}
-
-static int address_increment(const PPU *ppu)
-{
-    return ppu->get_ctrl(CTRL_ADDR_INCREMENT) ? 32 : 1;
+    return encode_address(v);
 }
 
 /* -------------------------------------------------------------------------- */
 /* tile */
 
-static uint8_t fetch_tile_id(const PPU *ppu)
+uint8_t PPU::fetch_tile_id() const
 {
-    return ppu->read_byte(0x2000 | (ppu->vram_addr & 0x0FFF));
+    return read_byte(0x2000 | (vram_addr & 0x0FFF));
 }
 
-static uint8_t fetch_tile_attr(const PPU *ppu)
+uint8_t PPU::fetch_tile_attr() const
 {
-    const struct vram_pointer v = decode_address(ppu->vram_addr);
+    const struct vram_pointer v = decode_address(vram_addr);
     const uint16_t attr_x = v.tile_x / 4;
     const uint16_t attr_y = v.tile_y / 4;
     const uint16_t offset = attr_y * 8 + attr_x;
     const uint16_t base = 0x2000 + 32 * 32 * v.table_x + 2 * 32 * 32 * v.table_y;
-    const uint8_t attr = ppu->read_byte(base + 32 * 30 + offset);
+    const uint8_t attr = read_byte(base + 32 * 30 + offset);
 
     const uint8_t bit_x = v.tile_x % 4 > 1;
     const uint8_t bit_y = v.tile_y % 4 > 1;
@@ -323,28 +318,23 @@ static uint8_t fetch_tile_attr(const PPU *ppu)
     return (attr >> (bit * 2)) & 0x03;
 }
 
-static uint8_t fetch_tile_row(const PPU *ppu, uint8_t tile_id, uint8_t plane)
+uint8_t PPU::fetch_tile_row(uint8_t tile_id, uint8_t plane) const
 {
-    const struct vram_pointer v = decode_address(ppu->vram_addr);
-    const uint16_t base = ppu->get_ctrl(CTRL_PATTERN_BG) ? 0x1000 : 0x0000;
+    const struct vram_pointer v = decode_address(vram_addr);
+    const uint16_t base = get_ctrl(CTRL_PATTERN_BG) ? 0x1000 : 0x0000;
     const uint16_t addr = base + 16 * tile_id + plane + v.fine_y;
 
-    return ppu->read_byte(addr);
+    return read_byte(addr);
 }
 
-static void clear_sprite_overflow(PPU *ppu)
+void PPU::load_next_tile()
 {
-    ppu->set_stat(STAT_SPRITE_OVERFLOW, 0);
-}
-
-static void load_next_tile(PPU *ppu, int cycle)
-{
-    /* after rendering is done in a scanline,
-     * it is necesarry to shift bits for whole row before loading new row */
+    // after rendering is done in a scanline,
+    // it is necesarry to shift bits for whole row before loading new row
     if (cycle >= 321)
-        ppu->tile_queue[2] = ppu->tile_queue[1];
+        tile_queue[2] = tile_queue[1];
 
-    ppu->tile_queue[1] = ppu->tile_queue[0];
+    tile_queue[1] = tile_queue[0];
 }
 
 static void shift_word(uint8_t *left, uint8_t *right)
@@ -354,48 +344,58 @@ static void shift_word(uint8_t *left, uint8_t *right)
     *right <<= 1;
 }
 
-static void shift_tile_data(PPU *ppu)
+static void shift_tile_data(PatternRow &tile_queue1, PatternRow &tile_queue2)
 {
-    shift_word(&ppu->tile_queue[2].lo, &ppu->tile_queue[1].lo);
-    shift_word(&ppu->tile_queue[2].hi, &ppu->tile_queue[1].hi);
-    shift_word(&ppu->tile_queue[2].palette_lo, &ppu->tile_queue[1].palette_lo);
-    shift_word(&ppu->tile_queue[2].palette_hi, &ppu->tile_queue[1].palette_hi);
+    shift_word(&tile_queue2.lo,         &tile_queue1.lo);
+    shift_word(&tile_queue2.hi,         &tile_queue1.hi);
+    shift_word(&tile_queue2.palette_lo, &tile_queue1.palette_lo);
+    shift_word(&tile_queue2.palette_hi, &tile_queue1.palette_hi);
 }
 
-static void set_tile_palette(PatternRow *patt, uint8_t palette)
+static void set_tile_palette(PatternRow &patt, uint8_t palette)
 {
-    patt->palette_lo = (palette & 0x01) ? 0xFF : 0x00;
-    patt->palette_hi = (palette & 0x02) ? 0xFF : 0x00;
+    patt.palette_lo = (palette & 0x01) ? 0xFF : 0x00;
+    patt.palette_hi = (palette & 0x02) ? 0xFF : 0x00;
 }
 
-static void fetch_tile_data(PPU *ppu, int cycle)
+void PPU::fetch_tile_data()
 {
-    PatternRow *next = &ppu->tile_queue[0];
+    PatternRow &next = tile_queue[0];
 
     switch (cycle % 8) {
     case 1:
         /* NT byte */
-        next->id = fetch_tile_id(ppu);
+        next.id = fetch_tile_id();
         break;
 
     case 3:
         /* AT byte */
-        set_tile_palette(next, fetch_tile_attr(ppu));
+        set_tile_palette(next, fetch_tile_attr());
         break;
 
     case 5:
         /* Low BG tile byte */
-        next->lo = fetch_tile_row(ppu, next->id, 0);
+        next.lo = fetch_tile_row(next.id, 0);
         break;
 
     case 7:
         /* High BG tile byte */
-        next->hi = fetch_tile_row(ppu, next->id, 8);
+        next.hi = fetch_tile_row(next.id, 8);
         break;
 
     default:
         break;
     }
+}
+
+void PPU::set_sprite_overflow()
+{
+    set_stat(STAT_SPRITE_OVERFLOW, 1);
+}
+
+void PPU::clear_sprite_overflow()
+{
+    set_stat(STAT_SPRITE_OVERFLOW, 0);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -506,9 +506,9 @@ static void fetch_sprite_data(PPU *ppu, int cycle, int scanline)
         ppu->rendering_oam[index] = ppu->secondary_oam[index];
 
         if (is_visible)
-            set_tile_palette(patt, ppu->rendering_oam[index].palette);
+            set_tile_palette(*patt, ppu->rendering_oam[index].palette);
         else
-            set_tile_palette(patt, 0x00);
+            set_tile_palette(*patt, 0x00);
         break;
 
     case 5:
@@ -736,28 +736,28 @@ void PPU::Clock()
 
             if (cycle % 8 == 0)
                 if (is_rendering)
-                    increment_scroll_x(this);
+                    vram_addr = increment_scroll_x(vram_addr);
 
             if (cycle % 8 == 1)
-                load_next_tile(this, cycle);
+                load_next_tile();
 
-            fetch_tile_data(this, cycle);
+            fetch_tile_data();
         }
 
         // inc vert(v)
         if (cycle == 256)
             if (is_rendering)
-                increment_scroll_y(this);
+                vram_addr = increment_scroll_y(vram_addr);
 
         // hori(v) = hori(t)
         if (cycle == 257)
             if (is_rendering)
-                copy_address_x(this);
+                vram_addr = copy_address_x(vram_addr, temp_addr);
 
         // vert(v) = vert(t)
         if ((cycle >= 280 && cycle <= 304) && scanline == 261)
             if (is_rendering)
-                copy_address_y(this);
+                vram_addr = copy_address_y(vram_addr, temp_addr);
 
         // clear secondary oam
         if ((cycle >= 1 && cycle <= 64) && scanline != 261)
@@ -779,7 +779,7 @@ void PPU::Clock()
     if (scanline == 261) {
         if (cycle == 1) {
             leave_vblank();
-            clear_sprite_overflow(this);
+            clear_sprite_overflow();
             set_stat(STAT_SPRITE_ZERO_HIT, 0);
         }
     }
@@ -790,7 +790,7 @@ void PPU::Clock()
             render_pixel(this, cycle - 1, scanline);
 
             if (is_rendering_bg())
-                shift_tile_data(this);
+                shift_tile_data(tile_queue[1], tile_queue[2]);
 
             if (is_rendering_sprite())
                 shift_sprite_data(this);
@@ -937,7 +937,7 @@ void PPU::WriteData(uint8_t data)
 {
     write_byte(vram_addr, data);
 
-    vram_addr += address_increment(this);
+    vram_addr += address_increment();
 }
 
 uint8_t PPU::ReadStatus()
@@ -965,7 +965,7 @@ uint8_t PPU::ReadData()
     if (addr >= 0x3F00 && addr <= 0x3FFF)
         data = read_buffer;
 
-    vram_addr += address_increment(this);
+    vram_addr += address_increment();
 
     return data;
 }

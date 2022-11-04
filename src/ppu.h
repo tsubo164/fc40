@@ -99,15 +99,24 @@ public:
 
 //private:
     void set_stat(uint8_t flag, uint8_t val);
-    int get_ctrl(uint8_t flag) const;
+    bool get_ctrl(uint8_t flag) const;
     bool is_rendering_bg() const;
     bool is_rendering_sprite() const;
     void enter_vblank();
     void leave_vblank();
-    void set_sprite_overflow();
+    int address_increment() const;
 
     uint8_t read_byte(uint16_t addr) const;
     void write_byte(uint16_t addr, uint8_t data);
+
+    uint8_t fetch_tile_id() const;
+    uint8_t fetch_tile_attr()const; 
+    uint8_t fetch_tile_row(uint8_t tile_id, uint8_t plane) const;
+    void load_next_tile();
+    void fetch_tile_data();
+
+    void set_sprite_overflow();
+    void clear_sprite_overflow();
 };
 
 } // namespace
