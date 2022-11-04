@@ -5,8 +5,8 @@
 
 namespace nes {
 
-/* -------------------------------------------------------------------------- */
-/* status */
+// --------------------------------------------------------------------------
+// status
 
 enum ppu_status {
     STAT_UNUSED          = 0x1F,
@@ -37,49 +37,49 @@ enum ppu_mask {
     MASK_EMPHASIZE_B      = 1 << 7
 };
 
-static void set_stat(PPU *ppu, uint8_t flag, uint8_t val)
+void PPU::set_stat(uint8_t flag, uint8_t val)
 {
     if (val)
-        ppu->stat |= flag;
+        stat |= flag;
     else
-        ppu->stat &= ~flag;
+        stat &= ~flag;
 }
 
-static int get_ctrl(const PPU *ppu, uint8_t flag)
+int PPU::get_ctrl(uint8_t flag) const
 {
-    return (ppu->ctrl & flag) > 0;
+    return (ctrl & flag) > 0;
 }
 
-static int is_rendering_bg(const PPU *ppu)
+bool PPU::is_rendering_bg() const
 {
-    return ppu->mask & MASK_SHOW_BG;
+    return mask & MASK_SHOW_BG;
 }
 
-static int is_rendering_sprite(const PPU *ppu)
+bool PPU::is_rendering_sprite() const
 {
-    return ppu->mask & MASK_SHOW_SPRITE;
+    return mask & MASK_SHOW_SPRITE;
 }
 
-static void enter_vblank(PPU *ppu)
+void PPU::enter_vblank()
 {
-    set_stat(ppu, STAT_VERTICAL_BLANK, 1);
+    set_stat(STAT_VERTICAL_BLANK, 1);
 
-    if (get_ctrl(ppu, CTRL_ENABLE_NMI))
-        ppu->nmi_generated = 1;
+    if (get_ctrl(CTRL_ENABLE_NMI))
+        nmi_generated = true;
 }
 
-static void leave_vblank(PPU *ppu)
+void PPU::leave_vblank()
 {
-    set_stat(ppu, STAT_VERTICAL_BLANK, 0);
+    set_stat(STAT_VERTICAL_BLANK, 0);
 }
 
-static void set_sprite_overflow(PPU *ppu)
+void PPU::set_sprite_overflow()
 {
-    set_stat(ppu, STAT_SPRITE_OVERFLOW, 1);
+    set_stat(STAT_SPRITE_OVERFLOW, 1);
 }
 
-/* -------------------------------------------------------------------------- */
-/* color */
+// --------------------------------------------------------------------------
+// color
 
 static const uint8_t palette_2C02[][3] = {
     { 84,  84,  84}, {  0,  30, 116}, {  8,  16, 144}, { 48,   0, 136},
@@ -129,18 +129,18 @@ static uint16_t name_table_index(const Cartridge *cart, uint16_t addr)
     return 0x0000;
 }
 
-static uint8_t read_byte(const PPU *ppu, uint16_t addr)
+uint8_t PPU::read_byte(uint16_t addr) const
 {
     if (addr >= 0x0000 && addr <= 0x1FFF) {
-        return ppu->cart->ReadChar(addr);
+        return cart->ReadChar(addr);
     }
     else if (addr >= 0x2000 && addr <= 0x2FFF) {
-        const uint16_t index = name_table_index(ppu->cart, addr);
-        return ppu->name_table[index];
+        const uint16_t index = name_table_index(cart, addr);
+        return name_table[index];
     }
     else if (addr >= 0x3000 && addr <= 0x3EFF) {
         /* mirrors of 0x2000-0x2EFF */
-        return read_byte(ppu, addr - 0x1000);
+        return read_byte(addr - 0x1000);
     }
     else if (addr >= 0x3F00 && addr <= 0x3FFF) {
         const uint16_t a = 0x3F00 + (addr & 0x1F);
@@ -149,26 +149,26 @@ static uint8_t read_byte(const PPU *ppu, uint16_t addr)
          * (since the pattern values that would otherwise select those cells
          * select the backdrop color instead). */
         if (a % 4 == 0)
-            return ppu->palette_ram[0x00];
+            return palette_ram[0x00];
         else
-            return ppu->palette_ram[a & 0x1F];
+            return palette_ram[a & 0x1F];
     }
 
     return 0xFF;
 }
 
-static void write_byte(PPU *ppu, uint16_t addr, uint8_t data)
+void PPU::write_byte(uint16_t addr, uint8_t data)
 {
     if (addr >= 0x0000 && addr <= 0x1FFF) {
-        ppu->cart->WriteChar(addr, data);
+        cart->WriteChar(addr, data);
     }
     else if (addr >= 0x2000 && addr <= 0x2FFF) {
-        const uint16_t index = name_table_index(ppu->cart, addr);
-        ppu->name_table[index] = data;
+        const uint16_t index = name_table_index(cart, addr);
+        name_table[index] = data;
     }
     else if (addr >= 0x3000 && addr <= 0x3EFF) {
         /* mirrors of 0x2000-0x2EFF */
-        write_byte(ppu, addr - 0x1000, data);
+        write_byte(addr - 0x1000, data);
     }
     else if (addr >= 0x3F00 && addr <= 0x3FFF) {
         /* $3F20-$3FFF -> Mirrors of $3F00-$3F1F */
@@ -181,7 +181,7 @@ static void write_byte(PPU *ppu, uint16_t addr, uint8_t data)
         if (addr == 0x3F18) a = 0x3F08;
         if (addr == 0x3F1C) a = 0x3F0C;
 
-        ppu->palette_ram[a & 0x1F] = data;
+        palette_ram[a & 0x1F] = data;
     }
 }
 
@@ -296,7 +296,7 @@ static void copy_address_y(PPU *ppu)
 
 static int address_increment(const PPU *ppu)
 {
-    return get_ctrl(ppu, CTRL_ADDR_INCREMENT) ? 32 : 1;
+    return ppu->get_ctrl(CTRL_ADDR_INCREMENT) ? 32 : 1;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -304,7 +304,7 @@ static int address_increment(const PPU *ppu)
 
 static uint8_t fetch_tile_id(const PPU *ppu)
 {
-    return read_byte(ppu, 0x2000 | (ppu->vram_addr & 0x0FFF));
+    return ppu->read_byte(0x2000 | (ppu->vram_addr & 0x0FFF));
 }
 
 static uint8_t fetch_tile_attr(const PPU *ppu)
@@ -314,7 +314,7 @@ static uint8_t fetch_tile_attr(const PPU *ppu)
     const uint16_t attr_y = v.tile_y / 4;
     const uint16_t offset = attr_y * 8 + attr_x;
     const uint16_t base = 0x2000 + 32 * 32 * v.table_x + 2 * 32 * 32 * v.table_y;
-    const uint8_t attr = read_byte(ppu, base + 32 * 30 + offset);
+    const uint8_t attr = ppu->read_byte(base + 32 * 30 + offset);
 
     const uint8_t bit_x = v.tile_x % 4 > 1;
     const uint8_t bit_y = v.tile_y % 4 > 1;
@@ -326,15 +326,15 @@ static uint8_t fetch_tile_attr(const PPU *ppu)
 static uint8_t fetch_tile_row(const PPU *ppu, uint8_t tile_id, uint8_t plane)
 {
     const struct vram_pointer v = decode_address(ppu->vram_addr);
-    const uint16_t base = get_ctrl(ppu, CTRL_PATTERN_BG) ? 0x1000 : 0x0000;
+    const uint16_t base = ppu->get_ctrl(CTRL_PATTERN_BG) ? 0x1000 : 0x0000;
     const uint16_t addr = base + 16 * tile_id + plane + v.fine_y;
 
-    return read_byte(ppu, addr);
+    return ppu->read_byte(addr);
 }
 
 static void clear_sprite_overflow(PPU *ppu)
 {
-    set_stat(ppu, STAT_SPRITE_OVERFLOW, 0);
+    ppu->set_stat(STAT_SPRITE_OVERFLOW, 0);
 }
 
 static void load_next_tile(PPU *ppu, int cycle)
@@ -461,7 +461,7 @@ static void evaluate_sprite(PPU *ppu, int cycle, int scanline)
         if (ppu->sprite_count < 8)
             ppu->secondary_oam[ppu->sprite_count] = obj;
         else
-            set_sprite_overflow(ppu);
+            ppu->set_sprite_overflow();
 
         ppu->sprite_count++;
     }
@@ -469,10 +469,10 @@ static void evaluate_sprite(PPU *ppu, int cycle, int scanline)
 
 static uint8_t fetch_sprite_row(const PPU *ppu, uint8_t tile_id, int y, uint8_t plane)
 {
-    const uint16_t base = get_ctrl(ppu, CTRL_PATTERN_SPRITE) ? 0x1000 : 0x0000;
+    const uint16_t base = ppu->get_ctrl(CTRL_PATTERN_SPRITE) ? 0x1000 : 0x0000;
     const uint16_t addr = base + 16 * tile_id + plane + y;
 
-    return read_byte(ppu, addr);
+    return ppu->read_byte(addr);
 }
 
 static uint8_t flip_pattern_row(uint8_t bits)
@@ -650,7 +650,7 @@ static int is_sprite_zero_hit(const PPU *ppu, struct pixel bg, struct pixel fg, 
     if (!fg.sprite_zero)
         return 0;
 
-    if (!is_rendering_bg(ppu) || !is_rendering_sprite(ppu))
+    if (!ppu->is_rendering_bg() || !ppu->is_rendering_sprite())
         return 0;
 
     if ((x >= 0 && x <= 7) && is_clipping_left(ppu))
@@ -672,7 +672,7 @@ static uint8_t fetch_palette_value(const PPU *ppu, uint8_t palette_id, uint8_t p
 {
     const uint16_t addr = 0x3F00 + 4 * palette_id + pixel_val;
 
-    return read_byte(ppu, addr);
+    return ppu->read_byte(addr);
 }
 
 static struct Color lookup_pixel_color(const PPU *ppu, struct pixel pix)
@@ -686,25 +686,25 @@ static void render_pixel(PPU *ppu, int x, int y)
     struct pixel bg = {0}, fg = {0}, final = {0};
     struct Color col = {0};
 
-    if (is_rendering_bg(ppu))
+    if (ppu->is_rendering_bg())
         bg = get_pixel_bg(ppu);
 
-    if (is_rendering_sprite(ppu) && y != 0)
+    if (ppu->is_rendering_sprite() && y != 0)
         fg = get_pixel_fg(ppu);
 
     final = composite_pixels(bg, fg);
     col = lookup_pixel_color(ppu, final);
 
-    if (!is_rendering_bg(ppu) && !is_rendering_sprite(ppu) &&
+    if (!ppu->is_rendering_bg() && !ppu->is_rendering_sprite() &&
         ppu->vram_addr >= 0x3F00 && ppu->vram_addr <= 0x3FFF) {
-        const uint8_t index = read_byte(ppu, ppu->vram_addr);
+        const uint8_t index = ppu->read_byte(ppu->vram_addr);
         col = get_color(index);
     }
 
     ppu->fbuf->SetColor(x, y, col);
 
     if (is_sprite_zero_hit(ppu, bg, fg, x))
-        set_stat(ppu, STAT_SPRITE_ZERO_HIT, 1);
+        ppu->set_stat(STAT_SPRITE_ZERO_HIT, 1);
 }
 
 // --------------------------------------------------------------------------
@@ -712,7 +712,7 @@ static void render_pixel(PPU *ppu, int x, int y)
 
 void PPU::ClearNMI()
 {
-    nmi_generated = 0;
+    nmi_generated = false;
 }
 
 bool PPU::IsSetNMI() const
@@ -727,7 +727,7 @@ bool PPU::IsFrameReady() const
 
 void PPU::Clock()
 {
-    const bool is_rendering = is_rendering_bg(this) || is_rendering_sprite(this);
+    const bool is_rendering = is_rendering_bg() || is_rendering_sprite();
 
     if ((scanline >= 0 && scanline <= 239) || scanline == 261) {
 
@@ -774,13 +774,13 @@ void PPU::Clock()
 
     if (scanline == 241)
         if (cycle == 1)
-            enter_vblank(this);
+            enter_vblank();
 
     if (scanline == 261) {
         if (cycle == 1) {
-            leave_vblank(this);
+            leave_vblank();
             clear_sprite_overflow(this);
-            set_stat(this, STAT_SPRITE_ZERO_HIT, 0);
+            set_stat(STAT_SPRITE_ZERO_HIT, 0);
         }
     }
 
@@ -789,10 +789,10 @@ void PPU::Clock()
         if (cycle >= 1 && cycle <= 256) {
             render_pixel(this, cycle - 1, scanline);
 
-            if (is_rendering_bg(this))
+            if (is_rendering_bg())
                 shift_tile_data(this);
 
-            if (is_rendering_sprite(this))
+            if (is_rendering_sprite())
                 shift_sprite_data(this);
         }
     }
@@ -935,7 +935,7 @@ void PPU::WriteAddress(uint8_t addr)
 
 void PPU::WriteData(uint8_t data)
 {
-    write_byte(this, vram_addr, data);
+    write_byte(vram_addr, data);
 
     vram_addr += address_increment(this);
 }
@@ -944,7 +944,7 @@ uint8_t PPU::ReadStatus()
 {
     const uint8_t data = stat;
 
-    set_stat(this, STAT_VERTICAL_BLANK, 0);
+    set_stat(STAT_VERTICAL_BLANK, 0);
     write_toggle = 0;
 
     return data;
@@ -960,7 +960,7 @@ uint8_t PPU::ReadData()
     const uint16_t addr = vram_addr;
     uint8_t data = read_buffer;
 
-    read_buffer = read_byte(this, addr);
+    read_buffer = read_byte(addr);
 
     if (addr >= 0x3F00 && addr <= 0x3FFF)
         data = read_buffer;

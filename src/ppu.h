@@ -64,7 +64,7 @@ public:
     uint64_t frame = 0;
     FrameBuffer *fbuf = nullptr;
 
-    uint8_t nmi_generated = 0;
+    bool nmi_generated = false;
 
     // interruptions
     void ClearNMI();
@@ -96,6 +96,18 @@ public:
     void WriteDmaSprite(uint8_t addr, uint8_t data);
     // debug
     ObjectAttribute ReadOam(int index) const;
+
+//private:
+    void set_stat(uint8_t flag, uint8_t val);
+    int get_ctrl(uint8_t flag) const;
+    bool is_rendering_bg() const;
+    bool is_rendering_sprite() const;
+    void enter_vblank();
+    void leave_vblank();
+    void set_sprite_overflow();
+
+    uint8_t read_byte(uint16_t addr) const;
+    void write_byte(uint16_t addr, uint8_t data);
 };
 
 } // namespace
