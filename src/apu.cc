@@ -213,19 +213,19 @@ void APU::WriteSquare2Hi(uint8_t data)
     write_pulse_hi(pulse2, data);
 }
 
-void write_apu_triangle_linear(struct APU *apu, uint8_t data)
+void APU::WriteTriangleLinear(uint8_t data)
 {
-    write_triangle_linear(apu->triangle, data);
+    write_triangle_linear(triangle, data);
 }
 
-void write_apu_triangle_lo(struct APU *apu, uint8_t data)
+void APU::WriteTriangleLo(uint8_t data)
 {
-    write_triangle_lo(apu->triangle, data);
+    write_triangle_lo(triangle, data);
 }
 
-void write_apu_triangle_hi(struct APU *apu, uint8_t data)
+void APU::WriteTriangleHi(uint8_t data)
 {
-    write_triangle_hi(apu->triangle, data);
+    write_triangle_hi(triangle, data);
 }
 
 void write_apu_noise_volume(struct APU *apu, uint8_t data)

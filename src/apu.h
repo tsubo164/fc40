@@ -107,11 +107,11 @@ struct APU {
     void WriteSquare2Sweep(uint8_t data);
     void WriteSquare2Lo(uint8_t data);
     void WriteSquare2Hi(uint8_t data);
-};
 
-extern void write_apu_triangle_linear(struct APU *apu, uint8_t data);
-extern void write_apu_triangle_lo(struct APU *apu, uint8_t data);
-extern void write_apu_triangle_hi(struct APU *apu, uint8_t data);
+    void WriteTriangleLinear(uint8_t data);
+    void WriteTriangleLo(uint8_t data);
+    void WriteTriangleHi(uint8_t data);
+};
 
 extern void write_apu_noise_volume(struct APU *apu, uint8_t data);
 extern void write_apu_noise_lo(struct APU *apu, uint8_t data);

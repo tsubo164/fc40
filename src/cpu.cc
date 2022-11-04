@@ -75,13 +75,13 @@ static void write_byte(struct CPU *cpu, uint16_t addr, uint8_t data)
         cpu->apu.WriteSquare2Hi(data);
     }
     else if (addr == 0x4008) {
-        write_apu_triangle_linear(&cpu->apu, data);
+        cpu->apu.WriteTriangleLinear(data);
     }
     else if (addr == 0x400A) {
-        write_apu_triangle_lo(&cpu->apu, data);
+        cpu->apu.WriteTriangleLo(data);
     }
     else if (addr == 0x400B) {
-        write_apu_triangle_hi(&cpu->apu, data);
+        cpu->apu.WriteTriangleHi(data);
     }
     else if (addr == 0x400C) {
         write_apu_noise_volume(&cpu->apu, data);
