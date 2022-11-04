@@ -1,5 +1,4 @@
-#include <stdlib.h>
-#include <stdio.h>
+//#include <cstdlib>
 #include "apu.h"
 #include "sound.h"
 
@@ -394,32 +393,6 @@ static void clock_noise_timer(NoiseChannel &noise)
     }
 }
 
-static void clock_timers(struct APU *apu)
-{
-    if (apu->clock % 2 == 0) {
-        clock_pulse_timer(apu->pulse1);
-        clock_pulse_timer(apu->pulse2);
-        clock_noise_timer(apu->noise);
-    }
-
-    clock_triangle_timer(apu->triangle);
-}
-
-static void clock_length_counters(struct APU *apu)
-{
-    if (apu->pulse1.length > 0 && !apu->pulse1.length_halt)
-        apu->pulse1.length--;
-
-    if (apu->pulse2.length > 0 && !apu->pulse1.length_halt)
-        apu->pulse2.length--;
-
-    if (apu->triangle.length > 0 && !apu->triangle.length_halt)
-        apu->triangle.length--;
-
-    if (apu->noise.length > 0 && !apu->noise.length_halt)
-        apu->noise.length--;
-}
-
 static void calculate_target_period(PulseChannel &pulse)
 {
     const uint16_t current_period = pulse.timer_period;
@@ -484,22 +457,48 @@ static void clock_envelope(Envelope &env)
     }
 }
 
-static void clock_sweeps(struct APU *apu)
+void APU::clock_timers()
 {
-    clock_sweep(apu->pulse1);
-    clock_sweep(apu->pulse2);
+    if (clock % 2 == 0) {
+        clock_pulse_timer(pulse1);
+        clock_pulse_timer(pulse2);
+        clock_noise_timer(noise);
+    }
+
+    clock_triangle_timer(triangle);
 }
 
-static void clock_envelopes(struct APU *apu)
+void APU::clock_length_counters()
 {
-    clock_envelope(apu->pulse1.envelope);
-    clock_envelope(apu->pulse2.envelope);
-    clock_envelope(apu->noise.envelope);
+    if (pulse1.length > 0 && !pulse1.length_halt)
+        pulse1.length--;
+
+    if (pulse2.length > 0 && !pulse1.length_halt)
+        pulse2.length--;
+
+    if (triangle.length > 0 && !triangle.length_halt)
+        triangle.length--;
+
+    if (noise.length > 0 && !noise.length_halt)
+        noise.length--;
 }
 
-static void clock_linear_counter(struct APU *apu)
+void APU::clock_sweeps()
 {
-    TriangleChannel &tri = apu->triangle;
+    clock_sweep(pulse1);
+    clock_sweep(pulse2);
+}
+
+void APU::clock_envelopes()
+{
+    clock_envelope(pulse1.envelope);
+    clock_envelope(pulse2.envelope);
+    clock_envelope(noise.envelope);
+}
+
+void APU::clock_linear_counter()
+{
+    TriangleChannel &tri = triangle;
 
     if (tri.linear_reload) {
         tri.linear_counter = tri.linear_period;
@@ -512,74 +511,74 @@ static void clock_linear_counter(struct APU *apu)
         tri.linear_reload = 0;
 }
 
-static void clock_frame_interrupt(struct APU *apu)
+void APU::clock_frame_interrupt()
 {
-    if (apu->frame_interrupt)
-        apu->irq_generated = 1;
+    if (frame_interrupt)
+        irq_generated = 1;
 }
 
-static void clock_sequencer_step4(struct APU *apu)
+void APU::clock_sequencer_step4()
 {
-    switch (apu->cycle) {
+    switch (cycle) {
     case 3729:
     case 11186:
-        clock_envelopes(apu);
-        clock_linear_counter(apu);
+        clock_envelopes();
+        clock_linear_counter();
         break;
 
     case 7457:
     case 14915:
-        clock_envelopes(apu);
-        clock_linear_counter(apu);
-        clock_length_counters(apu);
-        clock_sweeps(apu);
+        clock_envelopes();
+        clock_linear_counter();
+        clock_length_counters();
+        clock_sweeps();
         break;
 
     default:
         break;
     }
 
-    if (apu->cycle == 14915) {
-        clock_frame_interrupt(apu);
-        apu->cycle = 0;
+    if (cycle == 14915) {
+        clock_frame_interrupt();
+        cycle = 0;
     } else {
-        apu->cycle++;
+        cycle++;
     }
 }
 
-static void clock_sequencer_step5(struct APU *apu)
+void APU::clock_sequencer_step5()
 {
-    switch (apu->cycle) {
+    switch (cycle) {
     case 3729:
     case 11186:
-        clock_envelopes(apu);
-        clock_linear_counter(apu);
+        clock_envelopes();
+        clock_linear_counter();
         break;
 
     case 7457:
     case 18641:
-        clock_envelopes(apu);
-        clock_linear_counter(apu);
-        clock_length_counters(apu);
-        clock_sweeps(apu);
+        clock_envelopes();
+        clock_linear_counter();
+        clock_length_counters();
+        clock_sweeps();
         break;
 
     default:
         break;
     }
 
-    if (apu->cycle == 18641)
-        apu->cycle = 0;
+    if (cycle == 18641)
+        cycle = 0;
     else
-        apu->cycle++;
+        cycle++;
 }
 
-static void clock_sequencer(struct APU *apu)
+void APU::clock_sequencer()
 {
-    if (apu->mode == 0)
-        clock_sequencer_step4(apu);
+    if (mode == 0)
+        clock_sequencer_step4();
     else
-        clock_sequencer_step5(apu);
+        clock_sequencer_step5();
 }
 
 constexpr int CPU_CLOCK_FREQ = 1789773;
@@ -590,9 +589,9 @@ void APU::Clock()
 {
     /* apu clocked every other cpu cycles */
     if (clock % 2 == 0)
-        clock_sequencer(this);
+        clock_sequencer();
 
-    clock_timers(this);
+    clock_timers();
 
     audio_time += APU_TIME_STEP;
 

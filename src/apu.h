@@ -1,7 +1,7 @@
 #ifndef APU_H
 #define APU_H
 
-#include <stdint.h>
+#include <cstdint>
 
 namespace nes {
 
@@ -73,18 +73,7 @@ struct NoiseChannel {
 };
 
 struct APU {
-    double audio_time = 0.;
-    uint32_t clock = 0;
-    uint32_t cycle = 0;
-
-    uint8_t mode = 0;
-    uint8_t frame_interrupt;
-    bool irq_generated = false;
-
-    PulseChannel pulse1 = {1}, pulse2 = {2};
-    TriangleChannel triangle;
-    NoiseChannel noise;
-
+public:
     // status
     void Clock();
     void PowerUp();
@@ -117,6 +106,29 @@ struct APU {
     void WriteNoiseHi(uint8_t data);
 
     // read registers
+
+private:
+    void clock_timers();
+    void clock_length_counters();
+    void clock_sweeps();
+    void clock_envelopes();
+    void clock_linear_counter();
+    void clock_frame_interrupt();
+    void clock_sequencer_step4();
+    void clock_sequencer_step5();
+    void clock_sequencer();
+
+    double audio_time = 0.;
+    uint32_t clock = 0;
+    uint32_t cycle = 0;
+
+    uint8_t mode = 0;
+    uint8_t frame_interrupt;
+    bool irq_generated = false;
+
+    PulseChannel pulse1 = {1}, pulse2 = {2};
+    TriangleChannel triangle;
+    NoiseChannel noise;
 };
 
 } // namespace
