@@ -84,13 +84,13 @@ static void write_byte(struct CPU *cpu, uint16_t addr, uint8_t data)
         cpu->apu.WriteTriangleHi(data);
     }
     else if (addr == 0x400C) {
-        write_apu_noise_volume(&cpu->apu, data);
+        cpu->apu.WriteNoiseVolume(data);
     }
     else if (addr == 0x400E) {
-        write_apu_noise_lo(&cpu->apu, data);
+        cpu->apu.WriteNoiseLo(data);
     }
     else if (addr == 0x400F) {
-        write_apu_noise_hi(&cpu->apu, data);
+        cpu->apu.WriteNoiseHi(data);
     }
     else if (addr == 0x4014) {
         /* DMA */

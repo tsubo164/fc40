@@ -111,13 +111,13 @@ struct APU {
     void WriteTriangleLinear(uint8_t data);
     void WriteTriangleLo(uint8_t data);
     void WriteTriangleHi(uint8_t data);
+
+    void WriteNoiseVolume(uint8_t data);
+    void WriteNoiseLo(uint8_t data);
+    void WriteNoiseHi(uint8_t data);
+
+    // read registers
 };
-
-extern void write_apu_noise_volume(struct APU *apu, uint8_t data);
-extern void write_apu_noise_lo(struct APU *apu, uint8_t data);
-extern void write_apu_noise_hi(struct APU *apu, uint8_t data);
-
-// read registers
 
 } // namespace
 

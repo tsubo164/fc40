@@ -2,10 +2,8 @@
 
 NES  := nes
 
-all: $(NES)
-
-$(NES):
-	$(MAKE) -C src all
+all:
+	$(MAKE) -C src $@
 
 clean:
 	$(MAKE) -C src $@

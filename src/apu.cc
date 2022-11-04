@@ -228,19 +228,19 @@ void APU::WriteTriangleHi(uint8_t data)
     write_triangle_hi(triangle, data);
 }
 
-void write_apu_noise_volume(struct APU *apu, uint8_t data)
+void APU::WriteNoiseVolume(uint8_t data)
 {
-    write_noise_volume(apu->noise, data);
+    write_noise_volume(noise, data);
 }
 
-void write_apu_noise_lo(struct APU *apu, uint8_t data)
+void APU::WriteNoiseLo(uint8_t data)
 {
-    write_noise_lo(apu->noise, data);
+    write_noise_lo(noise, data);
 }
 
-void write_apu_noise_hi(struct APU *apu, uint8_t data)
+void APU::WriteNoiseHi(uint8_t data)
 {
-    write_noise_hi(apu->noise, data);
+    write_noise_hi(noise, data);
 }
 
 static float calculate_pulse_level(uint8_t pulse1, uint8_t pulse2)
