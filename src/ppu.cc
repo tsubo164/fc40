@@ -1,6 +1,5 @@
 #include <cstdlib>
 #include "ppu.h"
-#include "framebuffer.h"
 #include "cartridge.h"
 
 namespace nes {
@@ -98,10 +97,10 @@ static const uint8_t palette_2C02[][3] = {
     {160, 214, 228}, {160, 162, 160}, {  0,   0,   0}, {  0,   0,   0}
 };
 
-static struct Color get_color(int index)
+static Color get_color(int index)
 {
     const uint8_t *c = palette_2C02[index];
-    const struct Color col = {c[0], c[1], c[2]};
+    const Color col = {c[0], c[1], c[2]};
     return col;
 }
 
@@ -188,20 +187,20 @@ int PPU::address_increment() const
 // --------------------------------------------------------------------------
 // address
 
-struct vram_pointer {
-    uint8_t table_x, table_y;
-    uint8_t tile_x, tile_y;
-    uint8_t fine_y;
+struct VramPointer {
+    uint8_t table_x = 0, table_y = 0;
+    uint8_t tile_x = 0, tile_y = 0;
+    uint8_t fine_y = 0;
 };
 
-static struct vram_pointer decode_address(uint16_t addr)
+static VramPointer decode_address(uint16_t addr)
 {
     // yyy NN YYYYY XXXXX
     // ||| || ||||| +++++-- coarse X scroll
     // ||| || +++++-------- coarse Y scroll
     // ||| ++-------------- nametable select
     // +++----------------- fine Y scroll
-    struct vram_pointer v;
+    VramPointer v;
 
     v.tile_x  = (addr     )  & 0x001F;
     v.tile_y  = (addr >> 5)  & 0x001F;
@@ -212,7 +211,7 @@ static struct vram_pointer decode_address(uint16_t addr)
     return v;
 }
 
-static uint16_t encode_address(struct vram_pointer v)
+static uint16_t encode_address(VramPointer v)
 {
     // yyy NN YYYYY XXXXX
     // ||| || ||||| +++++-- coarse X scroll
@@ -232,7 +231,7 @@ static uint16_t encode_address(struct vram_pointer v)
 
 static uint16_t increment_scroll_x(uint16_t vram_addr)
 {
-    struct vram_pointer v = decode_address(vram_addr);
+    VramPointer v = decode_address(vram_addr);
 
     if (v.tile_x == 31) {
         v.tile_x = 0;
@@ -247,7 +246,7 @@ static uint16_t increment_scroll_x(uint16_t vram_addr)
 
 static uint16_t increment_scroll_y(uint16_t vram_addr)
 {
-    struct vram_pointer v = decode_address(vram_addr);
+    VramPointer v = decode_address(vram_addr);
 
     if (v.fine_y == 7) {
         v.fine_y = 0;
@@ -269,8 +268,8 @@ static uint16_t increment_scroll_y(uint16_t vram_addr)
 
 static uint16_t copy_address_x(uint16_t vram_addr, uint16_t temp_addr)
 {
-    const struct vram_pointer t = decode_address(temp_addr);
-    struct vram_pointer v = decode_address(vram_addr);
+    const VramPointer t = decode_address(temp_addr);
+    VramPointer v = decode_address(vram_addr);
 
     v.table_x = t.table_x;
     v.tile_x  = t.tile_x;
@@ -280,8 +279,8 @@ static uint16_t copy_address_x(uint16_t vram_addr, uint16_t temp_addr)
 
 static uint16_t copy_address_y(uint16_t vram_addr, uint16_t temp_addr)
 {
-    const struct vram_pointer t = decode_address(temp_addr);
-    struct vram_pointer v = decode_address(vram_addr);
+    const VramPointer t = decode_address(temp_addr);
+    VramPointer v = decode_address(vram_addr);
 
     v.table_y = t.table_y;
     v.tile_y  = t.tile_y;
@@ -300,7 +299,7 @@ uint8_t PPU::fetch_tile_id() const
 
 uint8_t PPU::fetch_tile_attr() const
 {
-    const struct vram_pointer v = decode_address(vram_addr);
+    const VramPointer v = decode_address(vram_addr);
     const uint16_t attr_x = v.tile_x / 4;
     const uint16_t attr_y = v.tile_y / 4;
     const uint16_t offset = attr_y * 8 + attr_x;
@@ -316,7 +315,7 @@ uint8_t PPU::fetch_tile_attr() const
 
 uint8_t PPU::fetch_tile_row(uint8_t tile_id, uint8_t plane) const
 {
-    const struct vram_pointer v = decode_address(vram_addr);
+    const VramPointer v = decode_address(vram_addr);
     const uint16_t base = get_ctrl(CTRL_PATTERN_BG) ? 0x1000 : 0x0000;
     const uint16_t addr = base + 16 * tile_id + plane + v.fine_y;
 
@@ -553,22 +552,13 @@ void PPU::shift_sprite_data()
     }
 }
 
-/* -------------------------------------------------------------------------- */
-/* rendering */
+// --------------------------------------------------------------------------
+// rendering
 
-struct pixel {
-    uint8_t value;
-    uint8_t palette;
-    uint8_t priority;
-    uint8_t sprite_zero;
-};
+static const Pixel BACKDROP;
 
-static const struct pixel BACKDROP = {0};
-
-static struct pixel get_pixel(PatternRow patt, uint8_t fine_x)
+static Pixel get_pixel(PatternRow patt, uint8_t fine_x)
 {
-    struct pixel pix = {0};
-
     const uint8_t mask = 0x80 >> fine_x;
     const uint8_t hi = (patt.hi & mask) > 0;
     const uint8_t lo = (patt.lo & mask) > 0;
@@ -577,37 +567,37 @@ static struct pixel get_pixel(PatternRow patt, uint8_t fine_x)
     const uint8_t pal_hi = (patt.palette_hi & mask) > 0;
     const uint8_t pal = (pal_hi << 1) | pal_lo;
 
+    Pixel pix;
+
     pix.value = val;
     pix.palette = pal;
 
     return pix;
 }
 
-static int is_sprite_zero(const PPU *ppu, ObjectAttribute obj)
+int PPU::is_sprite_zero(ObjectAttribute obj) const
 {
-    const int sprite_zero_id = ppu->oam[1];
+    const int sprite_zero_id = oam[1];
 
     return obj.id == sprite_zero_id;
 }
 
-static struct pixel get_pixel_bg(const PPU *ppu)
+Pixel PPU::get_pixel_bg() const
 {
-    return get_pixel(ppu->tile_queue[2], ppu->fine_x);
+    return get_pixel(tile_queue[2], fine_x);
 }
 
-static struct pixel get_pixel_fg(const PPU *ppu)
+Pixel PPU::get_pixel_fg() const
 {
-    int i;
-
-    for (i = 0; i < 8; i++) {
-        const ObjectAttribute obj = ppu->rendering_oam[i];
+    for (int i = 0; i < 8; i++) {
+        const ObjectAttribute obj = rendering_oam[i];
 
         if (obj.x == 0) {
-            struct pixel pix = get_pixel(ppu->rendering_sprite[i], 0);
+            Pixel pix = get_pixel(rendering_sprite[i], 0);
 
             pix.palette += 4;
             pix.priority = obj.priority;
-            pix.sprite_zero = is_sprite_zero(ppu, obj);
+            pix.sprite_zero = is_sprite_zero(obj);
 
             if (pix.value > 0)
                 return pix;
@@ -617,7 +607,7 @@ static struct pixel get_pixel_fg(const PPU *ppu)
     return BACKDROP;
 }
 
-static struct pixel composite_pixels(struct pixel bg, struct pixel fg)
+static Pixel composite_pixels(Pixel bg, Pixel fg)
 {
     if (bg.value == 0 && fg.value == 0)
         return BACKDROP;
@@ -629,21 +619,21 @@ static struct pixel composite_pixels(struct pixel bg, struct pixel fg)
         return fg.priority == 0 ? fg : bg;
 }
 
-static int is_clipping_left(const PPU *ppu)
+bool PPU::is_clipping_left() const
 {
-    return !(ppu->mask & MASK_SHOW_BG_LEFT) ||
-           !(ppu->mask & MASK_SHOW_SPRITE_LEFT);
+    return !(mask & MASK_SHOW_BG_LEFT) ||
+           !(mask & MASK_SHOW_SPRITE_LEFT);
 }
 
-static int is_sprite_zero_hit(const PPU *ppu, struct pixel bg, struct pixel fg, int x)
+bool PPU::is_sprite_zero_hit(Pixel bg, Pixel fg, int x) const
 {
     if (!fg.sprite_zero)
         return 0;
 
-    if (!ppu->is_rendering_bg() || !ppu->is_rendering_sprite())
+    if (!is_rendering_bg() || !is_rendering_sprite())
         return 0;
 
-    if ((x >= 0 && x <= 7) && is_clipping_left(ppu))
+    if ((x >= 0 && x <= 7) && is_clipping_left())
         return 0;
 
     if (x == 255)
@@ -652,49 +642,43 @@ static int is_sprite_zero_hit(const PPU *ppu, struct pixel bg, struct pixel fg, 
     if (fg.value == 0 || bg.value == 0)
         return 0;
 
-    if (ppu->stat & STAT_SPRITE_ZERO_HIT)
+    if (stat & STAT_SPRITE_ZERO_HIT)
         return 0;
 
     return 1;
 }
 
-static uint8_t fetch_palette_value(const PPU *ppu, uint8_t palette_id, uint8_t pixel_val)
+Color PPU::lookup_pixel_color(Pixel pix) const
 {
-    const uint16_t addr = 0x3F00 + 4 * palette_id + pixel_val;
-
-    return ppu->read_byte(addr);
-}
-
-static struct Color lookup_pixel_color(const PPU *ppu, struct pixel pix)
-{
-    const uint8_t index = fetch_palette_value(ppu, pix.palette, pix.value);
+    const uint16_t addr = 0x3F00 + 4 * pix.palette + pix.value;
+    const uint8_t index = read_byte(addr);
     return get_color(index);
 }
 
-static void render_pixel(PPU *ppu, int x, int y)
+void PPU::render_pixel(int x, int y)
 {
-    struct pixel bg = {0}, fg = {0}, final = {0};
-    struct Color col = {0};
+    Pixel bg = {0}, fg = {0}, out = {0};
+    Color col = {0};
 
-    if (ppu->is_rendering_bg())
-        bg = get_pixel_bg(ppu);
+    if (is_rendering_bg())
+        bg = get_pixel_bg();
 
-    if (ppu->is_rendering_sprite() && y != 0)
-        fg = get_pixel_fg(ppu);
+    if (is_rendering_sprite() && y != 0)
+        fg = get_pixel_fg();
 
-    final = composite_pixels(bg, fg);
-    col = lookup_pixel_color(ppu, final);
+    out = composite_pixels(bg, fg);
+    col = lookup_pixel_color(out);
 
-    if (!ppu->is_rendering_bg() && !ppu->is_rendering_sprite() &&
-        ppu->vram_addr >= 0x3F00 && ppu->vram_addr <= 0x3FFF) {
-        const uint8_t index = ppu->read_byte(ppu->vram_addr);
+    if (!is_rendering_bg() && !is_rendering_sprite() &&
+        vram_addr >= 0x3F00 && vram_addr <= 0x3FFF) {
+        const uint8_t index = read_byte(vram_addr);
         col = get_color(index);
     }
 
-    ppu->fbuf->SetColor(x, y, col);
+    fbuf->SetColor(x, y, col);
 
-    if (is_sprite_zero_hit(ppu, bg, fg, x))
-        ppu->set_stat(STAT_SPRITE_ZERO_HIT, 1);
+    if (is_sprite_zero_hit(bg, fg, x))
+        set_stat(STAT_SPRITE_ZERO_HIT, 1);
 }
 
 // --------------------------------------------------------------------------
@@ -777,7 +761,7 @@ void PPU::Clock()
     // render pixel
     if (scanline >= 0 && scanline <= 239) {
         if (cycle >= 1 && cycle <= 256) {
-            render_pixel(this, cycle - 1, scanline);
+            render_pixel(cycle - 1, scanline);
 
             if (is_rendering_bg())
                 shift_tile_data(tile_queue[1], tile_queue[2]);

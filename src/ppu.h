@@ -2,6 +2,7 @@
 #define PPU_H
 
 #include <cstdint>
+#include "framebuffer.h"
 
 namespace nes {
 
@@ -22,6 +23,13 @@ struct ObjectAttribute {
     uint8_t priority = 0xFF;
     uint8_t flipped_h = 0xFF;
     uint8_t flipped_v = 0xFF;
+};
+
+struct Pixel {
+    uint8_t value = 0;
+    uint8_t palette = 0;
+    uint8_t priority = 0;
+    bool sprite_zero = false;
 };
 
 class PPU {
@@ -127,6 +135,15 @@ public:
     uint8_t fetch_sprite_row(uint8_t tile_id, int y, uint8_t plane) const;
     void fetch_sprite_data();
     void shift_sprite_data();
+
+    // rendering
+    int is_sprite_zero(ObjectAttribute obj) const;
+    Pixel get_pixel_bg() const;
+    Pixel get_pixel_fg() const;
+    bool is_clipping_left() const;
+    bool is_sprite_zero_hit(Pixel bg, Pixel fg, int x) const;
+    Color lookup_pixel_color(Pixel pix) const;
+    void render_pixel(int x, int y);
 };
 
 } // namespace
