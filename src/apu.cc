@@ -137,29 +137,29 @@ static void write_noise_hi(NoiseChannel &noise, uint8_t data)
     noise.envelope.start = 1;
 }
 
-void write_apu_status(struct APU *apu, uint8_t data)
+void APU::WriteStatus(uint8_t data)
 {
 
     /* $4015 write | ---D NT21 | Enable DMC (D), noise (N), triangle (T),
      * and pulse channels (2/1) */
-    apu->pulse1.enabled = (data & 0x01);
-    if (!apu->pulse1.enabled)
-        apu->pulse1.length = 0;
+    pulse1.enabled = (data & 0x01);
+    if (!pulse1.enabled)
+        pulse1.length = 0;
 
-    apu->pulse2.enabled = (data >> 1) & 0x01;
-    if (!apu->pulse2.enabled)
-        apu->pulse2.length = 0;
+    pulse2.enabled = (data >> 1) & 0x01;
+    if (!pulse2.enabled)
+        pulse2.length = 0;
 
-    apu->triangle.enabled = (data >> 2) & 0x01;
-    if (!apu->triangle.enabled)
-        apu->triangle.length = 0;
+    triangle.enabled = (data >> 2) & 0x01;
+    if (!triangle.enabled)
+        triangle.length = 0;
 
-    apu->noise.enabled = (data >> 3) & 0x01;
-    if (!apu->noise.enabled)
-        apu->noise.length = 0;
+    noise.enabled = (data >> 3) & 0x01;
+    if (!noise.enabled)
+        noise.length = 0;
 }
 
-void write_apu_frame_counter(struct APU *apu, uint8_t data)
+void APU::WriteFrameCounter(uint8_t data)
 {
     /* $4017 | MI--.---- | Set mode and interrupt (write)
      * Bit 7 | M--- ---- | Sequencer mode: 0 selects 4-step sequence,
@@ -169,28 +169,28 @@ void write_apu_frame_counter(struct APU *apu, uint8_t data)
      * Side effects | After 3 or 4 CPU clock cycles*, the timer is reset.
      *              | If the mode flag is set, then both "quarter frame" and
      *              | "half frame" signals are also generated. */
-    apu->mode = (data >> 7) & 0x01;
-    apu->frame_interrupt = ((data >> 6) & 0x01) == 0;
+    mode = (data >> 7) & 0x01;
+    frame_interrupt = ((data >> 6) & 0x01) == 0;
 }
 
-void write_apu_square1_volume(struct APU *apu, uint8_t data)
+void APU::WriteSquare1Volume(uint8_t data)
 {
-    write_pulse_volume(apu->pulse1, data);
+    write_pulse_volume(pulse1, data);
 }
 
-void write_apu_square1_sweep(struct APU *apu, uint8_t data)
+void APU::WriteSquare1Sweep(uint8_t data)
 {
-    write_pulse_sweep(apu->pulse1, data);
+    write_pulse_sweep(pulse1, data);
 }
 
-void write_apu_square1_lo(struct APU *apu, uint8_t data)
+void APU::WriteSquare1Lo(uint8_t data)
 {
-    write_pulse_lo(apu->pulse1, data);
+    write_pulse_lo(pulse1, data);
 }
 
-void write_apu_square1_hi(struct APU *apu, uint8_t data)
+void APU::WriteSquare1Hi(uint8_t data)
 {
-    write_pulse_hi(apu->pulse1, data);
+    write_pulse_hi(pulse1, data);
 }
 
 void write_apu_square2_volume(struct APU *apu, uint8_t data)

@@ -85,22 +85,24 @@ struct APU {
     TriangleChannel triangle;
     NoiseChannel noise;
 
+    // status
     void Clock();
     void PowerUp();
     void Reset();
 
+    // interrupts
     void ClearIRQ();
     bool IsSetIRQ() const;
+
+    // write registers
+    void WriteStatus(uint8_t data);
+    void WriteFrameCounter(uint8_t data);
+
+    void WriteSquare1Volume(uint8_t data);
+    void WriteSquare1Sweep(uint8_t data);
+    void WriteSquare1Lo(uint8_t data);
+    void WriteSquare1Hi(uint8_t data);
 };
-
-/* write registers */
-extern void write_apu_status(struct APU *apu, uint8_t data);
-extern void write_apu_frame_counter(struct APU *apu, uint8_t data);
-
-extern void write_apu_square1_volume(struct APU *apu, uint8_t data);
-extern void write_apu_square1_sweep(struct APU *apu, uint8_t data);
-extern void write_apu_square1_lo(struct APU *apu, uint8_t data);
-extern void write_apu_square1_hi(struct APU *apu, uint8_t data);
 
 extern void write_apu_square2_volume(struct APU *apu, uint8_t data);
 extern void write_apu_square2_sweep(struct APU *apu, uint8_t data);

@@ -51,16 +51,16 @@ static void write_byte(struct CPU *cpu, uint16_t addr, uint8_t data)
         write_byte(cpu, 0x2000 | (addr & 0x007), data);
     }
     else if (addr == 0x4000) {
-        write_apu_square1_volume(&cpu->apu, data);
+        cpu->apu.WriteSquare1Volume(data);
     }
     else if (addr == 0x4001) {
-        write_apu_square1_sweep(&cpu->apu, data);
+        cpu->apu.WriteSquare1Sweep(data);
     }
     else if (addr == 0x4002) {
-        write_apu_square1_lo(&cpu->apu, data);
+        cpu->apu.WriteSquare1Lo(data);
     }
     else if (addr == 0x4003) {
-        write_apu_square1_hi(&cpu->apu, data);
+        cpu->apu.WriteSquare1Hi(data);
     }
     else if (addr == 0x4004) {
         write_apu_square2_volume(&cpu->apu, data);
@@ -98,14 +98,14 @@ static void write_byte(struct CPU *cpu, uint16_t addr, uint8_t data)
         cpu->dma_page = data;
     }
     else if (addr == 0x4015) {
-        write_apu_status(&cpu->apu, data);
+        cpu->apu.WriteStatus(data);
     }
     else if (addr == 0x4016) {
         const int id = addr & 0x001;
         cpu->controller_state[id] = cpu->controller_input[id];
     }
     else if (addr == 0x4017) {
-        write_apu_frame_counter(&cpu->apu, data);
+        cpu->apu.WriteFrameCounter(data);
     }
     else {
         cpu->cart->WriteProg(addr, data);
