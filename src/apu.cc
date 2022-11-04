@@ -243,40 +243,6 @@ void write_apu_noise_hi(struct APU *apu, uint8_t data)
     write_noise_hi(apu->noise, data);
 }
 
-void power_up_apu(struct APU *apu)
-{
-    struct APU a = {0};
-    *apu = a;
-
-    apu->pulse1.id = 1;
-    apu->pulse2.id = 2;
-
-    /* On power-up, the shift register is loaded with the value 1. */
-    apu->noise.shift = 1;
-}
-
-void reset_apu(struct APU *apu)
-{
-    struct APU a = {0};
-    *apu = a;
-
-    apu->pulse1.id = 1;
-    apu->pulse2.id = 2;
-
-    /* On power-up, the shift register is loaded with the value 1. */
-    apu->noise.shift = 1;
-}
-
-void clear_irq(struct APU *apu)
-{
-    apu->irq_generated = 0;
-}
-
-int is_irq_generated(const struct APU *apu)
-{
-    return apu->irq_generated;
-}
-
 static float calculate_pulse_level(uint8_t pulse1, uint8_t pulse2)
 {
     /* Linear Approximation sounds less cracking/popping */
@@ -620,26 +586,26 @@ constexpr int CPU_CLOCK_FREQ = 1789773;
 constexpr double APU_TIME_STEP = 1. / CPU_CLOCK_FREQ;
 constexpr double AUDIO_SAMPLE_STEP = 1. / 44100;
 
-void clock_apu(struct APU *apu)
+void APU::Clock()
 {
     /* apu clocked every other cpu cycles */
-    if (apu->clock % 2 == 0)
-        clock_sequencer(apu);
+    if (clock % 2 == 0)
+        clock_sequencer(this);
 
-    clock_timers(apu);
+    clock_timers(this);
 
-    apu->audio_time += APU_TIME_STEP;
+    audio_time += APU_TIME_STEP;
 
-    if (apu->audio_time > AUDIO_SAMPLE_STEP) {
+    if (audio_time > AUDIO_SAMPLE_STEP) {
         /* generate a sample */
-        apu->audio_time -= AUDIO_SAMPLE_STEP;
+        audio_time -= AUDIO_SAMPLE_STEP;
 
-        const uint8_t p1 = sample_pulse(apu->pulse1);
-        const uint8_t p2 = sample_pulse(apu->pulse2);
+        const uint8_t p1 = sample_pulse(pulse1);
+        const uint8_t p2 = sample_pulse(pulse2);
         const float pulse_out = calculate_pulse_level(p1, p2);
 
-        const uint8_t t = sample_triangle(apu->triangle);
-        const uint8_t n = sample_noise(apu->noise);
+        const uint8_t t = sample_triangle(triangle);
+        const uint8_t n = sample_noise(noise);
         const float tnd_out = calculate_tnd_level(t, n, 0);
 
         static float lpf = 0;
@@ -652,7 +618,30 @@ void clock_apu(struct APU *apu)
         PushSample(lpf);
     }
 
-    apu->clock++;
+    clock++;
+}
+
+void APU::PowerUp()
+{
+    Reset();
+}
+
+void APU::Reset()
+{
+    *this = APU();
+
+    // On power-up, the shift register is loaded with the value 1.
+    noise.shift = 1;
+}
+
+void APU::ClearIRQ()
+{
+    irq_generated = 0;
+}
+
+bool APU::IsSetIRQ() const
+{
+    return irq_generated;
 }
 
 } // namespace

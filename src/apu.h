@@ -25,6 +25,8 @@ struct Envelope {
 };
 
 struct PulseChannel {
+    PulseChannel(uint8_t chan_id) : id(chan_id) {}
+
     uint8_t id = 0;
     uint8_t enabled = 0;
     uint8_t length = 0;
@@ -62,8 +64,8 @@ struct NoiseChannel {
     uint8_t length_halt = 0;
 
     uint16_t shift = 1;
-
     uint8_t mode = 0;
+
     uint16_t timer = 0;
     uint16_t timer_period = 0;
 
@@ -77,11 +79,18 @@ struct APU {
 
     uint8_t mode;
     uint8_t frame_interrupt;
-    uint8_t irq_generated;
+    bool irq_generated = false;
 
-    PulseChannel pulse1, pulse2;
+    PulseChannel pulse1 = {1}, pulse2 = {2};
     TriangleChannel triangle;
     NoiseChannel noise;
+
+    void Clock();
+    void PowerUp();
+    void Reset();
+
+    void ClearIRQ();
+    bool IsSetIRQ() const;
 };
 
 /* write registers */
@@ -106,15 +115,7 @@ extern void write_apu_noise_volume(struct APU *apu, uint8_t data);
 extern void write_apu_noise_lo(struct APU *apu, uint8_t data);
 extern void write_apu_noise_hi(struct APU *apu, uint8_t data);
 
-/* read registers */
-
-/* interruptions */
-extern void clear_irq(struct APU *apu);
-extern int is_irq_generated(const struct APU *apu);
-
-extern void power_up_apu(struct APU *apu);
-extern void reset_apu(struct APU *apu);
-extern void clock_apu(struct APU *apu);
+// read registers
 
 } // namespace
 

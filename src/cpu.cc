@@ -1006,7 +1006,7 @@ void power_up_cpu(struct CPU *cpu)
     set_s(cpu, 0xFD);
     set_p(cpu, 0x00 | I);
 
-    power_up_apu(&cpu->apu);
+    cpu->apu.PowerUp();
 }
 
 void reset_cpu(struct CPU *cpu)
@@ -1019,7 +1019,7 @@ void reset_cpu(struct CPU *cpu)
     /* takes cycles */
     cpu->cycles = 8;
 
-    reset_apu(&cpu->apu);
+    cpu->apu.Reset();
 }
 
 void irq(struct CPU *cpu)

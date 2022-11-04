@@ -77,7 +77,7 @@ void NES::UpdateFrame()
             else
                 clock_cpu(&cpu);
 
-            clock_apu(&cpu.apu);
+            cpu.apu.Clock();
         }
 
         if (is_nmi_generated(&ppu)) {
@@ -85,8 +85,8 @@ void NES::UpdateFrame()
             nmi(&cpu);
         }
 
-        if (is_irq_generated(&cpu.apu)) {
-            clear_irq(&cpu.apu);
+        if (cpu.apu.IsSetIRQ()) {
+            cpu.apu.ClearIRQ();
             irq(&cpu);
         }
 
