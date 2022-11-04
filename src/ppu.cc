@@ -1,5 +1,4 @@
-#include <stdlib.h>
-#include <stdio.h>
+#include <cstdlib>
 #include "ppu.h"
 #include "framebuffer.h"
 #include "cartridge.h"
@@ -708,8 +707,8 @@ static void render_pixel(PPU *ppu, int x, int y)
         set_stat(ppu, STAT_SPRITE_ZERO_HIT, 1);
 }
 
-/* -------------------------------------------------------------------------- */
-/* clock */
+// --------------------------------------------------------------------------
+// clock
 
 void PPU::ClearNMI()
 {
@@ -868,110 +867,105 @@ void PPU::Reset()
         oam[i] = 0xFF;
 }
 
-void write_ppu_control(PPU *ppu, uint8_t data)
+void PPU::WriteControl(uint8_t data)
 {
-    /* Nametable x and y from control
-     * t: ...GH.. ........ <- d: ......GH
-     *    <used elsewhere> <- d: ABCDEF..
-     */
-    ppu->ctrl = data;
-    ppu->temp_addr = (ppu->temp_addr & 0xF3FF) | ((data & 0x03) << 10);
+    // Nametable x and y from control
+    // t: ...GH.. ........ <- d: ......GH
+    //    <used elsewhere> <- d: ABCDEF..
+    ctrl = data;
+    temp_addr = (temp_addr & 0xF3FF) | ((data & 0x03) << 10);
 }
 
-void write_ppu_mask(PPU *ppu, uint8_t data)
+void PPU::WriteMask(uint8_t data)
 {
-    ppu->mask = data;
+    mask = data;
 }
 
-void write_oam_address(PPU *ppu, uint8_t addr)
+void PPU::WriteOamAddress(uint8_t addr)
 {
-    ppu->oam_addr = addr;
+    oam_addr = addr;
 }
 
-void write_oam_data(PPU *ppu, uint8_t data)
+void PPU::WriteOamData(uint8_t data)
 {
-    ppu->oam[ppu->oam_addr] = data;
+    oam[oam_addr] = data;
 }
 
-void write_ppu_scroll(PPU *ppu, uint8_t data)
+void PPU::WriteScroll(uint8_t data)
 {
-    if (ppu->write_toggle == 0) {
-        /* Coarse X and fine x
-         * t: ....... ...ABCDE <- d: ABCDE...
-         * x:              FGH <- d: .....FGH
-         * w:                  <- 1
-         */
-        ppu->fine_x = data & 0x07;
-        ppu->temp_addr = (ppu->temp_addr & 0xFFE0) | (data >> 3);
-        ppu->write_toggle = 1;
+    if (write_toggle == 0) {
+        // Coarse X and fine x
+        // t: ....... ...ABCDE <- d: ABCDE...
+        // x:              FGH <- d: .....FGH
+        // w:                  <- 1
+        fine_x = data & 0x07;
+        temp_addr = (temp_addr & 0xFFE0) | (data >> 3);
+        write_toggle = 1;
     } else {
-        /* Coarse Y and fine y
-         * t: FGH..AB CDE..... <- d: ABCDEFGH
-         * w:                  <- 0
-         */
-        ppu->temp_addr = (ppu->temp_addr & 0xFC1F) | ((data >> 3) << 5);
-        ppu->temp_addr = (ppu->temp_addr & 0x8FFF) | ((data & 0x07) << 12);
-        ppu->write_toggle = 0;
+        // Coarse Y and fine y
+        // t: FGH..AB CDE..... <- d: ABCDEFGH
+        // w:                  <- 0
+        temp_addr = (temp_addr & 0xFC1F) | ((data >> 3) << 5);
+        temp_addr = (temp_addr & 0x8FFF) | ((data & 0x07) << 12);
+        write_toggle = 0;
     }
 }
 
-void write_ppu_address(PPU *ppu, uint8_t addr)
+void PPU::WriteAddress(uint8_t addr)
 {
-    if (ppu->write_toggle == 0) {
-        /* High byte
-         * t: .CDEFGH ........ <- d: ..CDEFGH
-         *        <unused>     <- d: AB......
-         * t: Z...... ........ <- 0 (bit Z is cleared)
-         * w:                  <- 1
-         */
-        ppu->temp_addr = (ppu->temp_addr & 0xC0FF) | ((addr & 0x3F) << 8);
-        ppu->temp_addr &= 0xBFFF;
-        ppu->write_toggle = 1;
+    if (write_toggle == 0) {
+        // High byte
+        // t: .CDEFGH ........ <- d: ..CDEFGH
+        //        <unused>     <- d: AB......
+        // t: Z...... ........ <- 0 (bit Z is cleared)
+        // w:                  <- 1
+        temp_addr = (temp_addr & 0xC0FF) | ((addr & 0x3F) << 8);
+        temp_addr &= 0xBFFF;
+        write_toggle = 1;
     } else {
-        /* Low byte
-         * t: ....... ABCDEFGH <- d: ABCDEFGH
-         * v: <...all bits...> <- t: <...all bits...>
-         * w:                  <- 0
-         */
-        ppu->temp_addr = (ppu->temp_addr & 0xFF00) | addr;
-        ppu->vram_addr = ppu->temp_addr;
-        ppu->write_toggle = 0;
+        // Low byte
+        // t: ....... ABCDEFGH <- d: ABCDEFGH
+        // v: <...all bits...> <- t: <...all bits...>
+        // w:                  <- 0
+        temp_addr = (temp_addr & 0xFF00) | addr;
+        vram_addr = temp_addr;
+        write_toggle = 0;
     }
 }
 
-void write_ppu_data(PPU *ppu, uint8_t data)
+void PPU::WriteData(uint8_t data)
 {
-    write_byte(ppu, ppu->vram_addr, data);
+    write_byte(this, vram_addr, data);
 
-    ppu->vram_addr += address_increment(ppu);
+    vram_addr += address_increment(this);
 }
 
-uint8_t read_ppu_status(PPU *ppu)
+uint8_t PPU::ReadStatus()
 {
-    const uint8_t data = ppu->stat;
+    const uint8_t data = stat;
 
-    set_stat(ppu, STAT_VERTICAL_BLANK, 0);
-    ppu->write_toggle = 0;
+    set_stat(this, STAT_VERTICAL_BLANK, 0);
+    write_toggle = 0;
 
     return data;
 }
 
-uint8_t read_oam_data(const PPU *ppu)
+uint8_t PPU::ReadOamData() const
 {
-    return ppu->oam[ppu->oam_addr];
+    return oam[oam_addr];
 }
 
-uint8_t read_ppu_data(PPU *ppu)
+uint8_t PPU::ReadData()
 {
-    const uint16_t addr = ppu->vram_addr;
-    uint8_t data = ppu->read_buffer;
+    const uint16_t addr = vram_addr;
+    uint8_t data = read_buffer;
 
-    ppu->read_buffer = read_byte(ppu, addr);
+    read_buffer = read_byte(this, addr);
 
     if (addr >= 0x3F00 && addr <= 0x3FFF)
-        data = ppu->read_buffer;
+        data = read_buffer;
 
-    ppu->vram_addr += address_increment(ppu);
+    vram_addr += address_increment(this);
 
     return data;
 }

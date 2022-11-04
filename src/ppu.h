@@ -75,21 +75,21 @@ public:
     void Clock();
     void PowerUp();
     void Reset();
+
+    // write registers
+    void WriteControl(uint8_t data);
+    void WriteMask(uint8_t data);
+    void WriteOamAddress(uint8_t addr);
+    void WriteOamData(uint8_t data);
+    void WriteScroll(uint8_t data);
+    void WriteAddress(uint8_t addr);
+    void WriteData(uint8_t data);
+
+    // read registers
+    uint8_t ReadStatus();
+    uint8_t ReadOamData() const;
+    uint8_t ReadData();
 };
-
-// write registers
-extern void write_ppu_control(PPU *ppu, uint8_t data);
-extern void write_ppu_mask(PPU *ppu, uint8_t data);
-extern void write_oam_address(PPU *ppu, uint8_t addr);
-extern void write_oam_data(PPU *ppu, uint8_t data);
-extern void write_ppu_scroll(PPU *ppu, uint8_t data);
-extern void write_ppu_address(PPU *ppu, uint8_t addr);
-extern void write_ppu_data(PPU *ppu, uint8_t data);
-
-// read registers
-extern uint8_t read_ppu_status(PPU *ppu);
-extern uint8_t read_oam_data(const PPU *ppu);
-extern uint8_t read_ppu_data(PPU *ppu);
 
 // peek registers
 extern uint8_t peek_ppu_status(const PPU *ppu);
