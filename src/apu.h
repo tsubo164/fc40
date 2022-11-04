@@ -6,31 +6,31 @@
 namespace nes {
 
 struct Sweep {
-    uint8_t enabled = 0;
+    bool enabled = false;
     uint8_t period = 0;
     uint16_t target_period = 0;
-    uint8_t negate = 0;
+    bool negate = false;
     uint8_t shift = 0;
-    uint8_t reload = 0;
+    bool reload = false;
     uint8_t divider = 0;
 };
 
 struct Envelope {
-    uint8_t start = 0;
+    bool start = false;
     uint8_t decay = 0;
     uint8_t divider = 0;
     uint8_t volume = 0;
-    uint8_t loop = 0;
-    uint8_t constant = 0;
+    bool loop = false;
+    bool constant = false;
 };
 
 struct PulseChannel {
     PulseChannel(uint8_t chan_id) : id(chan_id) {}
 
-    uint8_t id = 0;
-    uint8_t enabled = 0;
+    int id = 0;
+    bool enabled = false;
     uint8_t length = 0;
-    uint8_t length_halt = 0;
+    bool length_halt = false;
 
     uint16_t timer = 0;
     uint16_t timer_period = 0;
@@ -43,9 +43,9 @@ struct PulseChannel {
 };
 
 struct TriangleChannel {
-    uint8_t enabled = 0;
+    bool enabled = false;
     uint8_t length = 0;
-    uint8_t length_halt = 0;
+    bool length_halt = false;
 
     uint8_t control = 0;
     uint8_t linear_counter = 0;
@@ -59,9 +59,9 @@ struct TriangleChannel {
 };
 
 struct NoiseChannel {
-    uint8_t enabled = 0;
+    bool enabled = false;
     uint8_t length = 0;
-    uint8_t length_halt = 0;
+    bool length_halt = false;
 
     uint16_t shift = 1;
     uint8_t mode = 0;
@@ -74,6 +74,9 @@ struct NoiseChannel {
 
 struct APU {
 public:
+    APU() {}
+    ~APU() {}
+
     // status
     void Clock();
     void PowerUp();
@@ -108,6 +111,18 @@ public:
     // read registers
 
 private:
+    double audio_time_ = 0.;
+    uint32_t clock_ = 0;
+    uint32_t cycle_ = 0;
+
+    uint8_t mode_ = 0;
+    bool frame_interrupt_ = false;
+    bool irq_generated_ = false;
+
+    PulseChannel pulse1_ = {1}, pulse2_ = {2};
+    TriangleChannel triangle_;
+    NoiseChannel noise_;
+
     void clock_timers();
     void clock_length_counters();
     void clock_sweeps();
@@ -117,18 +132,6 @@ private:
     void clock_sequencer_step4();
     void clock_sequencer_step5();
     void clock_sequencer();
-
-    double audio_time = 0.;
-    uint32_t clock = 0;
-    uint32_t cycle = 0;
-
-    uint8_t mode = 0;
-    uint8_t frame_interrupt;
-    bool irq_generated = false;
-
-    PulseChannel pulse1 = {1}, pulse2 = {2};
-    TriangleChannel triangle;
-    NoiseChannel noise;
 };
 
 } // namespace

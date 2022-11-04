@@ -1,4 +1,3 @@
-//#include <cstdlib>
 #include "apu.h"
 #include "sound.h"
 
@@ -45,7 +44,7 @@ static void write_pulse_sweep(PulseChannel &pulse, uint8_t data)
     pulse.sweep.period = ((data >> 4) & 0x07) + 1;
     pulse.sweep.negate = (data >> 3) & 0x01;
     pulse.sweep.shift = (data & 0x07);
-    pulse.sweep.reload = 1;
+    pulse.sweep.reload = true;
 }
 
 static void write_pulse_lo(PulseChannel &pulse, uint8_t data)
@@ -64,7 +63,7 @@ static void write_pulse_hi(PulseChannel &pulse, uint8_t data)
     pulse.length = length_table[data >> 3];
     pulse.timer_period = ((data & 0x07) << 8) | (pulse.timer_period & 0x00FF);
     pulse.sequence_pos = 0;
-    pulse.envelope.start = 1;
+    pulse.envelope.start = true;
 
     /* Whenever the current period changes for any reason, whether by $400x writes or
      * by sweep, the target period also changes. */
@@ -133,7 +132,7 @@ static void write_noise_hi(NoiseChannel &noise, uint8_t data)
 {
     /* $400F | llll.l--- | Length counter load and envelope restart (write) */
     noise.length = length_table[data >> 3];
-    noise.envelope.start = 1;
+    noise.envelope.start = true;
 }
 
 void APU::WriteStatus(uint8_t data)
@@ -141,21 +140,21 @@ void APU::WriteStatus(uint8_t data)
 
     /* $4015 write | ---D NT21 | Enable DMC (D), noise (N), triangle (T),
      * and pulse channels (2/1) */
-    pulse1.enabled = (data & 0x01);
-    if (!pulse1.enabled)
-        pulse1.length = 0;
+    pulse1_.enabled = (data & 0x01);
+    if (!pulse1_.enabled)
+        pulse1_.length = 0;
 
-    pulse2.enabled = (data >> 1) & 0x01;
-    if (!pulse2.enabled)
-        pulse2.length = 0;
+    pulse2_.enabled = (data >> 1) & 0x01;
+    if (!pulse2_.enabled)
+        pulse2_.length = 0;
 
-    triangle.enabled = (data >> 2) & 0x01;
-    if (!triangle.enabled)
-        triangle.length = 0;
+    triangle_.enabled = (data >> 2) & 0x01;
+    if (!triangle_.enabled)
+        triangle_.length = 0;
 
-    noise.enabled = (data >> 3) & 0x01;
-    if (!noise.enabled)
-        noise.length = 0;
+    noise_.enabled = (data >> 3) & 0x01;
+    if (!noise_.enabled)
+        noise_.length = 0;
 }
 
 void APU::WriteFrameCounter(uint8_t data)
@@ -168,84 +167,84 @@ void APU::WriteFrameCounter(uint8_t data)
      * Side effects | After 3 or 4 CPU clock cycles*, the timer is reset.
      *              | If the mode flag is set, then both "quarter frame" and
      *              | "half frame" signals are also generated. */
-    mode = (data >> 7) & 0x01;
-    frame_interrupt = ((data >> 6) & 0x01) == 0;
+    mode_ = (data >> 7) & 0x01;
+    frame_interrupt_ = ((data >> 6) & 0x01) == 0;
 }
 
 void APU::WriteSquare1Volume(uint8_t data)
 {
-    write_pulse_volume(pulse1, data);
+    write_pulse_volume(pulse1_, data);
 }
 
 void APU::WriteSquare1Sweep(uint8_t data)
 {
-    write_pulse_sweep(pulse1, data);
+    write_pulse_sweep(pulse1_, data);
 }
 
 void APU::WriteSquare1Lo(uint8_t data)
 {
-    write_pulse_lo(pulse1, data);
+    write_pulse_lo(pulse1_, data);
 }
 
 void APU::WriteSquare1Hi(uint8_t data)
 {
-    write_pulse_hi(pulse1, data);
+    write_pulse_hi(pulse1_, data);
 }
 
 void APU::WriteSquare2Volume(uint8_t data)
 {
-    write_pulse_volume(pulse2, data);
+    write_pulse_volume(pulse2_, data);
 }
 
 void APU::WriteSquare2Sweep(uint8_t data)
 {
-    write_pulse_sweep(pulse2, data);
+    write_pulse_sweep(pulse2_, data);
 }
 
 void APU::WriteSquare2Lo(uint8_t data)
 {
-    write_pulse_lo(pulse2, data);
+    write_pulse_lo(pulse2_, data);
 }
 
 void APU::WriteSquare2Hi(uint8_t data)
 {
-    write_pulse_hi(pulse2, data);
+    write_pulse_hi(pulse2_, data);
 }
 
 void APU::WriteTriangleLinear(uint8_t data)
 {
-    write_triangle_linear(triangle, data);
+    write_triangle_linear(triangle_, data);
 }
 
 void APU::WriteTriangleLo(uint8_t data)
 {
-    write_triangle_lo(triangle, data);
+    write_triangle_lo(triangle_, data);
 }
 
 void APU::WriteTriangleHi(uint8_t data)
 {
-    write_triangle_hi(triangle, data);
+    write_triangle_hi(triangle_, data);
 }
 
 void APU::WriteNoiseVolume(uint8_t data)
 {
-    write_noise_volume(noise, data);
+    write_noise_volume(noise_, data);
 }
 
 void APU::WriteNoiseLo(uint8_t data)
 {
-    write_noise_lo(noise, data);
+    write_noise_lo(noise_, data);
 }
 
 void APU::WriteNoiseHi(uint8_t data)
 {
-    write_noise_hi(noise, data);
+    write_noise_hi(noise_, data);
 }
 
-static float calculate_pulse_level(uint8_t pulse1, uint8_t pulse2)
+static float calculate_pulse_level(uint8_t pulse1_, uint8_t pulse2_)
 {
     /* Linear Approximation sounds less cracking/popping */
-    return 0.00752 * (pulse1 + pulse2);
+    return 0.00752 * (pulse1_ + pulse2_);
 
     static float output_table[32] = {0.f};
     static int table_built = 0;
@@ -258,7 +257,7 @@ static float calculate_pulse_level(uint8_t pulse1, uint8_t pulse2)
         table_built = 1;
     }
 
-    return output_table[(pulse1 + pulse2) & 0x1F];
+    return output_table[(pulse1_ + pulse2_) & 0x1F];
 }
 
 static float calculate_tnd_level(uint8_t triangle, uint8_t noise, uint8_t dmc)
@@ -287,7 +286,7 @@ static uint8_t sample_pulse(PulseChannel &pulse)
     if (sample == 0)
         return 0;
 
-    if (pulse.enabled == 0)
+    if (pulse.enabled == false)
         return 0;
 
     if (pulse.length == 0)
@@ -314,7 +313,7 @@ static uint8_t sample_triangle(TriangleChannel &tri)
     if (sample == 0)
         return 0;
 
-    if (tri.enabled == 0)
+    if (tri.enabled == false)
         return 0;
 
     if (tri.length == 0)
@@ -427,7 +426,7 @@ static void clock_sweep(PulseChannel &pulse)
 
     if (swp.divider == 0 || swp.reload) {
         swp.divider = swp.period;
-        swp.reload = 0;
+        swp.reload = false;
     }
     else {
         swp.divider--;
@@ -436,7 +435,7 @@ static void clock_sweep(PulseChannel &pulse)
 
 static void clock_envelope(Envelope &env)
 {
-    if (env.start == 0) {
+    if (env.start == false) {
         /* clock divider */
         if (env.divider == 0) {
             env.divider = env.volume;
@@ -451,7 +450,7 @@ static void clock_envelope(Envelope &env)
         }
     }
     else {
-        env.start = 0;
+        env.start = false;
         env.decay = 15;
         env.divider = env.volume;
     }
@@ -459,46 +458,46 @@ static void clock_envelope(Envelope &env)
 
 void APU::clock_timers()
 {
-    if (clock % 2 == 0) {
-        clock_pulse_timer(pulse1);
-        clock_pulse_timer(pulse2);
-        clock_noise_timer(noise);
+    if (clock_ % 2 == 0) {
+        clock_pulse_timer(pulse1_);
+        clock_pulse_timer(pulse2_);
+        clock_noise_timer(noise_);
     }
 
-    clock_triangle_timer(triangle);
+    clock_triangle_timer(triangle_);
 }
 
 void APU::clock_length_counters()
 {
-    if (pulse1.length > 0 && !pulse1.length_halt)
-        pulse1.length--;
+    if (pulse1_.length > 0 && !pulse1_.length_halt)
+        pulse1_.length--;
 
-    if (pulse2.length > 0 && !pulse1.length_halt)
-        pulse2.length--;
+    if (pulse2_.length > 0 && !pulse1_.length_halt)
+        pulse2_.length--;
 
-    if (triangle.length > 0 && !triangle.length_halt)
-        triangle.length--;
+    if (triangle_.length > 0 && !triangle_.length_halt)
+        triangle_.length--;
 
-    if (noise.length > 0 && !noise.length_halt)
-        noise.length--;
+    if (noise_.length > 0 && !noise_.length_halt)
+        noise_.length--;
 }
 
 void APU::clock_sweeps()
 {
-    clock_sweep(pulse1);
-    clock_sweep(pulse2);
+    clock_sweep(pulse1_);
+    clock_sweep(pulse2_);
 }
 
 void APU::clock_envelopes()
 {
-    clock_envelope(pulse1.envelope);
-    clock_envelope(pulse2.envelope);
-    clock_envelope(noise.envelope);
+    clock_envelope(pulse1_.envelope);
+    clock_envelope(pulse2_.envelope);
+    clock_envelope(noise_.envelope);
 }
 
 void APU::clock_linear_counter()
 {
-    TriangleChannel &tri = triangle;
+    TriangleChannel &tri = triangle_;
 
     if (tri.linear_reload) {
         tri.linear_counter = tri.linear_period;
@@ -513,13 +512,13 @@ void APU::clock_linear_counter()
 
 void APU::clock_frame_interrupt()
 {
-    if (frame_interrupt)
-        irq_generated = 1;
+    if (frame_interrupt_)
+        irq_generated_ = true;
 }
 
 void APU::clock_sequencer_step4()
 {
-    switch (cycle) {
+    switch (cycle_) {
     case 3729:
     case 11186:
         clock_envelopes();
@@ -538,17 +537,17 @@ void APU::clock_sequencer_step4()
         break;
     }
 
-    if (cycle == 14915) {
+    if (cycle_ == 14915) {
         clock_frame_interrupt();
-        cycle = 0;
+        cycle_ = 0;
     } else {
-        cycle++;
+        cycle_++;
     }
 }
 
 void APU::clock_sequencer_step5()
 {
-    switch (cycle) {
+    switch (cycle_) {
     case 3729:
     case 11186:
         clock_envelopes();
@@ -567,15 +566,15 @@ void APU::clock_sequencer_step5()
         break;
     }
 
-    if (cycle == 18641)
-        cycle = 0;
+    if (cycle_ == 18641)
+        cycle_ = 0;
     else
-        cycle++;
+        cycle_++;
 }
 
 void APU::clock_sequencer()
 {
-    if (mode == 0)
+    if (mode_ == 0)
         clock_sequencer_step4();
     else
         clock_sequencer_step5();
@@ -588,23 +587,23 @@ constexpr double AUDIO_SAMPLE_STEP = 1. / 44100;
 void APU::Clock()
 {
     /* apu clocked every other cpu cycles */
-    if (clock % 2 == 0)
+    if (clock_ % 2 == 0)
         clock_sequencer();
 
     clock_timers();
 
-    audio_time += APU_TIME_STEP;
+    audio_time_ += APU_TIME_STEP;
 
-    if (audio_time > AUDIO_SAMPLE_STEP) {
+    if (audio_time_ > AUDIO_SAMPLE_STEP) {
         /* generate a sample */
-        audio_time -= AUDIO_SAMPLE_STEP;
+        audio_time_ -= AUDIO_SAMPLE_STEP;
 
-        const uint8_t p1 = sample_pulse(pulse1);
-        const uint8_t p2 = sample_pulse(pulse2);
+        const uint8_t p1 = sample_pulse(pulse1_);
+        const uint8_t p2 = sample_pulse(pulse2_);
         const float pulse_out = calculate_pulse_level(p1, p2);
 
-        const uint8_t t = sample_triangle(triangle);
-        const uint8_t n = sample_noise(noise);
+        const uint8_t t = sample_triangle(triangle_);
+        const uint8_t n = sample_noise(noise_);
         const float tnd_out = calculate_tnd_level(t, n, 0);
 
         static float lpf = 0;
@@ -617,7 +616,7 @@ void APU::Clock()
         PushSample(lpf);
     }
 
-    clock++;
+    clock_++;
 }
 
 void APU::PowerUp()
@@ -630,17 +629,17 @@ void APU::Reset()
     *this = APU();
 
     // On power-up, the shift register is loaded with the value 1.
-    noise.shift = 1;
+    noise_.shift = 1;
 }
 
 void APU::ClearIRQ()
 {
-    irq_generated = 0;
+    irq_generated_ = false;
 }
 
 bool APU::IsSetIRQ() const
 {
-    return irq_generated;
+    return irq_generated_;
 }
 
 } // namespace
