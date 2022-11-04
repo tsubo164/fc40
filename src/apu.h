@@ -73,11 +73,11 @@ struct NoiseChannel {
 };
 
 struct APU {
-    double audio_time;
-    uint32_t clock;
-    uint32_t cycle;
+    double audio_time = 0.;
+    uint32_t clock = 0;
+    uint32_t cycle = 0;
 
-    uint8_t mode;
+    uint8_t mode = 0;
     uint8_t frame_interrupt;
     bool irq_generated = false;
 
@@ -102,12 +102,12 @@ struct APU {
     void WriteSquare1Sweep(uint8_t data);
     void WriteSquare1Lo(uint8_t data);
     void WriteSquare1Hi(uint8_t data);
-};
 
-extern void write_apu_square2_volume(struct APU *apu, uint8_t data);
-extern void write_apu_square2_sweep(struct APU *apu, uint8_t data);
-extern void write_apu_square2_lo(struct APU *apu, uint8_t data);
-extern void write_apu_square2_hi(struct APU *apu, uint8_t data);
+    void WriteSquare2Volume(uint8_t data);
+    void WriteSquare2Sweep(uint8_t data);
+    void WriteSquare2Lo(uint8_t data);
+    void WriteSquare2Hi(uint8_t data);
+};
 
 extern void write_apu_triangle_linear(struct APU *apu, uint8_t data);
 extern void write_apu_triangle_lo(struct APU *apu, uint8_t data);

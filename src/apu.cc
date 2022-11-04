@@ -193,24 +193,24 @@ void APU::WriteSquare1Hi(uint8_t data)
     write_pulse_hi(pulse1, data);
 }
 
-void write_apu_square2_volume(struct APU *apu, uint8_t data)
+void APU::WriteSquare2Volume(uint8_t data)
 {
-    write_pulse_volume(apu->pulse2, data);
+    write_pulse_volume(pulse2, data);
 }
 
-void write_apu_square2_sweep(struct APU *apu, uint8_t data)
+void APU::WriteSquare2Sweep(uint8_t data)
 {
-    write_pulse_sweep(apu->pulse2, data);
+    write_pulse_sweep(pulse2, data);
 }
 
-void write_apu_square2_lo(struct APU *apu, uint8_t data)
+void APU::WriteSquare2Lo(uint8_t data)
 {
-    write_pulse_lo(apu->pulse2, data);
+    write_pulse_lo(pulse2, data);
 }
 
-void write_apu_square2_hi(struct APU *apu, uint8_t data)
+void APU::WriteSquare2Hi(uint8_t data)
 {
-    write_pulse_hi(apu->pulse2, data);
+    write_pulse_hi(pulse2, data);
 }
 
 void write_apu_triangle_linear(struct APU *apu, uint8_t data)

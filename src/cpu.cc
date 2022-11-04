@@ -63,16 +63,16 @@ static void write_byte(struct CPU *cpu, uint16_t addr, uint8_t data)
         cpu->apu.WriteSquare1Hi(data);
     }
     else if (addr == 0x4004) {
-        write_apu_square2_volume(&cpu->apu, data);
+        cpu->apu.WriteSquare2Volume(data);
     }
     else if (addr == 0x4005) {
-        write_apu_square2_sweep(&cpu->apu, data);
+        cpu->apu.WriteSquare2Sweep(data);
     }
     else if (addr == 0x4006) {
-        write_apu_square2_lo(&cpu->apu, data);
+        cpu->apu.WriteSquare2Lo(data);
     }
     else if (addr == 0x4007) {
-        write_apu_square2_hi(&cpu->apu, data);
+        cpu->apu.WriteSquare2Hi(data);
     }
     else if (addr == 0x4008) {
         write_apu_triangle_linear(&cpu->apu, data);
