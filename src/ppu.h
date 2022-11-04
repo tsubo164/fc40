@@ -98,6 +98,7 @@ public:
     ObjectAttribute ReadOam(int index) const;
 
 //private:
+    // control
     void set_stat(uint8_t flag, uint8_t val);
     bool get_ctrl(uint8_t flag) const;
     bool is_rendering_bg() const;
@@ -109,6 +110,7 @@ public:
     uint8_t read_byte(uint16_t addr) const;
     void write_byte(uint16_t addr, uint8_t data);
 
+    // tile
     uint8_t fetch_tile_id() const;
     uint8_t fetch_tile_attr()const; 
     uint8_t fetch_tile_row(uint8_t tile_id, uint8_t plane) const;
@@ -117,6 +119,14 @@ public:
 
     void set_sprite_overflow();
     void clear_sprite_overflow();
+
+    // sprite
+    void clear_secondary_oam();
+    ObjectAttribute get_sprite(int index) const;
+    void evaluate_sprite();
+    uint8_t fetch_sprite_row(uint8_t tile_id, int y, uint8_t plane) const;
+    void fetch_sprite_data();
+    void shift_sprite_data();
 };
 
 } // namespace

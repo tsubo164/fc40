@@ -196,13 +196,11 @@ struct vram_pointer {
 
 static struct vram_pointer decode_address(uint16_t addr)
 {
-    /*
-     *  yyy NN YYYYY XXXXX
-     *  ||| || ||||| +++++-- coarse X scroll
-     *  ||| || +++++-------- coarse Y scroll
-     *  ||| ++-------------- nametable select
-     *  +++----------------- fine Y scroll
-     */
+    // yyy NN YYYYY XXXXX
+    // ||| || ||||| +++++-- coarse X scroll
+    // ||| || +++++-------- coarse Y scroll
+    // ||| ++-------------- nametable select
+    // +++----------------- fine Y scroll
     struct vram_pointer v;
 
     v.tile_x  = (addr     )  & 0x001F;
@@ -216,13 +214,11 @@ static struct vram_pointer decode_address(uint16_t addr)
 
 static uint16_t encode_address(struct vram_pointer v)
 {
-    /*
-     *  yyy NN YYYYY XXXXX
-     *  ||| || ||||| +++++-- coarse X scroll
-     *  ||| || +++++-------- coarse Y scroll
-     *  ||| ++-------------- nametable select
-     *  +++----------------- fine Y scroll
-     */
+    // yyy NN YYYYY XXXXX
+    // ||| || ||||| +++++-- coarse X scroll
+    // ||| || +++++-------- coarse Y scroll
+    // ||| ++-------------- nametable select
+    // +++----------------- fine Y scroll
     uint16_t addr = 0;
 
     addr = v.fine_y & 0x07;
@@ -294,8 +290,8 @@ static uint16_t copy_address_y(uint16_t vram_addr, uint16_t temp_addr)
     return encode_address(v);
 }
 
-/* -------------------------------------------------------------------------- */
-/* tile */
+// --------------------------------------------------------------------------
+// tile
 
 uint8_t PPU::fetch_tile_id() const
 {
@@ -364,22 +360,22 @@ void PPU::fetch_tile_data()
 
     switch (cycle % 8) {
     case 1:
-        /* NT byte */
+        // NT byte
         next.id = fetch_tile_id();
         break;
 
     case 3:
-        /* AT byte */
+        // AT byte
         set_tile_palette(next, fetch_tile_attr());
         break;
 
     case 5:
-        /* Low BG tile byte */
+        // Low BG tile byte
         next.lo = fetch_tile_row(next.id, 0);
         break;
 
     case 7:
-        /* High BG tile byte */
+        // High BG tile byte
         next.hi = fetch_tile_row(next.id, 8);
         break;
 
@@ -398,33 +394,31 @@ void PPU::clear_sprite_overflow()
     set_stat(STAT_SPRITE_OVERFLOW, 0);
 }
 
-/* -------------------------------------------------------------------------- */
-/* sprite */
+// --------------------------------------------------------------------------
+// sprite
 
-static void clear_secondary_oam(PPU *ppu, int cycle)
+void PPU::clear_secondary_oam()
 {
-    /* secondary oam crear occurs cycle 1 - 64 */
-    if (cycle % 8 == 1) {
-        const ObjectAttribute init = {0xFF, 0xFF, 0xFF, 0xFF};
-        ppu->secondary_oam[cycle / 8] = init;
-    }
+    // secondary oam crear occurs cycle 1 - 64
+    if (cycle % 8 == 1)
+        secondary_oam[cycle / 8] = ObjectAttribute();
 
     if (cycle == 1)
-        ppu->sprite_count = 0;
+        sprite_count = 0;
 }
 
-static ObjectAttribute get_sprite(const PPU *ppu, int index)
+ObjectAttribute PPU::get_sprite(int index) const
 {
-    ObjectAttribute obj = {0xFF, 0xFF, 0xFF, 0xFF};
+    ObjectAttribute obj;
     uint8_t attr = 0;
 
     if (index < 0 || index > 63)
         return obj;
 
-    obj.y    = ppu->oam[4 * index + 0];
-    obj.id   = ppu->oam[4 * index + 1];
-    attr     = ppu->oam[4 * index + 2];
-    obj.x    = ppu->oam[4 * index + 3];
+    obj.y  = oam[4 * index + 0];
+    obj.id = oam[4 * index + 1];
+    attr   = oam[4 * index + 2];
+    obj.x  = oam[4 * index + 3];
 
     obj.palette   = (attr & 0x03);
     obj.priority  = (attr & 0x20) > 0;
@@ -441,47 +435,45 @@ static int is_sprite_visible(ObjectAttribute obj, int scanline, int height)
     return diff >= 0 && diff < height;
 }
 
-static void evaluate_sprite(PPU *ppu, int cycle, int scanline)
+void PPU::evaluate_sprite()
 {
-    /* secondary oam crear occurs cycle 65 - 256 */
-    /* index = 0 .. 191 */
+    // secondary oam crear occurs cycle 65 - 256
+    // index = 0 .. 191
     const int index = cycle - 65;
     const int sprite_height = 8;
-    ObjectAttribute obj;
 
     if (index > 63)
         return;
 
-    if (ppu->sprite_count > 8)
+    if (sprite_count > 8)
         return;
 
-    obj = get_sprite(ppu, index);
+    const ObjectAttribute obj = get_sprite(index);
 
     if (is_sprite_visible(obj, scanline, sprite_height)) {
-        if (ppu->sprite_count < 8)
-            ppu->secondary_oam[ppu->sprite_count] = obj;
+        if (sprite_count < 8)
+            secondary_oam[sprite_count] = obj;
         else
-            ppu->set_sprite_overflow();
+            set_sprite_overflow();
 
-        ppu->sprite_count++;
+        sprite_count++;
     }
 }
 
-static uint8_t fetch_sprite_row(const PPU *ppu, uint8_t tile_id, int y, uint8_t plane)
+uint8_t PPU::fetch_sprite_row(uint8_t tile_id, int y, uint8_t plane) const
 {
-    const uint16_t base = ppu->get_ctrl(CTRL_PATTERN_SPRITE) ? 0x1000 : 0x0000;
+    const uint16_t base = get_ctrl(CTRL_PATTERN_SPRITE) ? 0x1000 : 0x0000;
     const uint16_t addr = base + 16 * tile_id + plane + y;
 
-    return ppu->read_byte(addr);
+    return read_byte(addr);
 }
 
 static uint8_t flip_pattern_row(uint8_t bits)
 {
     uint8_t src = bits;
     uint8_t dst = 0x00;
-    int i;
 
-    for (i = 0; i < 8; i++) {
+    for (int i = 0; i < 8; i++) {
         dst = (dst << 1) | (src & 0x01);
         src >>= 1;
     }
@@ -489,54 +481,54 @@ static uint8_t flip_pattern_row(uint8_t bits)
     return dst;
 }
 
-static void fetch_sprite_data(PPU *ppu, int cycle, int scanline)
+void PPU::fetch_sprite_data()
 {
-    /* fetch sprite data occurs cycle 257 - 320 */
-    /* index = (0 .. 63) / 8 => 0 .. 7 */
+    // fetch sprite data occurs cycle 257 - 320
+    // index = (0 .. 63) / 8 => 0 .. 7
     const int index = (cycle - 257) / 8;
-    const int is_visible = index < ppu->sprite_count;
-    const int sprite_id = ppu->secondary_oam[index].id;
-    int sprite_y = scanline - ppu->secondary_oam[index].y;
-    PatternRow *patt = &ppu->rendering_sprite[index];
-    const ObjectAttribute obj = ppu->rendering_oam[index];
+    const int is_visible = index < sprite_count;
+    const int sprite_id = secondary_oam[index].id;
+    int sprite_y = scanline - secondary_oam[index].y;
+    PatternRow &patt = rendering_sprite[index];
+    const ObjectAttribute obj = rendering_oam[index];
 
     switch (cycle % 8) {
     case 3:
-        /* Attribute and X position */
-        ppu->rendering_oam[index] = ppu->secondary_oam[index];
+        // Attribute and X position
+        rendering_oam[index] = secondary_oam[index];
 
         if (is_visible)
-            set_tile_palette(*patt, ppu->rendering_oam[index].palette);
+            set_tile_palette(patt, rendering_oam[index].palette);
         else
-            set_tile_palette(*patt, 0x00);
+            set_tile_palette(patt, 0x00);
         break;
 
     case 5:
-        /* Low sprite byte */
+        // Low sprite byte
         if (obj.flipped_v)
             sprite_y = 7 - sprite_y;
 
         if (is_visible)
-            patt->lo = fetch_sprite_row(ppu, sprite_id, sprite_y, 0);
+            patt.lo = fetch_sprite_row(sprite_id, sprite_y, 0);
         else
-            patt->lo = 0x00;
+            patt.lo = 0x00;
 
         if (obj.flipped_h)
-            patt->lo = flip_pattern_row(patt->lo);
+            patt.lo = flip_pattern_row(patt.lo);
         break;
 
     case 7:
-        /* High sprite byte */
+        // High sprite byte
         if (obj.flipped_v)
             sprite_y = 7 - sprite_y;
 
         if (is_visible)
-            patt->hi = fetch_sprite_row(ppu, sprite_id, sprite_y, 8);
+            patt.hi = fetch_sprite_row(sprite_id, sprite_y, 8);
         else
-            patt->hi = 0x00;
+            patt.hi = 0x00;
 
         if (obj.flipped_h)
-            patt->hi = flip_pattern_row(patt->hi);
+            patt.hi = flip_pattern_row(patt.hi);
         break;
 
     default:
@@ -544,21 +536,19 @@ static void fetch_sprite_data(PPU *ppu, int cycle, int scanline)
     }
 }
 
-static void shift_sprite_data(PPU *ppu)
+void PPU::shift_sprite_data()
 {
-    int i;
+    for (int i = 0; i < 8; i++) {
+        ObjectAttribute &obj = rendering_oam[i];
+        PatternRow &patt = rendering_sprite[i];
 
-    for (i = 0; i < 8; i++) {
-        ObjectAttribute *obj = &ppu->rendering_oam[i];
-        PatternRow *patt = &ppu->rendering_sprite[i];
-
-        if (obj->x > 0) {
-            obj->x--;
+        if (obj.x > 0) {
+            obj.x--;
         } else {
-            patt->lo <<= 1;
-            patt->hi <<= 1;
-            patt->palette_lo <<= 1;
-            patt->palette_hi <<= 1;
+            patt.lo <<= 1;
+            patt.hi <<= 1;
+            patt.palette_lo <<= 1;
+            patt.palette_hi <<= 1;
         }
     }
 }
@@ -761,15 +751,15 @@ void PPU::Clock()
 
         // clear secondary oam
         if ((cycle >= 1 && cycle <= 64) && scanline != 261)
-            clear_secondary_oam(this, cycle);
+            clear_secondary_oam();
 
         // evaluate sprite for next scanline
         if ((cycle >= 65 && cycle <= 256) && scanline != 261)
-            evaluate_sprite(this, cycle, scanline);
+            evaluate_sprite();
 
         // fetch sprite
         if (cycle >= 257 && cycle <= 320)
-            fetch_sprite_data(this, cycle, scanline);
+            fetch_sprite_data();
     }
 
     if (scanline == 241)
@@ -793,7 +783,7 @@ void PPU::Clock()
                 shift_tile_data(tile_queue[1], tile_queue[2]);
 
             if (is_rendering_sprite())
-                shift_sprite_data(this);
+                shift_sprite_data();
         }
     }
 
@@ -982,7 +972,7 @@ void PPU::WriteDmaSprite(uint8_t addr, uint8_t data)
 
 ObjectAttribute PPU::ReadOam(int index) const
 {
-    return get_sprite(this, index);
+    return get_sprite(index);
 }
 
 } // namespace
