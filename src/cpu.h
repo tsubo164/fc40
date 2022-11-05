@@ -9,6 +9,12 @@ namespace nes {
 class Cartridge;
 class PPU;
 
+struct Instruction {
+    uint8_t opcode = 0;
+    uint8_t addr_mode = 0;
+    uint8_t cycles = 0;
+};
+
 struct CPU {
     Cartridge *cart = nullptr;
     PPU *ppu;
@@ -68,6 +74,9 @@ struct CPU {
     uint16_t pop_word();
     void compare(uint8_t a, uint8_t b);
     bool branch_if(uint16_t addr, bool cond);
+    void add_a_m(uint8_t data);
+    // instruction
+    int execute(Instruction inst);
 };
 
 extern void set_controller_input(struct CPU *cpu, uint8_t id, uint8_t input);

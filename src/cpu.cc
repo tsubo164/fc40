@@ -508,30 +508,24 @@ static bool is_positive(uint8_t val)
     return !(val & 0x80);
 }
 
-static void add_a_m(struct CPU *cpu, uint8_t data)
+void CPU::add_a_m(uint8_t data)
 {
     const uint16_t m = data;
-    const uint16_t a = cpu->a;
-    const uint16_t c = cpu->get_flag(C);
+    //const uint16_t a = a;
+    const uint16_t c = get_flag(C);
     const uint16_t r = a + m + c;
     const int A = is_positive(a);
     const int M = is_positive(m);
     const int R = is_positive(r);
 
-    cpu->set_flag(C, r > 0xFF);
-    cpu->set_flag(V, (A && M && !R) || (!A && !M && R));
-    cpu->set_a(r);
+    set_flag(C, r > 0xFF);
+    set_flag(V, (A && M && !R) || (!A && !M && R));
+    set_a(r);
 }
 
-struct instruction {
-    uint8_t opcode;
-    uint8_t addr_mode;
-    uint8_t cycles;
-};
-
-static struct instruction decode(uint8_t code)
+static Instruction decode(uint8_t code)
 {
-    struct instruction inst;
+    Instruction inst;
 
     inst.opcode    = opcode_table[code];
     inst.addr_mode = addr_mode_table[code];
@@ -540,450 +534,450 @@ static struct instruction decode(uint8_t code)
     return inst;
 }
 
-static int execute(struct CPU *cpu, struct instruction inst)
+int CPU::execute(Instruction inst)
 {
     int page_crossed = 0;
     int branch_taken = 0;
     const uint8_t mode = inst.addr_mode;
-    const uint16_t addr = cpu->fetch_address(mode, &page_crossed);
+    const uint16_t addr = fetch_address(mode, &page_crossed);
 
     switch (inst.opcode) {
 
-    /* Load Accumulator with Memory: M -> A (N, Z) */
+    // Load Accumulator with Memory: M -> A (N, Z)
     case LDA:
-        cpu->set_a(cpu->read_byte(addr));
+        set_a(read_byte(addr));
         break;
 
-    /* Load Index Register X from Memory: M -> X (N, Z) */
+    // Load Index Register X from Memory: M -> X (N, Z)
     case LDX:
-        cpu->set_x(cpu->read_byte(addr));
+        set_x(read_byte(addr));
         break;
 
-    /* Load Index Register Y from Memory: M -> Y (N, Z) */
+    // Load Index Register Y from Memory: M -> Y (N, Z)
     case LDY:
-        cpu->set_y(cpu->read_byte(addr));
+        set_y(read_byte(addr));
         break;
 
-    /* Store Accumulator in Memory: A -> M () */
+    // Store Accumulator in Memory: A -> M ()
     case STA:
-        cpu->write_byte(addr, cpu->a);
+        write_byte(addr, a);
         break;
 
-    /* Store Index Register X in Memory: X -> M () */
+    // Store Index Register X in Memory: X -> M ()
     case STX:
-        cpu->write_byte(addr, cpu->x);
+        write_byte(addr, x);
         break;
 
-    /* Store Index Register Y in Memory: Y -> M () */
+    // Store Index Register Y in Memory: Y -> M ()
     case STY:
-        cpu->write_byte(addr, cpu->y);
+        write_byte(addr, y);
         break;
 
-    /* Transfer Accumulator to Index X: A -> X (N, Z) */
+    // Transfer Accumulator to Index X: A -> X (N, Z)
     case TAX:
-        cpu->set_x(cpu->a);
+        set_x(a);
         break;
 
-    /* Transfer Accumulator to Index Y: A -> Y (N, Z) */
+    // Transfer Accumulator to Index Y: A -> Y (N, Z)
     case TAY:
-        cpu->set_y(cpu->a);
+        set_y(a);
         break;
 
-    /* Transfer Stack Pointer to Index X: S -> X (N, Z) */
+    // Transfer Stack Pointer to Index X: S -> X (N, Z)
     case TSX:
-        cpu->set_x(cpu->s);
+        set_x(s);
         break;
 
-    /* Transfer Index X to Accumulator: X -> A (N, Z) */
+    // Transfer Index X to Accumulator: X -> A (N, Z)
     case TXA:
-        cpu->set_a(cpu->x);
+        set_a(x);
         break;
 
-    /* Transfer Index X to Stack Pointer: X -> S () */
+    // Transfer Index X to Stack Pointer: X -> S ()
     case TXS:
-        cpu->set_s(cpu->x);
+        set_s(x);
         break;
 
-    /* Transfer Index Y to Accumulator: Y -> A (N, Z) */
+    // Transfer Index Y to Accumulator: Y -> A (N, Z)
     case TYA:
-        cpu->set_a(cpu->y);
+        set_a(y);
         break;
 
-    /* Push Accumulator on Stack: () */
+    // Push Accumulator on Stack: ()
     case PHA:
-        cpu->push(cpu->a);
+        push(a);
         break;
 
-    /* Push Processor Status on Stack: () */
+    // Push Processor Status on Stack: ()
     case PHP:
-        cpu->push(cpu->p | B);
+        push(p | B);
         break;
 
-    /* Pull Accumulator from Stack: (N, Z) */
+    // Pull Accumulator from Stack: (N, Z)
     case PLA:
-        cpu->set_a(cpu->pop());
+        set_a(pop());
         break;
 
-    /* Pull Processor Status from Stack: (N, V, D, I, Z, C) */
+    // Pull Processor Status from Stack: (N, V, D, I, Z, C)
     case PLP:
-        cpu->set_p(cpu->pop());
-        cpu->set_flag(B, 0);
+        set_p(pop());
+        set_flag(B, 0);
         break;
 
-    /* Arithmetic Shift Left: C <- /M7...M0/ <- 0 (N, Z, C) */
+    // Arithmetic Shift Left: C <- /M7...M0/ <- 0 (N, Z, C)
     case ASL:
         if (mode == ACC) {
-            const uint8_t data = cpu->a;
-            cpu->set_flag(C, data & 0x80);
-            cpu->set_a(data << 1);
+            const uint8_t data = a;
+            set_flag(C, data & 0x80);
+            set_a(data << 1);
         } else {
-            uint8_t data = cpu->read_byte(addr);
-            cpu->set_flag(C, data & 0x80);
+            uint8_t data = read_byte(addr);
+            set_flag(C, data & 0x80);
             data <<= 1;
-            cpu->update_zn(data);
-            cpu->write_byte(addr, data);
+            update_zn(data);
+            write_byte(addr, data);
         }
         break;
 
-    /* Logical Shift Right: 0 -> /M7...M0/ -> C (N, Z, C) */
+    // Logical Shift Right: 0 -> /M7...M0/ -> C (N, Z, C)
     case LSR:
         if (mode == ACC) {
-            const uint8_t data = cpu->a;
-            cpu->set_flag(C, data & 0x01);
-            cpu->set_a(data >> 1);
+            const uint8_t data = a;
+            set_flag(C, data & 0x01);
+            set_a(data >> 1);
         } else {
-            uint8_t data = cpu->read_byte(addr);
-            cpu->set_flag(C, data & 0x01);
+            uint8_t data = read_byte(addr);
+            set_flag(C, data & 0x01);
             data >>= 1;
-            cpu->update_zn(data);
-            cpu->write_byte(addr, data);
+            update_zn(data);
+            write_byte(addr, data);
         }
         break;
 
-    /* Rotate Left: C <- /M7...M0/ <- C (N, Z, C) */
+    // Rotate Left: C <- /M7...M0/ <- C (N, Z, C)
     case ROL:
         if (mode == ACC) {
-            const uint8_t carry = cpu->get_flag(C);
-            const uint8_t data = cpu->a;
-            cpu->set_flag(C, data & 0x80);
-            cpu->set_a((data << 1) | carry);
+            const uint8_t carry = get_flag(C);
+            const uint8_t data = a;
+            set_flag(C, data & 0x80);
+            set_a((data << 1) | carry);
         } else {
-            const uint8_t carry = cpu->get_flag(C);
-            uint8_t data = cpu->read_byte(addr);
-            cpu->set_flag(C, data & 0x80);
+            const uint8_t carry = get_flag(C);
+            uint8_t data = read_byte(addr);
+            set_flag(C, data & 0x80);
             data = (data << 1) | carry;
-            cpu->update_zn(data);
-            cpu->write_byte(addr, data);
+            update_zn(data);
+            write_byte(addr, data);
         }
         break;
 
-    /* Rotate Right: C -> /M7...M0/ -> C (N, Z, C) */
+    // Rotate Right: C -> /M7...M0/ -> C (N, Z, C)
     case ROR:
         if (mode == ACC) {
-            const uint8_t carry = cpu->get_flag(C);
-            const uint8_t data = cpu->a;
-            cpu->set_flag(C, data & 0x01);
-            cpu->set_a((data >> 1) | (carry << 7));
+            const uint8_t carry = get_flag(C);
+            const uint8_t data = a;
+            set_flag(C, data & 0x01);
+            set_a((data >> 1) | (carry << 7));
         } else {
-            const uint8_t carry = cpu->get_flag(C);
-            uint8_t data = cpu->read_byte(addr);
-            cpu->set_flag(C, data & 0x01);
+            const uint8_t carry = get_flag(C);
+            uint8_t data = read_byte(addr);
+            set_flag(C, data & 0x01);
             data = (data >> 1) | (carry << 7);
-            cpu->update_zn(data);
-            cpu->write_byte(addr, data);
+            update_zn(data);
+            write_byte(addr, data);
         }
         break;
 
-    /* AND Memory with Accumulator: A & M -> A (N, Z) */
+    // AND Memory with Accumulator: A & M -> A (N, Z)
     case AND:
-        cpu->set_a(cpu->a & cpu->read_byte(addr));
+        set_a(a & read_byte(addr));
         break;
 
-    /* Exclusive OR Memory with Accumulator: A ^ M -> A (N, Z) */
+    // Exclusive OR Memory with Accumulator: A ^ M -> A (N, Z)
     case EOR:
-        cpu->set_a(cpu->a ^ cpu->read_byte(addr));
+        set_a(a ^ read_byte(addr));
         break;
 
-    /* OR Memory with Accumulator: A | M -> A (N, Z) */
+    // OR Memory with Accumulator: A | M -> A (N, Z)
     case ORA:
-        cpu->set_a(cpu->a | cpu->read_byte(addr));
+        set_a(a | read_byte(addr));
         break;
 
-    /* Test Bits in Memory with Accumulator: A & M (N, V, Z) */
+    // Test Bits in Memory with Accumulator: A & M (N, V, Z)
     case BIT:
         {
-            const uint8_t data = cpu->read_byte(addr);
-            cpu->set_flag(Z, (cpu->a & data) == 0x00);
-            cpu->set_flag(N, data & N);
-            cpu->set_flag(V, data & V);
+            const uint8_t data = read_byte(addr);
+            set_flag(Z, (a & data) == 0x00);
+            set_flag(N, data & N);
+            set_flag(V, data & V);
         }
         break;
 
-    /* Add Memory to Accumulator with Carry: A + M + C -> A, C (N, V, Z, C) */
+    // Add Memory to Accumulator with Carry: A + M + C -> A, C (N, V, Z, C)
     case ADC:
-        add_a_m(cpu, cpu->read_byte(addr));
+        add_a_m(read_byte(addr));
         break;
 
-    /* Subtract Memory to Accumulator with Carry: A - M - ~C -> A (N, V, Z, C) */
+    // Subtract Memory to Accumulator with Carry: A - M - ~C -> A (N, V, Z, C)
     case SBC:
-        /* A - M - ~C = A + (-M) - (1 - C)
-         *            = A + (-M) - 1 + C
-         *            = A + (~M + 1) - 1 + C
-         *            = A + (~M) + C */
-        add_a_m(cpu, ~cpu->read_byte(addr));
+        // A - M - ~C = A + (-M) - (1 - C)
+        //            = A + (-M) - 1 + C
+        //            = A + (~M + 1) - 1 + C
+        //            = A + (~M) + C
+        add_a_m(~read_byte(addr));
         break;
 
-    /* Compare Memory and Accumulator: A - M (N, Z, C) */
+    // Compare Memory and Accumulator: A - M (N, Z, C)
     case CMP:
-        cpu->compare(cpu->a, cpu->read_byte(addr));
+        compare(a, read_byte(addr));
         break;
 
-    /* Compare Index Register X to Memory: X - M (N, Z, C) */
+    // Compare Index Register X to Memory: X - M (N, Z, C)
     case CPX:
-        cpu->compare(cpu->x, cpu->read_byte(addr));
+        compare(x, read_byte(addr));
         break;
 
-    /* Compare Index Register Y to Memory: Y - M (N, Z, C) */
+    // Compare Index Register Y to Memory: Y - M (N, Z, C)
     case CPY:
-        cpu->compare(cpu->y, cpu->read_byte(addr));
+        compare(y, read_byte(addr));
         break;
 
-    /* Increment Memory by One: M + 1 -> M (N, Z) */
+    // Increment Memory by One: M + 1 -> M (N, Z)
     case INC:
         {
-            const uint8_t data = cpu->read_byte(addr) + 1;
-            cpu->update_zn(data);
-            cpu->write_byte(addr, data);
+            const uint8_t data = read_byte(addr) + 1;
+            update_zn(data);
+            write_byte(addr, data);
         }
         break;
 
-    /* Increment Index Register X by One: X + 1 -> X (N, Z) */
+    // Increment Index Register X by One: X + 1 -> X (N, Z)
     case INX:
-        cpu->set_x(cpu->x + 1);
+        set_x(x + 1);
         break;
 
-    /* Increment Index Register Y by One: Y + 1 -> Y (N, Z) */
+    // Increment Index Register Y by One: Y + 1 -> Y (N, Z)
     case INY:
-        cpu->set_y(cpu->y + 1);
+        set_y(y + 1);
         break;
 
-    /* Decrement Memory by One: M - 1 -> M (N, Z) */
+    // Decrement Memory by One: M - 1 -> M (N, Z)
     case DEC:
         {
-            const uint8_t data = cpu->read_byte(addr) - 1;
-            cpu->update_zn(data);
-            cpu->write_byte(addr, data);
+            const uint8_t data = read_byte(addr) - 1;
+            update_zn(data);
+            write_byte(addr, data);
         }
         break;
 
-    /* Decrement Index Register X by One: X - 1 -> X (N, Z) */
+    // Decrement Index Register X by One: X - 1 -> X (N, Z)
     case DEX:
-        cpu->set_x(cpu->x - 1);
+        set_x(x - 1);
         break;
 
-    /* Decrement Index Register Y by One: Y - 1 -> Y (N, Z) */
+    // Decrement Index Register Y by One: Y - 1 -> Y (N, Z)
     case DEY:
-        cpu->set_y(cpu->y - 1);
+        set_y(y - 1);
         break;
 
-    /* Jump Indirect: [PC + 1] -> PCL, [PC + 2] -> PCH () */
+    // Jump Indirect: [PC + 1] -> PCL, [PC + 2] -> PCH ()
     case JMP:
-        cpu->set_pc(addr);
+        set_pc(addr);
         break;
 
-    /* Jump to Subroutine: push(PC + 2), [PC + 1] -> PCL, [PC + 2] -> PCH () */
+    // Jump to Subroutine: push(PC + 2), [PC + 1] -> PCL, [PC + 2] -> PCH ()
     case JSR:
-        /* the last byte of the jump instruction */
-        cpu->push_word(cpu->pc - 1);
-        cpu->set_pc(addr);
+        // the last byte of the jump instruction
+        push_word(pc - 1);
+        set_pc(addr);
         break;
 
-    /* Break Command: push(PC + 2), [FFFE] -> PCL, [FFFF] ->PCH (I) */
+    // Break Command: push(PC + 2), [FFFE] -> PCL, [FFFF] ->PCH (I)
     case BRK:
-        /* an extra byte of spacing for a break mark */
-        cpu->push_word(cpu->pc + 1);
-        cpu->push(cpu->p | B);
+        // an extra byte of spacing for a break mark
+        push_word(pc + 1);
+        push(p | B);
 
-        cpu->set_flag(I, 1);
-        cpu->set_pc(cpu->read_word(0xFFFE));
+        set_flag(I, 1);
+        set_pc(read_word(0xFFFE));
         break;
 
-    /* Return from Interrupt: pop(P) pop(PC) (N, V, D, I, Z, C) */
+    // Return from Interrupt: pop(P) pop(PC) (N, V, D, I, Z, C)
     case RTI:
-        cpu->set_p(cpu->pop());
-        cpu->set_flag(B, 0);
-        cpu->set_pc(cpu->pop_word());
+        set_p(pop());
+        set_flag(B, 0);
+        set_pc(pop_word());
         break;
 
-    /* Return from Subroutine: pop(PC), PC + 1 -> PC () */
+    // Return from Subroutine: pop(PC), PC + 1 -> PC ()
     case RTS:
-        cpu->set_pc(cpu->pop_word());
-        cpu->set_pc(cpu->pc + 1);
+        set_pc(pop_word());
+        set_pc(pc + 1);
         break;
 
-    /* Branch on Carry Clear: () */
+    // Branch on Carry Clear: ()
     case BCC:
-        branch_taken = cpu->branch_if(addr, cpu->get_flag(C) == 0);
+        branch_taken = branch_if(addr, get_flag(C) == 0);
         break;
 
-    /* Branch on Carry Set: () */
+    // Branch on Carry Set: ()
     case BCS:
-        branch_taken = cpu->branch_if(addr, cpu->get_flag(C) == 1);
+        branch_taken = branch_if(addr, get_flag(C) == 1);
         break;
 
-    /* Branch on Result Zero: () */
+    // Branch on Result Zero: ()
     case BEQ:
-        branch_taken = cpu->branch_if(addr, cpu->get_flag(Z) == 1);
+        branch_taken = branch_if(addr, get_flag(Z) == 1);
         break;
 
-    /* Branch on Result Minus: () */
+    // Branch on Result Minus: ()
     case BMI:
-        branch_taken = cpu->branch_if(addr, cpu->get_flag(N) == 1);
+        branch_taken = branch_if(addr, get_flag(N) == 1);
         break;
 
-    /* Branch on Result Not Zero: () */
+    // Branch on Result Not Zero: ()
     case BNE:
-        branch_taken = cpu->branch_if(addr, cpu->get_flag(Z) == 0);
+        branch_taken = branch_if(addr, get_flag(Z) == 0);
         break;
 
-    /* Branch on Result Plus: () */
+    // Branch on Result Plus: ()
     case BPL:
-        branch_taken = cpu->branch_if(addr, cpu->get_flag(N) == 0);
+        branch_taken = branch_if(addr, get_flag(N) == 0);
         break;
 
-    /* Branch on Overflow Clear: () */
+    // Branch on Overflow Clear: ()
     case BVC:
-        branch_taken = cpu->branch_if(addr, cpu->get_flag(V) == 0);
+        branch_taken = branch_if(addr, get_flag(V) == 0);
         break;
 
-    /* Branch on Overflow Set: () */
+    // Branch on Overflow Set: ()
     case BVS:
-        branch_taken = cpu->branch_if(addr, cpu->get_flag(V) == 1);
+        branch_taken = branch_if(addr, get_flag(V) == 1);
         break;
 
-    /* Clear Carry Flag: 0 -> C (C) */
+    // Clear Carry Flag: 0 -> C (C)
     case CLC:
-        cpu->set_flag(C, 0);
+        set_flag(C, 0);
         break;
 
-    /* Clear Decimal Mode: 0 -> D (D) */
+    // Clear Decimal Mode: 0 -> D (D)
     case CLD:
-        cpu->set_flag(D, 0);
+        set_flag(D, 0);
         break;
 
-    /* Clear Interrupt Disable: 0 -> I (I) */
+    // Clear Interrupt Disable: 0 -> I (I)
     case CLI:
-        cpu->set_flag(I, 0);
+        set_flag(I, 0);
         break;
 
-    /* Clear Overflow Flag: 0 -> V (V) */
+    // Clear Overflow Flag: 0 -> V (V)
     case CLV:
-        cpu->set_flag(V, 0);
+        set_flag(V, 0);
         break;
 
-    /* Set Carry Flag: 1 -> C (C) */
+    // Set Carry Flag: 1 -> C (C)
     case SEC:
-        cpu->set_flag(C, 1);
+        set_flag(C, 1);
         break;
 
-    /* Set Decimal Mode: 1 -> D (D) */
+    // Set Decimal Mode: 1 -> D (D)
     case SED:
-        cpu->set_flag(D, 1);
+        set_flag(D, 1);
         break;
 
-    /* Set Interrupt Disable: 1 -> I (I) */
+    // Set Interrupt Disable: 1 -> I (I)
     case SEI:
-        cpu->set_flag(I, 1);
+        set_flag(I, 1);
         break;
 
-    /* No Operation: () */
+    // No Operation: ()
     case NOP:
         break;
 
-    /* XXX Undocumented -------------------------------- */
+    // XXX Undocumented --------------------------------
 
-    /* Load Accumulator and Index Register X from Memory: M -> A, X (N, Z) */
+    // Load Accumulator and Index Register X from Memory: M -> A, X (N, Z)
     case LAX:
-        cpu->set_a(cpu->read_byte(addr));
-        cpu->set_x(cpu->a);
+        set_a(read_byte(addr));
+        set_x(a);
         break;
 
-    /* Store Accumulator AND Index Register X in Memory: A & X -> M () */
+    // Store Accumulator AND Index Register X in Memory: A & X -> M ()
     case SAX:
-        cpu->write_byte(addr, cpu->a & cpu->x);
+        write_byte(addr, a & x);
         break;
 
-    /* Decrement Memory by One then Compare with Accumulator: M - 1 -> M, A - M (N, Z, C) */
+    // Decrement Memory by One then Compare with Accumulator: M - 1 -> M, A - M (N, Z, C)
     case DCP:
         {
-            const uint8_t data = cpu->read_byte(addr) - 1;
-            cpu->update_zn(data);
-            cpu->write_byte(addr, data);
-            cpu->compare(cpu->a, data);
+            const uint8_t data = read_byte(addr) - 1;
+            update_zn(data);
+            write_byte(addr, data);
+            compare(a, data);
         }
         break;
 
-    /* Increment Memory by One then SBC then Subtract Memory from Accumulator with Borrow:
-     * M + 1 -> M, A - M -> A (N, V, Z, C) */
+    // Increment Memory by One then SBC then Subtract Memory from Accumulator with Borrow:
+    // M + 1 -> M, A - M -> A (N, V, Z, C)
     case ISC:
         {
-            const uint8_t data = cpu->read_byte(addr) + 1;
-            cpu->update_zn(data);
-            cpu->write_byte(addr, data);
-            add_a_m(cpu, ~data);
+            const uint8_t data = read_byte(addr) + 1;
+            update_zn(data);
+            write_byte(addr, data);
+            add_a_m(~data);
         }
         break;
 
-    /* Arithmetic Shift Left then OR Memory with Accumulator:
-     * M * 2 -> M, A | M -> A (N, Z, C) */
+    // Arithmetic Shift Left then OR Memory with Accumulator:
+    // M * 2 -> M, A | M -> A (N, Z, C)
     case SLO:
         {
-            uint8_t data = cpu->read_byte(addr);
-            cpu->set_flag(C, data & 0x80);
+            uint8_t data = read_byte(addr);
+            set_flag(C, data & 0x80);
             data <<= 1;
-            cpu->update_zn(data);
-            cpu->write_byte(addr, data);
-            cpu->set_a(cpu->a | data);
+            update_zn(data);
+            write_byte(addr, data);
+            set_a(a | data);
         }
         break;
 
-    /* Rotate Left then AND with Accumulator: C <- /M7...M0/ <- C, A & M -> A (N, Z, C) */
+    // Rotate Left then AND with Accumulator: C <- /M7...M0/ <- C, A & M -> A (N, Z, C)
     case RLA:
         {
-            const uint8_t carry = cpu->get_flag(C);
-            uint8_t data = cpu->read_byte(addr);
-            cpu->set_flag(C, data & 0x80);
+            const uint8_t carry = get_flag(C);
+            uint8_t data = read_byte(addr);
+            set_flag(C, data & 0x80);
             data = (data << 1) | carry;
-            cpu->update_zn(data);
-            cpu->write_byte(addr, data);
-            cpu->set_a(cpu->a & data);
+            update_zn(data);
+            write_byte(addr, data);
+            set_a(a & data);
         }
         break;
 
-    /* Logical Shift Right then Exclusive OR Memory with Accumulator:
-     * M /2 -> M, M ^ A -> A (N, Z, C) */
+    // Logical Shift Right then Exclusive OR Memory with Accumulator:
+    // M /2 -> M, M ^ A -> A (N, Z, C)
     case SRE:
         {
-            uint8_t data = cpu->read_byte(addr);
-            cpu->set_flag(C, data & 0x01);
+            uint8_t data = read_byte(addr);
+            set_flag(C, data & 0x01);
             data >>= 1;
-            cpu->update_zn(data);
-            cpu->write_byte(addr, data);
-            cpu->set_a(cpu->a ^ data);
+            update_zn(data);
+            write_byte(addr, data);
+            set_a(a ^ data);
         }
         break;
 
-    /* Rotate Right and Add Memory to Accumulator:
-     * C -> /M7...M0/ -> C, A + M + C -> A (N, V, Z, C) */
+    // Rotate Right and Add Memory to Accumulator:
+    // C -> /M7...M0/ -> C, A + M + C -> A (N, V, Z, C)
     case RRA:
         {
-            const uint8_t carry = cpu->get_flag(C);
-            uint8_t data = cpu->read_byte(addr);
-            cpu->set_flag(C, data & 0x01);
+            const uint8_t carry = get_flag(C);
+            uint8_t data = read_byte(addr);
+            set_flag(C, data & 0x01);
             data = (data >> 1) | (carry << 7);
-            cpu->update_zn(data);
-            cpu->write_byte(addr, data);
-            add_a_m(cpu, data);
+            update_zn(data);
+            write_byte(addr, data);
+            add_a_m(data);
         }
         break;
 
@@ -1052,11 +1046,11 @@ void CPU::Clock()
 {
     if (cycles == 0) {
         uint8_t code, cycs;
-        struct instruction inst;
+        Instruction inst;
 
         code = fetch();
         inst = decode(code);
-        cycs = execute(this, inst);
+        cycs = execute(inst);
 
         cycles = cycs;
     }
