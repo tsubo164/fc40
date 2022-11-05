@@ -17,7 +17,7 @@ void LogCpuStatus(struct CPU *cpu, int max_lines)
             PrintCpuStatus(cpu);
             log_line++;
         }
-        clock_cpu(cpu);
+        cpu->Clock();
     }
 }
 

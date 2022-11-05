@@ -1,7 +1,7 @@
 #ifndef CPU_H
 #define CPU_H
 
-#include <stdint.h>
+#include <cstdint>
 #include "apu.h"
 
 namespace nes {
@@ -10,35 +10,37 @@ class Cartridge;
 class PPU;
 
 struct CPU {
-    Cartridge *cart;
+    Cartridge *cart = nullptr;
     PPU *ppu;
-    struct APU apu;
-    int cycles;
-    int suspended;
+    APU apu;
+    int cycles = 0;
+    int suspended = 0;
 
-    /* registers */
-    uint8_t a;
-    uint8_t x;
-    uint8_t y;
-    uint8_t s; /* stack pointer */
-    uint8_t p; /* processor status */
-    uint16_t pc;
+    // registers
+    uint8_t a = 0;
+    uint8_t x = 0;
+    uint8_t y = 0;
+    uint8_t s = 0; // stack pointer
+    uint8_t p = 0; // processor status
+    uint16_t pc = 0;
 
-    /* 4 2KB ram. 3 of them are mirroring */
-    uint8_t wram[2048];
+    // 4 2KB ram. 3 of them are mirroring
+    uint8_t wram[2048] = {0};
 
-    uint8_t controller_input[2];
-    uint8_t controller_state[2];
+    uint8_t controller_input[2] = {0};
+    uint8_t controller_state[2] = {0};
 
-    /* dma */
-    uint8_t dma_page;
+    // dma
+    uint8_t dma_page = 0;
+
+    void PowerUp();
+    void Reset();
+    void HandleIRQ();
+    void HandleNMI();
+    void Clock();
+
+    void write_byte(uint16_t addr, uint8_t data);
 };
-
-extern void power_up_cpu(struct CPU *cpu);
-extern void reset_cpu(struct CPU *cpu);
-extern void irq(struct CPU *cpu);
-extern void nmi(struct CPU *cpu);
-extern void clock_cpu(struct CPU *cpu);
 
 extern void set_controller_input(struct CPU *cpu, uint8_t id, uint8_t input);
 extern int is_suspended(const struct CPU *cpu);

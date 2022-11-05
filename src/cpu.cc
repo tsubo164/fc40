@@ -17,98 +17,98 @@ enum status_flag {
     N = 1 << 7  /* negative */
 };
 
-static void write_byte(struct CPU *cpu, uint16_t addr, uint8_t data)
+void CPU::write_byte(uint16_t addr, uint8_t data)
 {
     if (addr >= 0x0000 && addr <= 0x1FFF) {
-        cpu->wram[addr & 0x07FF] = data;
+        wram[addr & 0x07FF] = data;
     }
     else if (addr == 0x2000) {
-        cpu->ppu->WriteControl(data);
+        ppu->WriteControl(data);
     }
     else if (addr == 0x2001) {
-        cpu->ppu->WriteMask(data);
+        ppu->WriteMask(data);
     }
     else if (addr == 0x2002) {
         /* PPU status not writable */
     }
     else if (addr == 0x2003) {
-        cpu->ppu->WriteOamAddress(data);
+        ppu->WriteOamAddress(data);
     }
     else if (addr == 0x2004) {
-        cpu->ppu->WriteOamData(data);
+        ppu->WriteOamData(data);
     }
     else if (addr == 0x2005) {
-        cpu->ppu->WriteScroll(data);
+        ppu->WriteScroll(data);
     }
     else if (addr == 0x2006) {
-        cpu->ppu->WriteAddress(data);
+        ppu->WriteAddress(data);
     }
     else if (addr == 0x2007) {
-        cpu->ppu->WriteData(data);
+        ppu->WriteData(data);
     }
     else if (addr >= 0x2008 && addr <= 0x3FFF) {
         /* PPU register mirrored every 8 */
-        write_byte(cpu, 0x2000 | (addr & 0x007), data);
+        write_byte(0x2000 | (addr & 0x007), data);
     }
     else if (addr == 0x4000) {
-        cpu->apu.WriteSquare1Volume(data);
+        apu.WriteSquare1Volume(data);
     }
     else if (addr == 0x4001) {
-        cpu->apu.WriteSquare1Sweep(data);
+        apu.WriteSquare1Sweep(data);
     }
     else if (addr == 0x4002) {
-        cpu->apu.WriteSquare1Lo(data);
+        apu.WriteSquare1Lo(data);
     }
     else if (addr == 0x4003) {
-        cpu->apu.WriteSquare1Hi(data);
+        apu.WriteSquare1Hi(data);
     }
     else if (addr == 0x4004) {
-        cpu->apu.WriteSquare2Volume(data);
+        apu.WriteSquare2Volume(data);
     }
     else if (addr == 0x4005) {
-        cpu->apu.WriteSquare2Sweep(data);
+        apu.WriteSquare2Sweep(data);
     }
     else if (addr == 0x4006) {
-        cpu->apu.WriteSquare2Lo(data);
+        apu.WriteSquare2Lo(data);
     }
     else if (addr == 0x4007) {
-        cpu->apu.WriteSquare2Hi(data);
+        apu.WriteSquare2Hi(data);
     }
     else if (addr == 0x4008) {
-        cpu->apu.WriteTriangleLinear(data);
+        apu.WriteTriangleLinear(data);
     }
     else if (addr == 0x400A) {
-        cpu->apu.WriteTriangleLo(data);
+        apu.WriteTriangleLo(data);
     }
     else if (addr == 0x400B) {
-        cpu->apu.WriteTriangleHi(data);
+        apu.WriteTriangleHi(data);
     }
     else if (addr == 0x400C) {
-        cpu->apu.WriteNoiseVolume(data);
+        apu.WriteNoiseVolume(data);
     }
     else if (addr == 0x400E) {
-        cpu->apu.WriteNoiseLo(data);
+        apu.WriteNoiseLo(data);
     }
     else if (addr == 0x400F) {
-        cpu->apu.WriteNoiseHi(data);
+        apu.WriteNoiseHi(data);
     }
     else if (addr == 0x4014) {
         /* DMA */
-        cpu->suspended = 1;
-        cpu->dma_page = data;
+        suspended = 1;
+        dma_page = data;
     }
     else if (addr == 0x4015) {
-        cpu->apu.WriteStatus(data);
+        apu.WriteStatus(data);
     }
     else if (addr == 0x4016) {
         const int id = addr & 0x001;
-        cpu->controller_state[id] = cpu->controller_input[id];
+        controller_state[id] = controller_input[id];
     }
     else if (addr == 0x4017) {
-        cpu->apu.WriteFrameCounter(data);
+        apu.WriteFrameCounter(data);
     }
     else {
-        cpu->cart->WriteProg(addr, data);
+        cart->WriteProg(addr, data);
     }
 }
 
@@ -466,7 +466,7 @@ static void set_p(struct CPU *cpu, uint8_t val)
 
 static void push(struct CPU *cpu, uint8_t val)
 {
-    write_byte(cpu, 0x0100 | cpu->s, val);
+    cpu->write_byte(0x0100 | cpu->s, val);
     set_s(cpu, cpu->s - 1);
 }
 
@@ -568,17 +568,17 @@ static int execute(struct CPU *cpu, struct instruction inst)
 
     /* Store Accumulator in Memory: A -> M () */
     case STA:
-        write_byte(cpu, addr, cpu->a);
+        cpu->write_byte(addr, cpu->a);
         break;
 
     /* Store Index Register X in Memory: X -> M () */
     case STX:
-        write_byte(cpu, addr, cpu->x);
+        cpu->write_byte(addr, cpu->x);
         break;
 
     /* Store Index Register Y in Memory: Y -> M () */
     case STY:
-        write_byte(cpu, addr, cpu->y);
+        cpu->write_byte(addr, cpu->y);
         break;
 
     /* Transfer Accumulator to Index X: A -> X (N, Z) */
@@ -643,7 +643,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
             set_flag(cpu, C, data & 0x80);
             data <<= 1;
             update_zn(cpu, data);
-            write_byte(cpu, addr, data);
+            cpu->write_byte(addr, data);
         }
         break;
 
@@ -658,7 +658,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
             set_flag(cpu, C, data & 0x01);
             data >>= 1;
             update_zn(cpu, data);
-            write_byte(cpu, addr, data);
+            cpu->write_byte(addr, data);
         }
         break;
 
@@ -675,7 +675,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
             set_flag(cpu, C, data & 0x80);
             data = (data << 1) | carry;
             update_zn(cpu, data);
-            write_byte(cpu, addr, data);
+            cpu->write_byte(addr, data);
         }
         break;
 
@@ -692,7 +692,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
             set_flag(cpu, C, data & 0x01);
             data = (data >> 1) | (carry << 7);
             update_zn(cpu, data);
-            write_byte(cpu, addr, data);
+            cpu->write_byte(addr, data);
         }
         break;
 
@@ -755,7 +755,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
         {
             const uint8_t data = read_byte(cpu, addr) + 1;
             update_zn(cpu, data);
-            write_byte(cpu, addr, data);
+            cpu->write_byte(addr, data);
         }
         break;
 
@@ -774,7 +774,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
         {
             const uint8_t data = read_byte(cpu, addr) - 1;
             update_zn(cpu, data);
-            write_byte(cpu, addr, data);
+            cpu->write_byte(addr, data);
         }
         break;
 
@@ -912,7 +912,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
 
     /* Store Accumulator AND Index Register X in Memory: A & X -> M () */
     case SAX:
-        write_byte(cpu, addr, cpu->a & cpu->x);
+        cpu->write_byte(addr, cpu->a & cpu->x);
         break;
 
     /* Decrement Memory by One then Compare with Accumulator: M - 1 -> M, A - M (N, Z, C) */
@@ -920,7 +920,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
         {
             const uint8_t data = read_byte(cpu, addr) - 1;
             update_zn(cpu, data);
-            write_byte(cpu, addr, data);
+            cpu->write_byte(addr, data);
             compare(cpu, cpu->a, data);
         }
         break;
@@ -931,7 +931,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
         {
             const uint8_t data = read_byte(cpu, addr) + 1;
             update_zn(cpu, data);
-            write_byte(cpu, addr, data);
+            cpu->write_byte(addr, data);
             add_a_m(cpu, ~data);
         }
         break;
@@ -944,7 +944,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
             set_flag(cpu, C, data & 0x80);
             data <<= 1;
             update_zn(cpu, data);
-            write_byte(cpu, addr, data);
+            cpu->write_byte(addr, data);
             set_a(cpu, cpu->a | data);
         }
         break;
@@ -957,7 +957,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
             set_flag(cpu, C, data & 0x80);
             data = (data << 1) | carry;
             update_zn(cpu, data);
-            write_byte(cpu, addr, data);
+            cpu->write_byte(addr, data);
             set_a(cpu, cpu->a & data);
         }
         break;
@@ -970,7 +970,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
             set_flag(cpu, C, data & 0x01);
             data >>= 1;
             update_zn(cpu, data);
-            write_byte(cpu, addr, data);
+            cpu->write_byte(addr, data);
             set_a(cpu, cpu->a ^ data);
         }
         break;
@@ -984,7 +984,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
             set_flag(cpu, C, data & 0x01);
             data = (data >> 1) | (carry << 7);
             update_zn(cpu, data);
-            write_byte(cpu, addr, data);
+            cpu->write_byte(addr, data);
             add_a_m(cpu, data);
         }
         break;
@@ -996,74 +996,74 @@ static int execute(struct CPU *cpu, struct instruction inst)
     return inst.cycles + page_crossed + branch_taken;
 }
 
-void power_up_cpu(struct CPU *cpu)
+void CPU::PowerUp()
 {
-    set_pc(cpu, read_word(cpu, 0xFFFC));
+    set_pc(this, read_word(this, 0xFFFC));
 
-    set_a(cpu, 0x00);
-    set_x(cpu, 0x00);
-    set_y(cpu, 0x00);
-    set_s(cpu, 0xFD);
-    set_p(cpu, 0x00 | I);
+    set_a(this, 0x00);
+    set_x(this, 0x00);
+    set_y(this, 0x00);
+    set_s(this, 0xFD);
+    set_p(this, 0x00 | I);
 
-    cpu->apu.PowerUp();
+    apu.PowerUp();
 }
 
-void reset_cpu(struct CPU *cpu)
+void CPU::Reset()
 {
-    set_pc(cpu, read_word(cpu, 0xFFFC));
+    set_pc(this, read_word(this, 0xFFFC));
 
-    set_s(cpu, cpu->s - 3);
-    set_flag(cpu, I, 1);
+    set_s(this, this->s - 3);
+    set_flag(this, I, 1);
 
     /* takes cycles */
-    cpu->cycles = 8;
+    cycles = 8;
 
-    cpu->apu.Reset();
+    apu.Reset();
 }
 
-void irq(struct CPU *cpu)
+void CPU::HandleIRQ()
 {
-    if (get_flag(cpu, I))
+    if (get_flag(this, I))
         /* interrupt is not allowed */
         return;
 
-    push_word(cpu, cpu->pc);
+    push_word(this, pc);
 
-    set_flag(cpu, B, 0);
-    set_flag(cpu, I, 1);
-    push(cpu, cpu->p);
+    set_flag(this, B, 0);
+    set_flag(this, I, 1);
+    push(this, p);
 
-    set_pc(cpu, read_word(cpu, 0xFFFE));
-    cpu->cycles = 7;
+    set_pc(this, read_word(this, 0xFFFE));
+    cycles = 7;
 }
 
-void nmi(struct CPU *cpu)
+void CPU::HandleNMI()
 {
-    push_word(cpu, cpu->pc);
+    push_word(this, this->pc);
 
-    set_flag(cpu, B, 0);
-    set_flag(cpu, I, 1);
-    push(cpu, cpu->p);
+    set_flag(this, B, 0);
+    set_flag(this, I, 1);
+    push(this, p);
 
-    set_pc(cpu, read_word(cpu, 0xFFFA));
-    cpu->cycles = 8;
+    set_pc(this, read_word(this, 0xFFFA));
+    cycles = 8;
 }
 
-void clock_cpu(struct CPU *cpu)
+void CPU::Clock()
 {
-    if (cpu->cycles == 0) {
+    if (cycles == 0) {
         uint8_t code, cycs;
         struct instruction inst;
 
-        code = fetch(cpu);
+        code = fetch(this);
         inst = decode(code);
-        cycs = execute(cpu, inst);
+        cycs = execute(this, inst);
 
-        cpu->cycles = cycs;
+        cycles = cycs;
     }
 
-    cpu->cycles--;
+    cycles--;
 }
 
 void set_controller_input(struct CPU *cpu, uint8_t id, uint8_t input)

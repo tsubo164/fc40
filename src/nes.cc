@@ -31,7 +31,7 @@ void NES::PowerUp()
 
     // CPU and PPU
     cpu.ppu = &ppu;
-    power_up_cpu(&cpu);
+    cpu.PowerUp();
     ppu.PowerUp();
 }
 
@@ -48,7 +48,7 @@ void NES::InsertCartridge(Cartridge *cart)
 
 void NES::PushResetButton()
 {
-    reset_cpu(&cpu);
+    cpu.Reset();
     ppu.Reset();
 }
 
@@ -75,19 +75,19 @@ void NES::UpdateFrame()
             if (is_suspended(&cpu))
                 clock_dma();
             else
-                clock_cpu(&cpu);
+                cpu.Clock();
 
             cpu.apu.Clock();
         }
 
         if (ppu.IsSetNMI()) {
             ppu.ClearNMI();
-            nmi(&cpu);
+            cpu.HandleNMI();
         }
 
         if (cpu.apu.IsSetIRQ()) {
             cpu.apu.ClearIRQ();
-            irq(&cpu);
+            cpu.HandleIRQ();
         }
 
         clock_++;

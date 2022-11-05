@@ -72,7 +72,7 @@ struct NoiseChannel {
     Envelope envelope;
 };
 
-struct APU {
+class APU {
 public:
     APU() {}
     ~APU() {}
