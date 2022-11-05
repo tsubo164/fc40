@@ -1,5 +1,4 @@
-#include <stdio.h>
-#include <string.h>
+#include <cstring>
 #include "cpu.h"
 #include "ppu.h"
 #include "cartridge.h"
@@ -1019,6 +1018,27 @@ void CPU::Reset()
     apu.Reset();
 }
 
+void CPU::Clock()
+{
+    if (cycles == 0) {
+        uint8_t code, cycs;
+        Instruction inst;
+
+        code = fetch();
+        inst = decode(code);
+        cycs = execute(inst);
+
+        cycles = cycs;
+    }
+
+    cycles--;
+}
+
+void CPU::ClockAPU()
+{
+    apu.Clock();
+}
+
 void CPU::HandleIRQ()
 {
     if (get_flag(I))
@@ -1047,20 +1067,14 @@ void CPU::HandleNMI()
     cycles = 8;
 }
 
-void CPU::Clock()
+void CPU::ClearIRQ()
 {
-    if (cycles == 0) {
-        uint8_t code, cycs;
-        Instruction inst;
+    apu.ClearIRQ();
+}
 
-        code = fetch();
-        inst = decode(code);
-        cycs = execute(inst);
-
-        cycles = cycs;
-    }
-
-    cycles--;
+bool CPU::IsSetIRQ() const
+{
+    return apu.IsSetIRQ();
 }
 
 void CPU::InputController(uint8_t controller_id, uint8_t input)

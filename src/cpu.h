@@ -30,12 +30,36 @@ public:
     CPU(PPU &ppu) : ppu_(ppu) {}
     ~CPU() {}
 
+    void SetCartride(Cartridge *cart);
+
+    // clock
+    void PowerUp();
+    void Reset();
+    void Clock();
+    void ClockAPU();
+
+    // interrupts
+    void HandleIRQ();
+    void HandleNMI();
+    void ClearIRQ();
+    bool IsSetIRQ() const;
+
+    // DMA
+    void InputController(uint8_t controller_id, uint8_t input);
+    bool IsSuspended() const;
+    void Resume();
+    uint8_t GetDmaPage() const;
+    uint8_t PeekData(uint16_t addr) const;
+    void GetStatus(CpuStatus &stat) const;
+
+    // debug
+    void SetPC(uint16_t addr);
+    int GetCycles() const;
+
 private:
     Cartridge *cart_ = nullptr;
     PPU &ppu_;
-public:
     APU apu;
-private:
     int cycles = 0;
     int suspended = 0;
 
@@ -55,27 +79,6 @@ private:
 
     // dma
     uint8_t dma_page = 0;
-
-public:
-    void SetCartride(Cartridge *cart);
-
-    void PowerUp();
-    void Reset();
-    void HandleIRQ();
-    void HandleNMI();
-    void Clock();
-
-    // DMA
-    void InputController(uint8_t controller_id, uint8_t input);
-    bool IsSuspended() const;
-    void Resume();
-    uint8_t GetDmaPage() const;
-    uint8_t PeekData(uint16_t addr) const;
-    void GetStatus(CpuStatus &stat) const;
-
-    // debug
-    void SetPC(uint16_t addr);
-    int GetCycles() const;
 
     // read and write
     void write_byte(uint16_t addr, uint8_t data);

@@ -15,7 +15,7 @@ void NES::PowerUp()
     const int RESX = 256;
     const int RESY = 240;
 
-    // dma
+    // DMA
     dma_wait_ = 1;
     dma_addr_ = 0x00;
     dma_page_ = 0x00;
@@ -23,14 +23,12 @@ void NES::PowerUp()
 
     // framebuffer
     fbuf.Resize(RESX, RESY);
-    //ppu.fbuf = &fbuf;
 
     // pattern table
     patt.Resize(16 * 8 * 2, 16 * 8);
     LoadPatternTable(patt, cart_);
 
     // CPU and PPU
-    //cpu.ppu = &ppu;
     cpu.PowerUp();
     ppu.PowerUp();
 }
@@ -77,7 +75,7 @@ void NES::UpdateFrame()
             else
                 cpu.Clock();
 
-            cpu.apu.Clock();
+            cpu.ClockAPU();
         }
 
         if (ppu.IsSetNMI()) {
@@ -85,8 +83,8 @@ void NES::UpdateFrame()
             cpu.HandleNMI();
         }
 
-        if (cpu.apu.IsSetIRQ()) {
-            cpu.apu.ClearIRQ();
+        if (cpu.IsSetIRQ()) {
+            cpu.ClearIRQ();
             cpu.HandleIRQ();
         }
 
