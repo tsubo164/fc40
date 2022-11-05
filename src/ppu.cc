@@ -104,12 +104,12 @@ static Color get_color(int index)
     return col;
 }
 
-static uint16_t name_table_index(const Cartridge *cart, uint16_t addr)
+static uint16_t name_table_index(const Cartridge *cart_, uint16_t addr)
 {
     const uint16_t index = addr - 0x2000;
 
     // vertical mirroring
-    if (cart->IsVerticalMirroring())
+    if (cart_->IsVerticalMirroring())
         return index & 0x07FF;
 
     // horizontal mirroring
@@ -126,10 +126,10 @@ static uint16_t name_table_index(const Cartridge *cart, uint16_t addr)
 uint8_t PPU::read_byte(uint16_t addr) const
 {
     if (addr >= 0x0000 && addr <= 0x1FFF) {
-        return cart->ReadChar(addr);
+        return cart_->ReadChar(addr);
     }
     else if (addr >= 0x2000 && addr <= 0x2FFF) {
-        const uint16_t index = name_table_index(cart, addr);
+        const uint16_t index = name_table_index(cart_, addr);
         return name_table[index];
     }
     else if (addr >= 0x3000 && addr <= 0x3EFF) {
@@ -154,10 +154,10 @@ uint8_t PPU::read_byte(uint16_t addr) const
 void PPU::write_byte(uint16_t addr, uint8_t data)
 {
     if (addr >= 0x0000 && addr <= 0x1FFF) {
-        cart->WriteChar(addr, data);
+        cart_->WriteChar(addr, data);
     }
     else if (addr >= 0x2000 && addr <= 0x2FFF) {
-        const uint16_t index = name_table_index(cart, addr);
+        const uint16_t index = name_table_index(cart_, addr);
         name_table[index] = data;
     }
     else if (addr >= 0x3000 && addr <= 0x3EFF) {
@@ -675,10 +675,15 @@ void PPU::render_pixel(int x, int y)
         col = get_color(index);
     }
 
-    fbuf->SetColor(x, y, col);
+    fbuf.SetColor(x, y, col);
 
     if (is_sprite_zero_hit(bg, fg, x))
         set_stat(STAT_SPRITE_ZERO_HIT, 1);
+}
+
+void PPU::SetCartride(Cartridge *cart)
+{
+    cart_ = cart;
 }
 
 // --------------------------------------------------------------------------

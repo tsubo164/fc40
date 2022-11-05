@@ -23,7 +23,7 @@ void NES::PowerUp()
 
     // framebuffer
     fbuf.Resize(RESX, RESY);
-    ppu.fbuf = &fbuf;
+    //ppu.fbuf = &fbuf;
 
     // pattern table
     patt.Resize(16 * 8 * 2, 16 * 8);
@@ -43,7 +43,7 @@ void NES::InsertCartridge(Cartridge *cart)
 {
     cart_ = cart;
     cpu.cart = cart_;
-    ppu.cart = cart_;
+    ppu.SetCartride(cart_);
 }
 
 void NES::PushResetButton()

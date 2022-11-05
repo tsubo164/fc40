@@ -16,11 +16,10 @@ public:
     NES() {}
     ~NES() {}
 
-    struct CPU cpu = {0};
-    PPU ppu;
-
     FrameBuffer fbuf;
     FrameBuffer patt;
+    struct CPU cpu = {0};
+    PPU ppu = {fbuf};
 
     void PowerUp();
     void ShutDown();
