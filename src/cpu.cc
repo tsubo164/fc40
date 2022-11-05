@@ -158,44 +158,44 @@ uint8_t CPU::read_byte(uint16_t addr)
     return 0;
 }
 
-static uint8_t peek_byte(const struct CPU *cpu, uint16_t addr)
+uint8_t CPU::peek_byte(uint16_t addr) const
 {
     if (addr == 0x2002) {
-        return cpu->ppu->PeekStatus();
+        return ppu->PeekStatus();
     }
     else if (addr >= 0x4016 && addr <= 0x4017) {
         const int id = addr & 0x001;
-        return (cpu->controller_state[id] & 0x80) > 0;
+        return (controller_state[id] & 0x80) > 0;
     }
 
-    return ((CPU *)cpu)->read_byte(addr);
+    return const_cast<CPU*>(this)->read_byte(addr);
 }
 
-static uint16_t peek_word(const struct CPU *cpu, uint16_t addr)
+uint16_t CPU::peek_word(uint16_t addr) const
 {
-    const uint16_t lo = peek_byte(cpu, addr);
-    const uint16_t hi = peek_byte(cpu, addr + 1);
+    const uint16_t lo = peek_byte(addr);
+    const uint16_t hi = peek_byte(addr + 1);
 
     return (hi << 8) | lo;
 }
 
-static uint16_t read_word(struct CPU *cpu, uint16_t addr)
+uint16_t CPU::read_word(uint16_t addr)
 {
-    const uint16_t lo = cpu->read_byte(addr);
-    const uint16_t hi = cpu->read_byte(addr + 1);
+    const uint16_t lo = read_byte(addr);
+    const uint16_t hi = read_byte(addr + 1);
 
     return (hi << 8) | lo;
 }
 
-static uint8_t fetch(struct CPU *cpu)
+uint8_t CPU::fetch()
 {
-    return cpu->read_byte(cpu->pc++);
+    return read_byte(pc++);
 }
 
-static uint16_t fetch_word(struct CPU *cpu)
+uint16_t CPU::fetch_word()
 {
-    const uint16_t lo = fetch(cpu);
-    const uint16_t hi = fetch(cpu);
+    const uint16_t lo = fetch();
+    const uint16_t hi = fetch();
 
     return (hi << 8) | lo;
 }
@@ -241,16 +241,16 @@ static uint16_t abs_indirect(const struct CPU *cpu, uint16_t abs)
 {
     if ((abs & 0x00FF) == 0x00FF)
         /* emulate page boundary hardware bug */
-        return (peek_byte(cpu, abs & 0xFF00) << 8) | peek_byte(cpu, abs);
+        return (cpu->peek_byte(abs & 0xFF00) << 8) | cpu->peek_byte(abs);
     else
         /* normal behavior */
-        return peek_word(cpu, abs);
+        return cpu->peek_word(abs);
 }
 
 static uint16_t zp_indirect(const struct CPU *cpu, uint8_t zp)
 {
-    const uint16_t lo = peek_byte(cpu, zp & 0xFF);
-    const uint16_t hi = peek_byte(cpu, (zp + 1) & 0xFF);
+    const uint16_t lo = cpu->peek_byte(zp & 0xFF);
+    const uint16_t hi = cpu->peek_byte((zp + 1) & 0xFF);
 
     return (hi << 8) | lo;
 }
@@ -262,13 +262,13 @@ static uint16_t fetch_address(struct CPU *cpu, int mode, int *page_crossed)
     switch (mode) {
 
     case ABS:
-        return fetch_word(cpu);
+        return cpu->fetch_word();
 
     case ABX:
-        return abs_index(fetch_word(cpu), cpu->x, page_crossed);
+        return abs_index(cpu->fetch_word(), cpu->x, page_crossed);
 
     case ABY:
-        return abs_index(fetch_word(cpu), cpu->y, page_crossed);
+        return abs_index(cpu->fetch_word(), cpu->y, page_crossed);
 
     case ACC:
         /* no address for register */
@@ -283,18 +283,18 @@ static uint16_t fetch_address(struct CPU *cpu, int mode, int *page_crossed)
         return 0;
 
     case IND:
-        return abs_indirect(cpu, fetch_word(cpu));
+        return abs_indirect(cpu, cpu->fetch_word());
 
     case IZX:
         {
             /* addr = {[arg + X], [arg + X + 1]} */
-            return zp_indirect(cpu, fetch(cpu) + cpu->x);
+            return zp_indirect(cpu, cpu->fetch() + cpu->x);
         }
 
     case IZY:
         {
             /* addr = {[arg], [arg + 1]} + Y */
-            const uint16_t addr = zp_indirect(cpu, fetch(cpu));
+            const uint16_t addr = zp_indirect(cpu, cpu->fetch());
             if (is_page_crossing(addr, cpu->y))
                 *page_crossed = 1;
             return addr + cpu->y;
@@ -303,18 +303,18 @@ static uint16_t fetch_address(struct CPU *cpu, int mode, int *page_crossed)
     case REL:
         {
             /* fetch data first, then add it to the pc */
-            const uint8_t offset = fetch(cpu);
+            const uint8_t offset = cpu->fetch();
             return cpu->pc + (int8_t) offset;
         }
 
     case ZPG:
-        return fetch(cpu);
+        return cpu->fetch();
 
     case ZPX:
-        return (fetch(cpu) + cpu->x) & 0x00FF;
+        return (cpu->fetch() + cpu->x) & 0x00FF;
 
     case ZPY:
-        return (fetch(cpu) + cpu->y) & 0x00FF;
+        return (cpu->fetch() + cpu->y) & 0x00FF;
 
     default:
         return 0;
@@ -807,7 +807,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
         push(cpu, cpu->p | B);
 
         set_flag(cpu, I, 1);
-        set_pc(cpu, read_word(cpu, 0xFFFE));
+        set_pc(cpu, cpu->read_word(0xFFFE));
         break;
 
     /* Return from Interrupt: pop(P) pop(PC) (N, V, D, I, Z, C) */
@@ -998,7 +998,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
 
 void CPU::PowerUp()
 {
-    set_pc(this, read_word(this, 0xFFFC));
+    set_pc(this, this->read_word(0xFFFC));
 
     set_a(this, 0x00);
     set_x(this, 0x00);
@@ -1011,7 +1011,7 @@ void CPU::PowerUp()
 
 void CPU::Reset()
 {
-    set_pc(this, read_word(this, 0xFFFC));
+    set_pc(this, this->read_word(0xFFFC));
 
     set_s(this, this->s - 3);
     set_flag(this, I, 1);
@@ -1034,7 +1034,7 @@ void CPU::HandleIRQ()
     set_flag(this, I, 1);
     push(this, p);
 
-    set_pc(this, read_word(this, 0xFFFE));
+    set_pc(this, this->read_word(0xFFFE));
     cycles = 7;
 }
 
@@ -1046,7 +1046,7 @@ void CPU::HandleNMI()
     set_flag(this, I, 1);
     push(this, p);
 
-    set_pc(this, read_word(this, 0xFFFA));
+    set_pc(this, this->read_word(0xFFFA));
     cycles = 8;
 }
 
@@ -1056,7 +1056,7 @@ void CPU::Clock()
         uint8_t code, cycs;
         struct instruction inst;
 
-        code = fetch(this);
+        code = fetch();
         inst = decode(code);
         cycs = execute(this, inst);
 
@@ -1089,7 +1089,7 @@ uint8_t get_dma_page(const struct CPU *cpu)
 
 uint8_t read_cpu_data(const struct CPU *cpu, uint16_t addr)
 {
-    return peek_byte(cpu, addr);
+    return cpu->peek_byte(addr);
 }
 
 void get_cpu_status(const struct CPU *cpu, struct cpu_status *stat)
@@ -1101,9 +1101,9 @@ void get_cpu_status(const struct CPU *cpu, struct cpu_status *stat)
     stat->p  = cpu->p;
     stat->s  = cpu->s;
 
-    stat->code = peek_byte(cpu, stat->pc + 0);
-    stat->lo   = peek_byte(cpu, stat->pc + 1);
-    stat->hi   = peek_byte(cpu, stat->pc + 2);
+    stat->code = cpu->peek_byte(stat->pc + 0);
+    stat->lo   = cpu->peek_byte(stat->pc + 1);
+    stat->hi   = cpu->peek_byte(stat->pc + 2);
     stat->wd   = (stat->hi << 8) | stat->lo;
 
     strcpy(stat->inst_name, opcode_name_table[stat->code]);
@@ -1112,7 +1112,7 @@ void get_cpu_status(const struct CPU *cpu, struct cpu_status *stat)
 
 uint8_t peek_cpu_data(const struct CPU *cpu, uint16_t addr)
 {
-    return peek_byte(cpu, addr);
+    return cpu->peek_byte(addr);
 }
 
 } // namespace

@@ -41,6 +41,11 @@ struct CPU {
 
     void write_byte(uint16_t addr, uint8_t data);
     uint8_t read_byte(uint16_t addr);
+    uint16_t read_word(uint16_t addr);
+    uint8_t peek_byte(uint16_t addr) const;
+    uint16_t peek_word(uint16_t addr) const;
+    uint8_t fetch();
+    uint16_t fetch_word();
 };
 
 extern void set_controller_input(struct CPU *cpu, uint8_t id, uint8_t input);
