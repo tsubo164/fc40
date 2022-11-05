@@ -46,6 +46,10 @@ struct CPU {
     uint16_t peek_word(uint16_t addr) const;
     uint8_t fetch();
     uint16_t fetch_word();
+
+    uint16_t abs_indirect(uint16_t abs) const;
+    uint16_t zp_indirect(uint8_t zp) const;
+    uint16_t fetch_address(int mode, int *page_crossed);
 };
 
 extern void set_controller_input(struct CPU *cpu, uint8_t id, uint8_t input);

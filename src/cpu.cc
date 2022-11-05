@@ -237,84 +237,82 @@ static uint16_t abs_index(uint16_t abs, uint8_t idx, int *page_crossed)
     return abs + idx;
 }
 
-static uint16_t abs_indirect(const struct CPU *cpu, uint16_t abs)
+uint16_t CPU::abs_indirect(uint16_t abs) const
 {
     if ((abs & 0x00FF) == 0x00FF)
-        /* emulate page boundary hardware bug */
-        return (cpu->peek_byte(abs & 0xFF00) << 8) | cpu->peek_byte(abs);
+        // emulate page boundary hardware bug
+        return (peek_byte(abs & 0xFF00) << 8) | peek_byte(abs);
     else
-        /* normal behavior */
-        return cpu->peek_word(abs);
+        // normal behavior
+        return peek_word(abs);
 }
 
-static uint16_t zp_indirect(const struct CPU *cpu, uint8_t zp)
+uint16_t CPU::zp_indirect(uint8_t zp) const
 {
-    const uint16_t lo = cpu->peek_byte(zp & 0xFF);
-    const uint16_t hi = cpu->peek_byte((zp + 1) & 0xFF);
+    const uint16_t lo = peek_byte(zp & 0xFF);
+    const uint16_t hi = peek_byte((zp + 1) & 0xFF);
 
     return (hi << 8) | lo;
 }
 
-static uint16_t fetch_address(struct CPU *cpu, int mode, int *page_crossed)
+uint16_t CPU::fetch_address(int mode, int *page_crossed)
 {
     *page_crossed = 0;
 
     switch (mode) {
 
     case ABS:
-        return cpu->fetch_word();
+        return fetch_word();
 
     case ABX:
-        return abs_index(cpu->fetch_word(), cpu->x, page_crossed);
+        return abs_index(fetch_word(), x, page_crossed);
 
     case ABY:
-        return abs_index(cpu->fetch_word(), cpu->y, page_crossed);
+        return abs_index(fetch_word(), y, page_crossed);
 
     case ACC:
-        /* no address for register */
+        // no address for register
         return 0;
 
     case IMM:
-        /* address where the immediate value is stored */
-        return cpu->pc++;
+        // address where the immediate value is stored
+        return pc++;
 
     case IMP:
-        /* no address */
+        // no address
         return 0;
 
     case IND:
-        return abs_indirect(cpu, cpu->fetch_word());
+        return abs_indirect(fetch_word());
 
     case IZX:
-        {
-            /* addr = {[arg + X], [arg + X + 1]} */
-            return zp_indirect(cpu, cpu->fetch() + cpu->x);
-        }
+        // addr = {[arg + X], [arg + X + 1]}
+        return zp_indirect(fetch() + x);
 
     case IZY:
         {
-            /* addr = {[arg], [arg + 1]} + Y */
-            const uint16_t addr = zp_indirect(cpu, cpu->fetch());
-            if (is_page_crossing(addr, cpu->y))
+            // addr = {[arg], [arg + 1]} + Y
+            const uint16_t addr = zp_indirect(fetch());
+            if (is_page_crossing(addr, y))
                 *page_crossed = 1;
-            return addr + cpu->y;
+            return addr + y;
         }
 
     case REL:
         {
-            /* fetch data first, then add it to the pc */
-            const uint8_t offset = cpu->fetch();
-            return cpu->pc + (int8_t) offset;
+            // fetch data first, then add it to the pc
+            const uint8_t offset = fetch();
+            return pc + (int8_t) offset;
         }
 
     case ZPG:
-        return cpu->fetch();
+        return fetch();
 
     case ZPX:
-        return (cpu->fetch() + cpu->x) & 0x00FF;
+        return (fetch() + x) & 0x00FF;
 
     case ZPY:
-        return (cpu->fetch() + cpu->y) & 0x00FF;
+        return (fetch() + y) & 0x00FF;
 
     default:
         return 0;
@@ -547,7 +545,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
     int page_crossed = 0;
     int branch_taken = 0;
     const uint8_t mode = inst.addr_mode;
-    const uint16_t addr = fetch_address(cpu, mode, &page_crossed);
+    const uint16_t addr = cpu->fetch_address(mode, &page_crossed);
 
     switch (inst.opcode) {
 
