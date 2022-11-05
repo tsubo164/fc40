@@ -45,6 +45,12 @@ struct CPU {
     void HandleNMI();
     void Clock();
 
+    void InputController(uint8_t controller_id, uint8_t input);
+    bool IsSuspended() const;
+    void Resume();
+    uint8_t GetDmaPage() const;
+    uint8_t ReadData(uint16_t addr) const;
+
     // read and write
     void write_byte(uint16_t addr, uint8_t data);
     uint8_t read_byte(uint16_t addr);
@@ -78,13 +84,6 @@ struct CPU {
     // instruction
     int execute(Instruction inst);
 };
-
-extern void set_controller_input(struct CPU *cpu, uint8_t id, uint8_t input);
-extern int is_suspended(const struct CPU *cpu);
-extern void resume(struct CPU *cpu);
-extern uint8_t get_dma_page(const struct CPU *cpu);
-
-extern uint8_t read_cpu_data(const struct CPU *cpu, uint16_t addr);
 
 struct cpu_status {
     uint16_t pc;

@@ -1058,30 +1058,30 @@ void CPU::Clock()
     cycles--;
 }
 
-void set_controller_input(struct CPU *cpu, uint8_t id, uint8_t input)
+void CPU::InputController(uint8_t controller_id, uint8_t input)
 {
-    cpu->controller_input[id] = input;
+    controller_input[controller_id] = input;
 }
 
-int is_suspended(const struct CPU *cpu)
+bool CPU::IsSuspended() const
 {
-    return cpu->suspended;
+    return suspended;
 }
 
-void resume(struct CPU *cpu)
+void CPU::Resume()
 {
-    cpu->suspended = 0;
-    cpu->dma_page = 0x00;
+    suspended = 0;
+    dma_page = 0x00;
 }
 
-uint8_t get_dma_page(const struct CPU *cpu)
+uint8_t CPU::GetDmaPage() const
 {
-    return cpu->dma_page;
+    return dma_page;
 }
 
-uint8_t read_cpu_data(const struct CPU *cpu, uint16_t addr)
+uint8_t CPU::ReadData(uint16_t addr) const
 {
-    return cpu->peek_byte(addr);
+    return peek_byte(addr);
 }
 
 void get_cpu_status(const struct CPU *cpu, struct cpu_status *stat)

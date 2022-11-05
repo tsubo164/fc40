@@ -72,7 +72,7 @@ void NES::UpdateFrame()
         ppu.Clock();
 
         if (clock_ % 3 == 0) {
-            if (is_suspended(&cpu))
+            if (cpu.IsSuspended())
                 clock_dma();
             else
                 cpu.Clock();
@@ -102,7 +102,7 @@ void NES::UpdateFrame()
 
 void NES::InputController(uint8_t id, uint8_t input)
 {
-    set_controller_input(&cpu, id, input);
+    cpu.InputController(id, input);
 }
 
 void NES::clock_dma()
@@ -111,7 +111,7 @@ void NES::clock_dma()
         if (clock_ % 2 == 1) {
             dma_wait_ = 0;
             dma_addr_ = 0x00;
-            dma_page_ = get_dma_page(&cpu);
+            dma_page_ = cpu.GetDmaPage();
         }
         // idle for this cpu cycle
         return;
@@ -119,7 +119,7 @@ void NES::clock_dma()
 
     if (clock_ % 2 == 0) {
         // read
-        dma_data_ = read_cpu_data(&cpu, (dma_page_ << 8) | dma_addr_);
+        dma_data_ = cpu.ReadData((dma_page_ << 8) | dma_addr_);
     }
     else {
         // write
@@ -130,7 +130,7 @@ void NES::clock_dma()
             dma_wait_ = 1;
             dma_page_ = 0x00;
             dma_addr_ = 0x00;
-            resume(&cpu);
+            cpu.Resume();
         }
     }
 }
