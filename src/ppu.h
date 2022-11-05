@@ -6,7 +6,6 @@
 
 namespace nes {
 
-class FrameBuffer;
 class Cartridge;
 
 struct PatternRow {
@@ -34,7 +33,7 @@ struct Pixel {
 
 class PPU {
 public:
-    PPU(FrameBuffer &fb) : fbuf(fb) {}
+    PPU(FrameBuffer &fb) : fbuf_(fb) {}
     ~PPU() {}
 
     void SetCartride(Cartridge *cart);
@@ -74,39 +73,39 @@ private:
     Cartridge *cart_ = nullptr;
 
     // registers
-    uint8_t ctrl = 0;
-    uint8_t mask = 0;
-    uint8_t stat = 0;
+    uint8_t ctrl_ = 0;
+    uint8_t mask_ = 0;
+    uint8_t stat_ = 0;
 
     // vram and scroll
-    uint8_t write_toggle = 0;
-    uint16_t vram_addr = 0;
-    uint16_t temp_addr = 0;
-    uint8_t fine_x = 0;
+    bool write_toggle_ = 0;
+    uint16_t vram_addr_ = 0;
+    uint16_t temp_addr_ = 0;
+    uint8_t fine_x_ = 0;
 
     // vram
-    uint8_t read_buffer = 0;
-    uint8_t palette_ram[32] = {0};
-    uint8_t name_table[2048] = {0};
+    uint8_t read_buffer_ = 0;
+    uint8_t palette_ram_[32] = {0};
+    uint8_t name_table_[2048] = {0};
 
     // bg tile cache
-    PatternRow tile_queue[3];
+    PatternRow tile_queue_[3];
 
     // fg sprite
-    uint8_t oam_addr = 0;
-    uint8_t oam[256] = {0};
-    ObjectAttribute secondary_oam[8];
+    uint8_t oam_addr_ = 0;
+    uint8_t oam_[256] = {0};
+    ObjectAttribute secondary_oam_[8];
     // 8 latches and 8 counters
-    ObjectAttribute rendering_oam[8];
-    PatternRow rendering_sprite[8];
-    int sprite_count = 0;
+    ObjectAttribute rendering_oam_[8];
+    PatternRow rendering_sprite_[8];
+    int sprite_count_ = 0;
 
-    int cycle = 0;
-    int scanline = 0;
-    uint64_t frame = 0;
-    FrameBuffer &fbuf;
+    int cycle_ = 0;
+    int scanline_ = 0;
+    uint64_t frame_ = 0;
+    FrameBuffer &fbuf_;
 
-    bool nmi_generated = false;
+    bool nmi_generated_ = false;
 
     // control
     void set_stat(uint8_t flag, uint8_t val);

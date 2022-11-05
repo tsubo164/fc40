@@ -1,4 +1,3 @@
-#include <cstdlib>
 #include "ppu.h"
 #include "cartridge.h"
 
@@ -39,24 +38,24 @@ enum ppu_mask {
 void PPU::set_stat(uint8_t flag, uint8_t val)
 {
     if (val)
-        stat |= flag;
+        stat_ |= flag;
     else
-        stat &= ~flag;
+        stat_ &= ~flag;
 }
 
 bool PPU::get_ctrl(uint8_t flag) const
 {
-    return (ctrl & flag) > 0;
+    return (ctrl_ & flag) > 0;
 }
 
 bool PPU::is_rendering_bg() const
 {
-    return mask & MASK_SHOW_BG;
+    return mask_ & MASK_SHOW_BG;
 }
 
 bool PPU::is_rendering_sprite() const
 {
-    return mask & MASK_SHOW_SPRITE;
+    return mask_ & MASK_SHOW_SPRITE;
 }
 
 void PPU::enter_vblank()
@@ -64,7 +63,7 @@ void PPU::enter_vblank()
     set_stat(STAT_VERTICAL_BLANK, 1);
 
     if (get_ctrl(CTRL_ENABLE_NMI))
-        nmi_generated = true;
+        nmi_generated_ = true;
 }
 
 void PPU::leave_vblank()
@@ -130,7 +129,7 @@ uint8_t PPU::read_byte(uint16_t addr) const
     }
     else if (addr >= 0x2000 && addr <= 0x2FFF) {
         const uint16_t index = name_table_index(cart_, addr);
-        return name_table[index];
+        return name_table_[index];
     }
     else if (addr >= 0x3000 && addr <= 0x3EFF) {
         // mirrors of 0x2000-0x2EFF
@@ -143,9 +142,9 @@ uint8_t PPU::read_byte(uint16_t addr) const
         // (since the pattern values that would otherwise select those cells
         // select the backdrop color instead).
         if (a % 4 == 0)
-            return palette_ram[0x00];
+            return palette_ram_[0x00];
         else
-            return palette_ram[a & 0x1F];
+            return palette_ram_[a & 0x1F];
     }
 
     return 0xFF;
@@ -158,7 +157,7 @@ void PPU::write_byte(uint16_t addr, uint8_t data)
     }
     else if (addr >= 0x2000 && addr <= 0x2FFF) {
         const uint16_t index = name_table_index(cart_, addr);
-        name_table[index] = data;
+        name_table_[index] = data;
     }
     else if (addr >= 0x3000 && addr <= 0x3EFF) {
         // mirrors of 0x2000-0x2EFF
@@ -175,7 +174,7 @@ void PPU::write_byte(uint16_t addr, uint8_t data)
         if (addr == 0x3F18) a = 0x3F08;
         if (addr == 0x3F1C) a = 0x3F0C;
 
-        palette_ram[a & 0x1F] = data;
+        palette_ram_[a & 0x1F] = data;
     }
 }
 
@@ -294,12 +293,12 @@ static uint16_t copy_address_y(uint16_t vram_addr, uint16_t temp_addr)
 
 uint8_t PPU::fetch_tile_id() const
 {
-    return read_byte(0x2000 | (vram_addr & 0x0FFF));
+    return read_byte(0x2000 | (vram_addr_ & 0x0FFF));
 }
 
 uint8_t PPU::fetch_tile_attr() const
 {
-    const VramPointer v = decode_address(vram_addr);
+    const VramPointer v = decode_address(vram_addr_);
     const uint16_t attr_x = v.tile_x / 4;
     const uint16_t attr_y = v.tile_y / 4;
     const uint16_t offset = attr_y * 8 + attr_x;
@@ -315,7 +314,7 @@ uint8_t PPU::fetch_tile_attr() const
 
 uint8_t PPU::fetch_tile_row(uint8_t tile_id, uint8_t plane) const
 {
-    const VramPointer v = decode_address(vram_addr);
+    const VramPointer v = decode_address(vram_addr_);
     const uint16_t base = get_ctrl(CTRL_PATTERN_BG) ? 0x1000 : 0x0000;
     const uint16_t addr = base + 16 * tile_id + plane + v.fine_y;
 
@@ -326,10 +325,10 @@ void PPU::load_next_tile()
 {
     // after rendering is done in a scanline,
     // it is necesarry to shift bits for whole row before loading new row
-    if (cycle >= 321)
-        tile_queue[2] = tile_queue[1];
+    if (cycle_ >= 321)
+        tile_queue_[2] = tile_queue_[1];
 
-    tile_queue[1] = tile_queue[0];
+    tile_queue_[1] = tile_queue_[0];
 }
 
 static void shift_word(uint8_t *left, uint8_t *right)
@@ -355,9 +354,9 @@ static void set_tile_palette(PatternRow &patt, uint8_t palette)
 
 void PPU::fetch_tile_data()
 {
-    PatternRow &next = tile_queue[0];
+    PatternRow &next = tile_queue_[0];
 
-    switch (cycle % 8) {
+    switch (cycle_ % 8) {
     case 1:
         // NT byte
         next.id = fetch_tile_id();
@@ -398,12 +397,12 @@ void PPU::clear_sprite_overflow()
 
 void PPU::clear_secondary_oam()
 {
-    // secondary oam crear occurs cycle 1 - 64
-    if (cycle % 8 == 1)
-        secondary_oam[cycle / 8] = ObjectAttribute();
+    // secondary oam_ crear occurs cycle 1 - 64
+    if (cycle_ % 8 == 1)
+        secondary_oam_[cycle_ / 8] = ObjectAttribute();
 
-    if (cycle == 1)
-        sprite_count = 0;
+    if (cycle_ == 1)
+        sprite_count_ = 0;
 }
 
 ObjectAttribute PPU::get_sprite(int index) const
@@ -414,10 +413,10 @@ ObjectAttribute PPU::get_sprite(int index) const
     if (index < 0 || index > 63)
         return obj;
 
-    obj.y  = oam[4 * index + 0];
-    obj.id = oam[4 * index + 1];
-    attr   = oam[4 * index + 2];
-    obj.x  = oam[4 * index + 3];
+    obj.y  = oam_[4 * index + 0];
+    obj.id = oam_[4 * index + 1];
+    attr   = oam_[4 * index + 2];
+    obj.x  = oam_[4 * index + 3];
 
     obj.palette   = (attr & 0x03);
     obj.priority  = (attr & 0x20) > 0;
@@ -438,24 +437,24 @@ void PPU::evaluate_sprite()
 {
     // secondary oam crear occurs cycle 65 - 256
     // index = 0 .. 191
-    const int index = cycle - 65;
+    const int index = cycle_ - 65;
     const int sprite_height = 8;
 
     if (index > 63)
         return;
 
-    if (sprite_count > 8)
+    if (sprite_count_ > 8)
         return;
 
     const ObjectAttribute obj = get_sprite(index);
 
-    if (is_sprite_visible(obj, scanline, sprite_height)) {
-        if (sprite_count < 8)
-            secondary_oam[sprite_count] = obj;
+    if (is_sprite_visible(obj, scanline_, sprite_height)) {
+        if (sprite_count_ < 8)
+            secondary_oam_[sprite_count_] = obj;
         else
             set_sprite_overflow();
 
-        sprite_count++;
+        sprite_count_++;
     }
 }
 
@@ -484,20 +483,20 @@ void PPU::fetch_sprite_data()
 {
     // fetch sprite data occurs cycle 257 - 320
     // index = (0 .. 63) / 8 => 0 .. 7
-    const int index = (cycle - 257) / 8;
-    const int is_visible = index < sprite_count;
-    const int sprite_id = secondary_oam[index].id;
-    int sprite_y = scanline - secondary_oam[index].y;
-    PatternRow &patt = rendering_sprite[index];
-    const ObjectAttribute obj = rendering_oam[index];
+    const int index = (cycle_ - 257) / 8;
+    const int is_visible = index < sprite_count_;
+    const int sprite_id = secondary_oam_[index].id;
+    int sprite_y = scanline_ - secondary_oam_[index].y;
+    PatternRow &patt = rendering_sprite_[index];
+    const ObjectAttribute obj = rendering_oam_[index];
 
-    switch (cycle % 8) {
+    switch (cycle_ % 8) {
     case 3:
         // Attribute and X position
-        rendering_oam[index] = secondary_oam[index];
+        rendering_oam_[index] = secondary_oam_[index];
 
         if (is_visible)
-            set_tile_palette(patt, rendering_oam[index].palette);
+            set_tile_palette(patt, rendering_oam_[index].palette);
         else
             set_tile_palette(patt, 0x00);
         break;
@@ -538,8 +537,8 @@ void PPU::fetch_sprite_data()
 void PPU::shift_sprite_data()
 {
     for (int i = 0; i < 8; i++) {
-        ObjectAttribute &obj = rendering_oam[i];
-        PatternRow &patt = rendering_sprite[i];
+        ObjectAttribute &obj = rendering_oam_[i];
+        PatternRow &patt = rendering_sprite_[i];
 
         if (obj.x > 0) {
             obj.x--;
@@ -559,12 +558,12 @@ static const Pixel BACKDROP;
 
 static Pixel get_pixel(PatternRow patt, uint8_t fine_x)
 {
-    const uint8_t mask = 0x80 >> fine_x;
-    const uint8_t hi = (patt.hi & mask) > 0;
-    const uint8_t lo = (patt.lo & mask) > 0;
+    const uint8_t mask_ = 0x80 >> fine_x;
+    const uint8_t hi = (patt.hi & mask_) > 0;
+    const uint8_t lo = (patt.lo & mask_) > 0;
     const uint8_t val = (hi << 1) | lo;
-    const uint8_t pal_lo = (patt.palette_lo & mask) > 0;
-    const uint8_t pal_hi = (patt.palette_hi & mask) > 0;
+    const uint8_t pal_lo = (patt.palette_lo & mask_) > 0;
+    const uint8_t pal_hi = (patt.palette_hi & mask_) > 0;
     const uint8_t pal = (pal_hi << 1) | pal_lo;
 
     Pixel pix;
@@ -577,23 +576,23 @@ static Pixel get_pixel(PatternRow patt, uint8_t fine_x)
 
 int PPU::is_sprite_zero(ObjectAttribute obj) const
 {
-    const int sprite_zero_id = oam[1];
+    const int sprite_zero_id = oam_[1];
 
     return obj.id == sprite_zero_id;
 }
 
 Pixel PPU::get_pixel_bg() const
 {
-    return get_pixel(tile_queue[2], fine_x);
+    return get_pixel(tile_queue_[2], fine_x_);
 }
 
 Pixel PPU::get_pixel_fg() const
 {
     for (int i = 0; i < 8; i++) {
-        const ObjectAttribute obj = rendering_oam[i];
+        const ObjectAttribute obj = rendering_oam_[i];
 
         if (obj.x == 0) {
-            Pixel pix = get_pixel(rendering_sprite[i], 0);
+            Pixel pix = get_pixel(rendering_sprite_[i], 0);
 
             pix.palette += 4;
             pix.priority = obj.priority;
@@ -621,8 +620,8 @@ static Pixel composite_pixels(Pixel bg, Pixel fg)
 
 bool PPU::is_clipping_left() const
 {
-    return !(mask & MASK_SHOW_BG_LEFT) ||
-           !(mask & MASK_SHOW_SPRITE_LEFT);
+    return !(mask_ & MASK_SHOW_BG_LEFT) ||
+           !(mask_ & MASK_SHOW_SPRITE_LEFT);
 }
 
 bool PPU::is_sprite_zero_hit(Pixel bg, Pixel fg, int x) const
@@ -642,7 +641,7 @@ bool PPU::is_sprite_zero_hit(Pixel bg, Pixel fg, int x) const
     if (fg.value == 0 || bg.value == 0)
         return 0;
 
-    if (stat & STAT_SPRITE_ZERO_HIT)
+    if (stat_ & STAT_SPRITE_ZERO_HIT)
         return 0;
 
     return 1;
@@ -670,12 +669,12 @@ void PPU::render_pixel(int x, int y)
     col = lookup_pixel_color(out);
 
     if (!is_rendering_bg() && !is_rendering_sprite() &&
-        vram_addr >= 0x3F00 && vram_addr <= 0x3FFF) {
-        const uint8_t index = read_byte(vram_addr);
+        vram_addr_ >= 0x3F00 && vram_addr_ <= 0x3FFF) {
+        const uint8_t index = read_byte(vram_addr_);
         col = get_color(index);
     }
 
-    fbuf.SetColor(x, y, col);
+    fbuf_.SetColor(x, y, col);
 
     if (is_sprite_zero_hit(bg, fg, x))
         set_stat(STAT_SPRITE_ZERO_HIT, 1);
@@ -691,72 +690,72 @@ void PPU::SetCartride(Cartridge *cart)
 
 void PPU::ClearNMI()
 {
-    nmi_generated = false;
+    nmi_generated_ = false;
 }
 
 bool PPU::IsSetNMI() const
 {
-    return nmi_generated;
+    return nmi_generated_;
 }
 
 bool PPU::IsFrameReady() const
 {
-    return cycle == 0 && scanline == 0;
+    return cycle_ == 0 && scanline_ == 0;
 }
 
 void PPU::Clock()
 {
     const bool is_rendering = is_rendering_bg() || is_rendering_sprite();
 
-    if ((scanline >= 0 && scanline <= 239) || scanline == 261) {
+    if ((scanline_ >= 0 && scanline_ <= 239) || scanline_ == 261) {
 
         // fetch bg tile
-        if ((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 337)) {
+        if ((cycle_ >= 1 && cycle_ <= 256) || (cycle_ >= 321 && cycle_ <= 337)) {
 
-            if (cycle % 8 == 0)
+            if (cycle_ % 8 == 0)
                 if (is_rendering)
-                    vram_addr = increment_scroll_x(vram_addr);
+                    vram_addr_ = increment_scroll_x(vram_addr_);
 
-            if (cycle % 8 == 1)
+            if (cycle_ % 8 == 1)
                 load_next_tile();
 
             fetch_tile_data();
         }
 
         // inc vert(v)
-        if (cycle == 256)
+        if (cycle_ == 256)
             if (is_rendering)
-                vram_addr = increment_scroll_y(vram_addr);
+                vram_addr_ = increment_scroll_y(vram_addr_);
 
         // hori(v) = hori(t)
-        if (cycle == 257)
+        if (cycle_ == 257)
             if (is_rendering)
-                vram_addr = copy_address_x(vram_addr, temp_addr);
+                vram_addr_ = copy_address_x(vram_addr_, temp_addr_);
 
         // vert(v) = vert(t)
-        if ((cycle >= 280 && cycle <= 304) && scanline == 261)
+        if ((cycle_ >= 280 && cycle_ <= 304) && scanline_ == 261)
             if (is_rendering)
-                vram_addr = copy_address_y(vram_addr, temp_addr);
+                vram_addr_ = copy_address_y(vram_addr_, temp_addr_);
 
         // clear secondary oam
-        if ((cycle >= 1 && cycle <= 64) && scanline != 261)
+        if ((cycle_ >= 1 && cycle_ <= 64) && scanline_ != 261)
             clear_secondary_oam();
 
         // evaluate sprite for next scanline
-        if ((cycle >= 65 && cycle <= 256) && scanline != 261)
+        if ((cycle_ >= 65 && cycle_ <= 256) && scanline_ != 261)
             evaluate_sprite();
 
         // fetch sprite
-        if (cycle >= 257 && cycle <= 320)
+        if (cycle_ >= 257 && cycle_ <= 320)
             fetch_sprite_data();
     }
 
-    if (scanline == 241)
-        if (cycle == 1)
+    if (scanline_ == 241)
+        if (cycle_ == 1)
             enter_vblank();
 
-    if (scanline == 261) {
-        if (cycle == 1) {
+    if (scanline_ == 261) {
+        if (cycle_ == 1) {
             leave_vblank();
             clear_sprite_overflow();
             set_stat(STAT_SPRITE_ZERO_HIT, 0);
@@ -764,12 +763,12 @@ void PPU::Clock()
     }
 
     // render pixel
-    if (scanline >= 0 && scanline <= 239) {
-        if (cycle >= 1 && cycle <= 256) {
-            render_pixel(cycle - 1, scanline);
+    if (scanline_ >= 0 && scanline_ <= 239) {
+        if (cycle_ >= 1 && cycle_ <= 256) {
+            render_pixel(cycle_ - 1, scanline_);
 
             if (is_rendering_bg())
-                shift_tile_data(tile_queue[1], tile_queue[2]);
+                shift_tile_data(tile_queue_[1], tile_queue_[2]);
 
             if (is_rendering_sprite())
                 shift_sprite_data();
@@ -777,73 +776,73 @@ void PPU::Clock()
     }
 
     // advance cycle and scanline
-    if (cycle == 339) {
-        if (scanline == 261 && frame % 2 == 0) {
+    if (cycle_ == 339) {
+        if (scanline_ == 261 && frame_ % 2 == 0) {
             // the end of the scanline for odd frames
-            cycle = 0;
-            scanline = 0;
-            frame++;
+            cycle_ = 0;
+            scanline_ = 0;
+            frame_++;
         }
         else {
-            cycle++;
+            cycle_++;
         }
     }
-    else if (cycle == 340) {
-        if (scanline == 261) {
-            cycle = 0;
-            scanline = 0;
-            frame++;
+    else if (cycle_ == 340) {
+        if (scanline_ == 261) {
+            cycle_ = 0;
+            scanline_ = 0;
+            frame_++;
         }
         else {
-            cycle = 0;
-            scanline++;
+            cycle_ = 0;
+            scanline_++;
         }
     }
     else {
-        cycle++;
+        cycle_++;
     }
 }
 
 void PPU::PowerUp()
 {
-    ctrl = 0x00;
-    mask = 0x00;
-    stat = 0xA0;
-    oam_addr = 0x00;
+    ctrl_ = 0x00;
+    mask_ = 0x00;
+    stat_ = 0xA0;
+    oam_addr_ = 0x00;
 
-    write_toggle = 0;
+    write_toggle_ = false;
 
-    temp_addr = 0x0000;
-    vram_addr = 0x0000;
-    read_buffer = 0x00;
+    temp_addr_ = 0x0000;
+    vram_addr_ = 0x0000;
+    read_buffer_ = 0x00;
 
-    frame = 0;
+    frame_ = 0;
 
-    for (int i = 0; i < 256; i++)
-        oam[i] = 0xFF;
+    for (auto &i : oam_)
+        i = 0xFF;
 
-    for (int i = 0; i < 32; i++)
-        palette_ram[i] = 0xFF;
+    for (auto &i : palette_ram_)
+        i = 0xFF;
 
-    for (int i = 0; i < 2048; i++)
-        name_table[i] = 0xFF;
+    for (auto &i : name_table_)
+        i = 0xFF;
 }
 
 void PPU::Reset()
 {
-    ctrl = 0x00;
-    mask = 0x00;
-    stat &= 0x80;
+    ctrl_ = 0x00;
+    mask_ = 0x00;
+    stat_ &= 0x80;
 
-    write_toggle = 0;
+    write_toggle_ = false;
 
-    temp_addr   = 0x0000;
-    read_buffer = 0x00;
+    temp_addr_   = 0x0000;
+    read_buffer_ = 0x00;
 
-    frame = 0;
+    frame_ = 0;
 
-    for (int i = 0; i < 256; i++)
-        oam[i] = 0xFF;
+    for (auto &i : oam_)
+        i = 0xFF;
 }
 
 void PPU::WriteControl(uint8_t data)
@@ -851,112 +850,112 @@ void PPU::WriteControl(uint8_t data)
     // Nametable x and y from control
     // t: ...GH.. ........ <- d: ......GH
     //    <used elsewhere> <- d: ABCDEF..
-    ctrl = data;
-    temp_addr = (temp_addr & 0xF3FF) | ((data & 0x03) << 10);
+    ctrl_ = data;
+    temp_addr_ = (temp_addr_ & 0xF3FF) | ((data & 0x03) << 10);
 }
 
 void PPU::WriteMask(uint8_t data)
 {
-    mask = data;
+    mask_ = data;
 }
 
 void PPU::WriteOamAddress(uint8_t addr)
 {
-    oam_addr = addr;
+    oam_addr_ = addr;
 }
 
 void PPU::WriteOamData(uint8_t data)
 {
-    oam[oam_addr] = data;
+    oam_[oam_addr_] = data;
 }
 
 void PPU::WriteScroll(uint8_t data)
 {
-    if (write_toggle == 0) {
+    if (write_toggle_ == 0) {
         // Coarse X and fine x
         // t: ....... ...ABCDE <- d: ABCDE...
         // x:              FGH <- d: .....FGH
         // w:                  <- 1
-        fine_x = data & 0x07;
-        temp_addr = (temp_addr & 0xFFE0) | (data >> 3);
-        write_toggle = 1;
+        fine_x_ = data & 0x07;
+        temp_addr_ = (temp_addr_ & 0xFFE0) | (data >> 3);
+        write_toggle_ = true;
     } else {
         // Coarse Y and fine y
         // t: FGH..AB CDE..... <- d: ABCDEFGH
         // w:                  <- 0
-        temp_addr = (temp_addr & 0xFC1F) | ((data >> 3) << 5);
-        temp_addr = (temp_addr & 0x8FFF) | ((data & 0x07) << 12);
-        write_toggle = 0;
+        temp_addr_ = (temp_addr_ & 0xFC1F) | ((data >> 3) << 5);
+        temp_addr_ = (temp_addr_ & 0x8FFF) | ((data & 0x07) << 12);
+        write_toggle_ = false;
     }
 }
 
 void PPU::WriteAddress(uint8_t addr)
 {
-    if (write_toggle == 0) {
+    if (write_toggle_ == 0) {
         // High byte
         // t: .CDEFGH ........ <- d: ..CDEFGH
         //        <unused>     <- d: AB......
         // t: Z...... ........ <- 0 (bit Z is cleared)
         // w:                  <- 1
-        temp_addr = (temp_addr & 0xC0FF) | ((addr & 0x3F) << 8);
-        temp_addr &= 0xBFFF;
-        write_toggle = 1;
+        temp_addr_ = (temp_addr_ & 0xC0FF) | ((addr & 0x3F) << 8);
+        temp_addr_ &= 0xBFFF;
+        write_toggle_ = true;
     } else {
         // Low byte
         // t: ....... ABCDEFGH <- d: ABCDEFGH
         // v: <...all bits...> <- t: <...all bits...>
         // w:                  <- 0
-        temp_addr = (temp_addr & 0xFF00) | addr;
-        vram_addr = temp_addr;
-        write_toggle = 0;
+        temp_addr_ = (temp_addr_ & 0xFF00) | addr;
+        vram_addr_ = temp_addr_;
+        write_toggle_ = false;
     }
 }
 
 void PPU::WriteData(uint8_t data)
 {
-    write_byte(vram_addr, data);
+    write_byte(vram_addr_, data);
 
-    vram_addr += address_increment();
+    vram_addr_ += address_increment();
 }
 
 uint8_t PPU::ReadStatus()
 {
-    const uint8_t data = stat;
+    const uint8_t data = stat_;
 
     set_stat(STAT_VERTICAL_BLANK, 0);
-    write_toggle = 0;
+    write_toggle_ = false;
 
     return data;
 }
 
 uint8_t PPU::ReadOamData() const
 {
-    return oam[oam_addr];
+    return oam_[oam_addr_];
 }
 
 uint8_t PPU::ReadData()
 {
-    const uint16_t addr = vram_addr;
-    uint8_t data = read_buffer;
+    const uint16_t addr = vram_addr_;
+    uint8_t data = read_buffer_;
 
-    read_buffer = read_byte(addr);
+    read_buffer_ = read_byte(addr);
 
     if (addr >= 0x3F00 && addr <= 0x3FFF)
-        data = read_buffer;
+        data = read_buffer_;
 
-    vram_addr += address_increment();
+    vram_addr_ += address_increment();
 
     return data;
 }
 
 uint8_t PPU::PeekStatus() const
 {
-    return stat;
+    return stat_;
 }
 
 void PPU::WriteDmaSprite(uint8_t addr, uint8_t data)
 {
-    oam[addr] = data;
+    oam_[addr] = data;
 }
 
 ObjectAttribute PPU::ReadOam(int index) const
