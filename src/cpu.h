@@ -40,6 +40,7 @@ struct CPU {
     void Clock();
 
     void write_byte(uint16_t addr, uint8_t data);
+    uint8_t read_byte(uint16_t addr);
 };
 
 extern void set_controller_input(struct CPU *cpu, uint8_t id, uint8_t input);
