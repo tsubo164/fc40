@@ -18,7 +18,7 @@ struct KeyState {
 
 static void init_gl();
 static void transfer_texture(const FrameBuffer &fb);
-static void resize(GLFWwindow *const window, int width, int height);
+static void resize(GLFWwindow *window, int width, int height);
 static void render_grid(int width, int height);
 static void render_pattern_table(const FrameBuffer &patt);
 static void render_sprite_box(const PPU &ppu, int width, int height);
@@ -66,7 +66,6 @@ int Display::Open()
 
         // Update framebuffer
         nes_.UpdateFrame();
-        transfer_texture(nes_.fbuf);
 
         // Render here
         render();
@@ -165,8 +164,10 @@ void Display::render() const
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    glBindTexture(GL_TEXTURE_2D, main_screen);
     glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, main_screen);
+    transfer_texture(nes_.fbuf);
+
     glBegin(GL_QUADS);
         glTexCoord2f(0, 0); glVertex2f(-W/2,  H/2);
         glTexCoord2f(1, 0); glVertex2f( W/2,  H/2);
@@ -212,7 +213,7 @@ static void transfer_texture(const FrameBuffer &fb)
             0, GL_RGB, GL_UNSIGNED_BYTE, fb.GetData());
 }
 
-static void resize(GLFWwindow *const window, int width, int height)
+static void resize(GLFWwindow *window, int width, int height)
 {
     float win_w = 0., win_h = 0.;
     int fb_w = 0, fb_h = 0;
