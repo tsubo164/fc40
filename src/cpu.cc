@@ -320,36 +320,36 @@ uint16_t CPU::fetch_address(int mode, int *page_crossed)
 }
 
 enum opcode {
-    /* illegal */
+    // illegal
     ILL = 0,
-    /* load and store */
+    // load and store
     LDA, LDX, LDY, STA, STX, STY,
-    /* transfer */
+    // transfer
     TAX, TAY, TSX, TXA, TXS, TYA,
-    /* stack */
+    // stack
     PHA, PHP, PLA, PLP,
-    /* shift */
+    // shift
     ASL, LSR, ROL, ROR,
-    /* logic */
+    // logic
     AND, EOR, ORA, BIT,
-    /* arithmetic */
+    // arithmetic
     ADC, SBC, CMP, CPX, CPY,
-    /* increment and decrement */
+    // increment and decrement
     INC, INX, INY, DEC, DEX, DEY,
-    /* control */
+    // control
     JMP, JSR, BRK, RTI, RTS,
-    /* branch */
+    // branch
     BCC, BCS, BEQ, BMI, BNE, BPL, BVC, BVS,
-    /* flag */
+    // flag
     CLC, CLD, CLI, CLV, SEC, SED, SEI,
-    /* XXX undocumented. there are actually some more ops. */
+    // XXX undocumented. there are actually some more ops.
     LAX, SAX, DCP, ISC, SLO, RLA, SRE, RRA,
-    /* no op */
+    // no op
     NOP
 };
 
 static const uint8_t opcode_table[] = {
-/*      00   01   02   03   04   05   06   07   08   09   0A   0B   0C   0D   0E   0F */
+//      00   01   02   03   04   05   06   07   08   09   0A   0B   0C   0D   0E   0F
 /*00*/ BRK, ORA,   0, SLO, NOP, ORA, ASL, SLO, PHP, ORA, ASL,   0, NOP, ORA, ASL, SLO,
 /*10*/ BPL, ORA,   0, SLO, NOP, ORA, ASL, SLO, CLC, ORA, NOP, SLO, NOP, ORA, ASL, SLO,
 /*20*/ JSR, AND,   0, RLA, BIT, AND, ROL, RLA, PLP, AND, ROL,   0, BIT, AND, ROL, RLA,
@@ -390,7 +390,7 @@ static const char opcode_name_table[][4] = {
 #undef ILLEG
 
 static const int8_t cycle_table[] = {
-/*     00  01  02  03  04  05  06  07  08  09  0A  0B  0C  0D  0E  0F */
+//     00  01  02  03  04  05  06  07  08  09  0A  0B  0C  0D  0E  0F
 /*00*/  7,  6,  0,  8,  3,  3,  5,  5,  3,  2,  2,  2,  4,  4,  6,  6,
 /*10*/  2,  5,  0,  8,  4,  4,  6,  6,  2,  4,  2,  7,  4,  4,  7,  7,
 /*20*/  6,  6,  0,  8,  3,  3,  5,  5,  4,  2,  2,  2,  4,  4,  6,  6,
@@ -409,68 +409,68 @@ static const int8_t cycle_table[] = {
 /*F0*/  2,  5,  0,  8,  4,  4,  6,  6,  2,  4,  2,  7,  4,  4,  7,  7
 };
 
-static void set_pc(struct CPU *cpu, uint16_t addr)
+void CPU::set_pc(uint16_t addr)
 {
-    cpu->pc = addr;
+    pc = addr;
 }
 
-static void set_flag(struct CPU *cpu, uint8_t flag, uint8_t val)
+void CPU::set_flag(uint8_t flag, uint8_t val)
 {
     if (val)
-        cpu->p |= flag;
+        p |= flag;
     else
-        cpu->p &= ~flag;
+        p &= ~flag;
 }
 
-static uint8_t get_flag(const struct CPU *cpu, uint8_t flag)
+uint8_t CPU::get_flag(uint8_t flag) const
 {
-    return (cpu->p & flag) > 0;
+    return (p & flag) > 0;
 }
 
-static uint8_t update_zn(struct CPU *cpu, uint8_t val)
+uint8_t CPU::update_zn(uint8_t val)
 {
-    set_flag(cpu, Z, val == 0x00);
-    set_flag(cpu, N, val & 0x80);
+    set_flag(Z, val == 0x00);
+    set_flag(N, val & 0x80);
     return val;
 }
 
-static void set_a(struct CPU *cpu, uint8_t val)
+void CPU::set_a(uint8_t val)
 {
-    cpu->a = val;
-    update_zn(cpu, cpu->a);
+    a = val;
+    update_zn(a);
 }
 
-static void set_x(struct CPU *cpu, uint8_t val)
+void CPU::set_x(uint8_t val)
 {
-    cpu->x = val;
-    update_zn(cpu, cpu->x);
+    x = val;
+    update_zn(x);
 }
 
-static void set_y(struct CPU *cpu, uint8_t val)
+void CPU::set_y(uint8_t val)
 {
-    cpu->y = val;
-    update_zn(cpu, cpu->y);
+    y = val;
+    update_zn(y);
 }
 
-static void set_s(struct CPU *cpu, uint8_t val)
+void CPU::set_s(uint8_t val)
 {
-    cpu->s = val;
+    s = val;
 }
 
-static void set_p(struct CPU *cpu, uint8_t val)
+void CPU::set_p(uint8_t val)
 {
-    cpu->p = val | U;
+    p = val | U;
 }
 
 static void push(struct CPU *cpu, uint8_t val)
 {
     cpu->write_byte(0x0100 | cpu->s, val);
-    set_s(cpu, cpu->s - 1);
+    cpu->set_s(cpu->s - 1);
 }
 
 static uint8_t pop(struct CPU *cpu)
 {
-    set_s(cpu, cpu->s + 1);
+    cpu->set_s(cpu->s + 1);
     return cpu->read_byte(0x0100 | cpu->s);
 }
 
@@ -490,8 +490,8 @@ static uint16_t pop_word(struct CPU *cpu)
 
 static void compare(struct CPU *cpu, uint8_t a, uint8_t b)
 {
-    set_flag(cpu, C, a >= b);
-    update_zn(cpu, a - b);
+    cpu->set_flag(C, a >= b);
+    cpu->update_zn(a - b);
 }
 
 static int branch_if(struct CPU *cpu, uint16_t addr, int cond)
@@ -499,7 +499,7 @@ static int branch_if(struct CPU *cpu, uint16_t addr, int cond)
     if (!cond)
         return 0;
 
-    set_pc(cpu, addr);
+    cpu->set_pc(addr);
     return 1;
 }
 
@@ -512,15 +512,15 @@ static void add_a_m(struct CPU *cpu, uint8_t data)
 {
     const uint16_t m = data;
     const uint16_t a = cpu->a;
-    const uint16_t c = get_flag(cpu, C);
+    const uint16_t c = cpu->get_flag(C);
     const uint16_t r = a + m + c;
     const int A = is_positive(a);
     const int M = is_positive(m);
     const int R = is_positive(r);
 
-    set_flag(cpu, C, r > 0xFF);
-    set_flag(cpu, V, (A && M && !R) || (!A && !M && R));
-    set_a(cpu, r);
+    cpu->set_flag(C, r > 0xFF);
+    cpu->set_flag(V, (A && M && !R) || (!A && !M && R));
+    cpu->set_a(r);
 }
 
 struct instruction {
@@ -551,17 +551,17 @@ static int execute(struct CPU *cpu, struct instruction inst)
 
     /* Load Accumulator with Memory: M -> A (N, Z) */
     case LDA:
-        set_a(cpu, cpu->read_byte(addr));
+        cpu->set_a(cpu->read_byte(addr));
         break;
 
     /* Load Index Register X from Memory: M -> X (N, Z) */
     case LDX:
-        set_x(cpu, cpu->read_byte(addr));
+        cpu->set_x(cpu->read_byte(addr));
         break;
 
     /* Load Index Register Y from Memory: M -> Y (N, Z) */
     case LDY:
-        set_y(cpu, cpu->read_byte(addr));
+        cpu->set_y(cpu->read_byte(addr));
         break;
 
     /* Store Accumulator in Memory: A -> M () */
@@ -581,32 +581,32 @@ static int execute(struct CPU *cpu, struct instruction inst)
 
     /* Transfer Accumulator to Index X: A -> X (N, Z) */
     case TAX:
-        set_x(cpu, cpu->a);
+        cpu->set_x(cpu->a);
         break;
 
     /* Transfer Accumulator to Index Y: A -> Y (N, Z) */
     case TAY:
-        set_y(cpu, cpu->a);
+        cpu->set_y(cpu->a);
         break;
 
     /* Transfer Stack Pointer to Index X: S -> X (N, Z) */
     case TSX:
-        set_x(cpu, cpu->s);
+        cpu->set_x(cpu->s);
         break;
 
     /* Transfer Index X to Accumulator: X -> A (N, Z) */
     case TXA:
-        set_a(cpu, cpu->x);
+        cpu->set_a(cpu->x);
         break;
 
     /* Transfer Index X to Stack Pointer: X -> S () */
     case TXS:
-        set_s(cpu, cpu->x);
+        cpu->set_s(cpu->x);
         break;
 
     /* Transfer Index Y to Accumulator: Y -> A (N, Z) */
     case TYA:
-        set_a(cpu, cpu->y);
+        cpu->set_a(cpu->y);
         break;
 
     /* Push Accumulator on Stack: () */
@@ -621,26 +621,26 @@ static int execute(struct CPU *cpu, struct instruction inst)
 
     /* Pull Accumulator from Stack: (N, Z) */
     case PLA:
-        set_a(cpu, pop(cpu));
+        cpu->set_a(pop(cpu));
         break;
 
     /* Pull Processor Status from Stack: (N, V, D, I, Z, C) */
     case PLP:
-        set_p(cpu, pop(cpu));
-        set_flag(cpu, B, 0);
+        cpu->set_p(pop(cpu));
+        cpu->set_flag(B, 0);
         break;
 
     /* Arithmetic Shift Left: C <- /M7...M0/ <- 0 (N, Z, C) */
     case ASL:
         if (mode == ACC) {
             const uint8_t data = cpu->a;
-            set_flag(cpu, C, data & 0x80);
-            set_a(cpu, data << 1);
+            cpu->set_flag(C, data & 0x80);
+            cpu->set_a(data << 1);
         } else {
             uint8_t data = cpu->read_byte(addr);
-            set_flag(cpu, C, data & 0x80);
+            cpu->set_flag(C, data & 0x80);
             data <<= 1;
-            update_zn(cpu, data);
+            cpu->update_zn(data);
             cpu->write_byte(addr, data);
         }
         break;
@@ -649,13 +649,13 @@ static int execute(struct CPU *cpu, struct instruction inst)
     case LSR:
         if (mode == ACC) {
             const uint8_t data = cpu->a;
-            set_flag(cpu, C, data & 0x01);
-            set_a(cpu, data >> 1);
+            cpu->set_flag(C, data & 0x01);
+            cpu->set_a(data >> 1);
         } else {
             uint8_t data = cpu->read_byte(addr);
-            set_flag(cpu, C, data & 0x01);
+            cpu->set_flag(C, data & 0x01);
             data >>= 1;
-            update_zn(cpu, data);
+            cpu->update_zn(data);
             cpu->write_byte(addr, data);
         }
         break;
@@ -663,16 +663,16 @@ static int execute(struct CPU *cpu, struct instruction inst)
     /* Rotate Left: C <- /M7...M0/ <- C (N, Z, C) */
     case ROL:
         if (mode == ACC) {
-            const uint8_t carry = get_flag(cpu, C);
+            const uint8_t carry = cpu->get_flag(C);
             const uint8_t data = cpu->a;
-            set_flag(cpu, C, data & 0x80);
-            set_a(cpu, (data << 1) | carry);
+            cpu->set_flag(C, data & 0x80);
+            cpu->set_a((data << 1) | carry);
         } else {
-            const uint8_t carry = get_flag(cpu, C);
+            const uint8_t carry = cpu->get_flag(C);
             uint8_t data = cpu->read_byte(addr);
-            set_flag(cpu, C, data & 0x80);
+            cpu->set_flag(C, data & 0x80);
             data = (data << 1) | carry;
-            update_zn(cpu, data);
+            cpu->update_zn(data);
             cpu->write_byte(addr, data);
         }
         break;
@@ -680,42 +680,42 @@ static int execute(struct CPU *cpu, struct instruction inst)
     /* Rotate Right: C -> /M7...M0/ -> C (N, Z, C) */
     case ROR:
         if (mode == ACC) {
-            const uint8_t carry = get_flag(cpu, C);
+            const uint8_t carry = cpu->get_flag(C);
             const uint8_t data = cpu->a;
-            set_flag(cpu, C, data & 0x01);
-            set_a(cpu, (data >> 1) | (carry << 7));
+            cpu->set_flag(C, data & 0x01);
+            cpu->set_a((data >> 1) | (carry << 7));
         } else {
-            const uint8_t carry = get_flag(cpu, C);
+            const uint8_t carry = cpu->get_flag(C);
             uint8_t data = cpu->read_byte(addr);
-            set_flag(cpu, C, data & 0x01);
+            cpu->set_flag(C, data & 0x01);
             data = (data >> 1) | (carry << 7);
-            update_zn(cpu, data);
+            cpu->update_zn(data);
             cpu->write_byte(addr, data);
         }
         break;
 
     /* AND Memory with Accumulator: A & M -> A (N, Z) */
     case AND:
-        set_a(cpu, cpu->a & cpu->read_byte(addr));
+        cpu->set_a(cpu->a & cpu->read_byte(addr));
         break;
 
     /* Exclusive OR Memory with Accumulator: A ^ M -> A (N, Z) */
     case EOR:
-        set_a(cpu, cpu->a ^ cpu->read_byte(addr));
+        cpu->set_a(cpu->a ^ cpu->read_byte(addr));
         break;
 
     /* OR Memory with Accumulator: A | M -> A (N, Z) */
     case ORA:
-        set_a(cpu, cpu->a | cpu->read_byte(addr));
+        cpu->set_a(cpu->a | cpu->read_byte(addr));
         break;
 
     /* Test Bits in Memory with Accumulator: A & M (N, V, Z) */
     case BIT:
         {
             const uint8_t data = cpu->read_byte(addr);
-            set_flag(cpu, Z, (cpu->a & data) == 0x00);
-            set_flag(cpu, N, data & N);
-            set_flag(cpu, V, data & V);
+            cpu->set_flag(Z, (cpu->a & data) == 0x00);
+            cpu->set_flag(N, data & N);
+            cpu->set_flag(V, data & V);
         }
         break;
 
@@ -752,50 +752,50 @@ static int execute(struct CPU *cpu, struct instruction inst)
     case INC:
         {
             const uint8_t data = cpu->read_byte(addr) + 1;
-            update_zn(cpu, data);
+            cpu->update_zn(data);
             cpu->write_byte(addr, data);
         }
         break;
 
     /* Increment Index Register X by One: X + 1 -> X (N, Z) */
     case INX:
-        set_x(cpu, cpu->x + 1);
+        cpu->set_x(cpu->x + 1);
         break;
 
     /* Increment Index Register Y by One: Y + 1 -> Y (N, Z) */
     case INY:
-        set_y(cpu, cpu->y + 1);
+        cpu->set_y(cpu->y + 1);
         break;
 
     /* Decrement Memory by One: M - 1 -> M (N, Z) */
     case DEC:
         {
             const uint8_t data = cpu->read_byte(addr) - 1;
-            update_zn(cpu, data);
+            cpu->update_zn(data);
             cpu->write_byte(addr, data);
         }
         break;
 
     /* Decrement Index Register X by One: X - 1 -> X (N, Z) */
     case DEX:
-        set_x(cpu, cpu->x - 1);
+        cpu->set_x(cpu->x - 1);
         break;
 
     /* Decrement Index Register Y by One: Y - 1 -> Y (N, Z) */
     case DEY:
-        set_y(cpu, cpu->y - 1);
+        cpu->set_y(cpu->y - 1);
         break;
 
     /* Jump Indirect: [PC + 1] -> PCL, [PC + 2] -> PCH () */
     case JMP:
-        set_pc(cpu, addr);
+        cpu->set_pc(addr);
         break;
 
     /* Jump to Subroutine: push(PC + 2), [PC + 1] -> PCL, [PC + 2] -> PCH () */
     case JSR:
         /* the last byte of the jump instruction */
         push_word(cpu, cpu->pc - 1);
-        set_pc(cpu, addr);
+        cpu->set_pc(addr);
         break;
 
     /* Break Command: push(PC + 2), [FFFE] -> PCL, [FFFF] ->PCH (I) */
@@ -804,96 +804,96 @@ static int execute(struct CPU *cpu, struct instruction inst)
         push_word(cpu, cpu->pc + 1);
         push(cpu, cpu->p | B);
 
-        set_flag(cpu, I, 1);
-        set_pc(cpu, cpu->read_word(0xFFFE));
+        cpu->set_flag(I, 1);
+        cpu->set_pc(cpu->read_word(0xFFFE));
         break;
 
     /* Return from Interrupt: pop(P) pop(PC) (N, V, D, I, Z, C) */
     case RTI:
-        set_p(cpu, pop(cpu));
-        set_flag(cpu, B, 0);
-        set_pc(cpu, pop_word(cpu));
+        cpu->set_p(pop(cpu));
+        cpu->set_flag(B, 0);
+        cpu->set_pc(pop_word(cpu));
         break;
 
     /* Return from Subroutine: pop(PC), PC + 1 -> PC () */
     case RTS:
-        set_pc(cpu, pop_word(cpu));
-        set_pc(cpu, cpu->pc + 1);
+        cpu->set_pc(pop_word(cpu));
+        cpu->set_pc(cpu->pc + 1);
         break;
 
     /* Branch on Carry Clear: () */
     case BCC:
-        branch_taken = branch_if(cpu, addr, get_flag(cpu, C) == 0);
+        branch_taken = branch_if(cpu, addr, cpu->get_flag(C) == 0);
         break;
 
     /* Branch on Carry Set: () */
     case BCS:
-        branch_taken = branch_if(cpu, addr, get_flag(cpu, C) == 1);
+        branch_taken = branch_if(cpu, addr, cpu->get_flag(C) == 1);
         break;
 
     /* Branch on Result Zero: () */
     case BEQ:
-        branch_taken = branch_if(cpu, addr, get_flag(cpu, Z) == 1);
+        branch_taken = branch_if(cpu, addr, cpu->get_flag(Z) == 1);
         break;
 
     /* Branch on Result Minus: () */
     case BMI:
-        branch_taken = branch_if(cpu, addr, get_flag(cpu, N) == 1);
+        branch_taken = branch_if(cpu, addr, cpu->get_flag(N) == 1);
         break;
 
     /* Branch on Result Not Zero: () */
     case BNE:
-        branch_taken = branch_if(cpu, addr, get_flag(cpu, Z) == 0);
+        branch_taken = branch_if(cpu, addr, cpu->get_flag(Z) == 0);
         break;
 
     /* Branch on Result Plus: () */
     case BPL:
-        branch_taken = branch_if(cpu, addr, get_flag(cpu, N) == 0);
+        branch_taken = branch_if(cpu, addr, cpu->get_flag(N) == 0);
         break;
 
     /* Branch on Overflow Clear: () */
     case BVC:
-        branch_taken = branch_if(cpu, addr, get_flag(cpu, V) == 0);
+        branch_taken = branch_if(cpu, addr, cpu->get_flag(V) == 0);
         break;
 
     /* Branch on Overflow Set: () */
     case BVS:
-        branch_taken = branch_if(cpu, addr, get_flag(cpu, V) == 1);
+        branch_taken = branch_if(cpu, addr, cpu->get_flag(V) == 1);
         break;
 
     /* Clear Carry Flag: 0 -> C (C) */
     case CLC:
-        set_flag(cpu, C, 0);
+        cpu->set_flag(C, 0);
         break;
 
     /* Clear Decimal Mode: 0 -> D (D) */
     case CLD:
-        set_flag(cpu, D, 0);
+        cpu->set_flag(D, 0);
         break;
 
     /* Clear Interrupt Disable: 0 -> I (I) */
     case CLI:
-        set_flag(cpu, I, 0);
+        cpu->set_flag(I, 0);
         break;
 
     /* Clear Overflow Flag: 0 -> V (V) */
     case CLV:
-        set_flag(cpu, V, 0);
+        cpu->set_flag(V, 0);
         break;
 
     /* Set Carry Flag: 1 -> C (C) */
     case SEC:
-        set_flag(cpu, C, 1);
+        cpu->set_flag(C, 1);
         break;
 
     /* Set Decimal Mode: 1 -> D (D) */
     case SED:
-        set_flag(cpu, D, 1);
+        cpu->set_flag(D, 1);
         break;
 
     /* Set Interrupt Disable: 1 -> I (I) */
     case SEI:
-        set_flag(cpu, I, 1);
+        cpu->set_flag(I, 1);
         break;
 
     /* No Operation: () */
@@ -904,8 +904,8 @@ static int execute(struct CPU *cpu, struct instruction inst)
 
     /* Load Accumulator and Index Register X from Memory: M -> A, X (N, Z) */
     case LAX:
-        set_a(cpu, cpu->read_byte(addr));
-        set_x(cpu, cpu->a);
+        cpu->set_a(cpu->read_byte(addr));
+        cpu->set_x(cpu->a);
         break;
 
     /* Store Accumulator AND Index Register X in Memory: A & X -> M () */
@@ -917,7 +917,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
     case DCP:
         {
             const uint8_t data = cpu->read_byte(addr) - 1;
-            update_zn(cpu, data);
+            cpu->update_zn(data);
             cpu->write_byte(addr, data);
             compare(cpu, cpu->a, data);
         }
@@ -928,7 +928,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
     case ISC:
         {
             const uint8_t data = cpu->read_byte(addr) + 1;
-            update_zn(cpu, data);
+            cpu->update_zn(data);
             cpu->write_byte(addr, data);
             add_a_m(cpu, ~data);
         }
@@ -939,24 +939,24 @@ static int execute(struct CPU *cpu, struct instruction inst)
     case SLO:
         {
             uint8_t data = cpu->read_byte(addr);
-            set_flag(cpu, C, data & 0x80);
+            cpu->set_flag(C, data & 0x80);
             data <<= 1;
-            update_zn(cpu, data);
+            cpu->update_zn(data);
             cpu->write_byte(addr, data);
-            set_a(cpu, cpu->a | data);
+            cpu->set_a(cpu->a | data);
         }
         break;
 
     /* Rotate Left then AND with Accumulator: C <- /M7...M0/ <- C, A & M -> A (N, Z, C) */
     case RLA:
         {
-            const uint8_t carry = get_flag(cpu, C);
+            const uint8_t carry = cpu->get_flag(C);
             uint8_t data = cpu->read_byte(addr);
-            set_flag(cpu, C, data & 0x80);
+            cpu->set_flag(C, data & 0x80);
             data = (data << 1) | carry;
-            update_zn(cpu, data);
+            cpu->update_zn(data);
             cpu->write_byte(addr, data);
-            set_a(cpu, cpu->a & data);
+            cpu->set_a(cpu->a & data);
         }
         break;
 
@@ -965,11 +965,11 @@ static int execute(struct CPU *cpu, struct instruction inst)
     case SRE:
         {
             uint8_t data = cpu->read_byte(addr);
-            set_flag(cpu, C, data & 0x01);
+            cpu->set_flag(C, data & 0x01);
             data >>= 1;
-            update_zn(cpu, data);
+            cpu->update_zn(data);
             cpu->write_byte(addr, data);
-            set_a(cpu, cpu->a ^ data);
+            cpu->set_a(cpu->a ^ data);
         }
         break;
 
@@ -977,11 +977,11 @@ static int execute(struct CPU *cpu, struct instruction inst)
      * C -> /M7...M0/ -> C, A + M + C -> A (N, V, Z, C) */
     case RRA:
         {
-            const uint8_t carry = get_flag(cpu, C);
+            const uint8_t carry = cpu->get_flag(C);
             uint8_t data = cpu->read_byte(addr);
-            set_flag(cpu, C, data & 0x01);
+            cpu->set_flag(C, data & 0x01);
             data = (data >> 1) | (carry << 7);
-            update_zn(cpu, data);
+            cpu->update_zn(data);
             cpu->write_byte(addr, data);
             add_a_m(cpu, data);
         }
@@ -996,25 +996,25 @@ static int execute(struct CPU *cpu, struct instruction inst)
 
 void CPU::PowerUp()
 {
-    set_pc(this, this->read_word(0xFFFC));
+    set_pc(read_word(0xFFFC));
 
-    set_a(this, 0x00);
-    set_x(this, 0x00);
-    set_y(this, 0x00);
-    set_s(this, 0xFD);
-    set_p(this, 0x00 | I);
+    set_a(0x00);
+    set_x(0x00);
+    set_y(0x00);
+    set_s(0xFD);
+    set_p(0x00 | I);
 
     apu.PowerUp();
 }
 
 void CPU::Reset()
 {
-    set_pc(this, this->read_word(0xFFFC));
+    set_pc(read_word(0xFFFC));
 
-    set_s(this, this->s - 3);
-    set_flag(this, I, 1);
+    set_s(s - 3);
+    set_flag(I, 1);
 
-    /* takes cycles */
+    // takes cycles
     cycles = 8;
 
     apu.Reset();
@@ -1022,17 +1022,17 @@ void CPU::Reset()
 
 void CPU::HandleIRQ()
 {
-    if (get_flag(this, I))
-        /* interrupt is not allowed */
+    if (get_flag(I))
+        // interrupt is not allowed
         return;
 
     push_word(this, pc);
 
-    set_flag(this, B, 0);
-    set_flag(this, I, 1);
+    set_flag(B, 0);
+    set_flag(I, 1);
     push(this, p);
 
-    set_pc(this, this->read_word(0xFFFE));
+    set_pc(read_word(0xFFFE));
     cycles = 7;
 }
 
@@ -1040,11 +1040,11 @@ void CPU::HandleNMI()
 {
     push_word(this, this->pc);
 
-    set_flag(this, B, 0);
-    set_flag(this, I, 1);
+    set_flag(B, 0);
+    set_flag(I, 1);
     push(this, p);
 
-    set_pc(this, this->read_word(0xFFFA));
+    set_pc(read_word(0xFFFA));
     cycles = 8;
 }
 

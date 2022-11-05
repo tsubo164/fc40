@@ -39,6 +39,7 @@ struct CPU {
     void HandleNMI();
     void Clock();
 
+    // read and write
     void write_byte(uint16_t addr, uint8_t data);
     uint8_t read_byte(uint16_t addr);
     uint16_t read_word(uint16_t addr);
@@ -46,10 +47,20 @@ struct CPU {
     uint16_t peek_word(uint16_t addr) const;
     uint8_t fetch();
     uint16_t fetch_word();
-
+    // address
     uint16_t abs_indirect(uint16_t abs) const;
     uint16_t zp_indirect(uint8_t zp) const;
     uint16_t fetch_address(int mode, int *page_crossed);
+    // flags and registers
+    void set_pc(uint16_t addr);
+    void set_flag(uint8_t flag, uint8_t val);
+    uint8_t get_flag(uint8_t flag) const;
+    uint8_t update_zn(uint8_t val);
+    void set_a(uint8_t val);
+    void set_x(uint8_t val);
+    void set_y(uint8_t val);
+    void set_s(uint8_t val);
+    void set_p(uint8_t val);
 };
 
 extern void set_controller_input(struct CPU *cpu, uint8_t id, uint8_t input);
