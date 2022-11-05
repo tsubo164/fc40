@@ -207,7 +207,7 @@ static const char addr_mode_name_table[][4] = {
 };
 
 static const uint8_t addr_mode_table[] = {
-/*       +00  +01  +02  +03  +04  +05  +06  +07  +08  +09  +0A  +0B  +0C  +0D  +0E  +0F */
+//       +00  +01  +02  +03  +04  +05  +06  +07  +08  +09  +0A  +0B  +0C  +0D  +0E  +0F
 /*0x00*/ IMP, IZX, IMP, IZX, ZPG, ZPG, ZPG, ZPG, IMP, IMM, ACC, IMM, ABS, ABS, ABS, ABS,
 /*0x10*/ REL, IZY, IMP, IZY, ZPX, ZPX, ZPX, ZPX, IMP, ABY, IMP, ABY, ABX, ABX, ABX, ABX,
 /*0x20*/ ABS, IZX, IMP, IZX, ZPG, ZPG, ZPG, ZPG, IMP, IMM, ACC, IMM, ABS, ABS, ABS, ABS,
@@ -462,48 +462,48 @@ void CPU::set_p(uint8_t val)
     p = val | U;
 }
 
-static void push(struct CPU *cpu, uint8_t val)
+void CPU::push(uint8_t val)
 {
-    cpu->write_byte(0x0100 | cpu->s, val);
-    cpu->set_s(cpu->s - 1);
+    write_byte(0x0100 | s, val);
+    set_s(s - 1);
 }
 
-static uint8_t pop(struct CPU *cpu)
+uint8_t CPU::pop()
 {
-    cpu->set_s(cpu->s + 1);
-    return cpu->read_byte(0x0100 | cpu->s);
+    set_s(s + 1);
+    return read_byte(0x0100 | s);
 }
 
-static void push_word(struct CPU *cpu, uint16_t val)
+void CPU::push_word(uint16_t val)
 {
-    push(cpu, val >> 8);
-    push(cpu, val);
+    push(val >> 8);
+    push(val);
 }
 
-static uint16_t pop_word(struct CPU *cpu)
+uint16_t CPU::pop_word()
 {
-    const uint16_t lo = pop(cpu);
-    const uint16_t hi = pop(cpu);
+    const uint16_t lo = pop();
+    const uint16_t hi = pop();
 
     return (hi << 8) | lo;
 }
 
-static void compare(struct CPU *cpu, uint8_t a, uint8_t b)
+void CPU::compare(uint8_t a, uint8_t b)
 {
-    cpu->set_flag(C, a >= b);
-    cpu->update_zn(a - b);
+    set_flag(C, a >= b);
+    update_zn(a - b);
 }
 
-static int branch_if(struct CPU *cpu, uint16_t addr, int cond)
+bool CPU::branch_if(uint16_t addr, bool cond)
 {
     if (!cond)
-        return 0;
+        return false;
 
-    cpu->set_pc(addr);
-    return 1;
+    set_pc(addr);
+    return true;
 }
 
-static int is_positive(uint8_t val)
+static bool is_positive(uint8_t val)
 {
     return !(val & 0x80);
 }
@@ -611,22 +611,22 @@ static int execute(struct CPU *cpu, struct instruction inst)
 
     /* Push Accumulator on Stack: () */
     case PHA:
-        push(cpu, cpu->a);
+        cpu->push(cpu->a);
         break;
 
     /* Push Processor Status on Stack: () */
     case PHP:
-        push(cpu, cpu->p | B);
+        cpu->push(cpu->p | B);
         break;
 
     /* Pull Accumulator from Stack: (N, Z) */
     case PLA:
-        cpu->set_a(pop(cpu));
+        cpu->set_a(cpu->pop());
         break;
 
     /* Pull Processor Status from Stack: (N, V, D, I, Z, C) */
     case PLP:
-        cpu->set_p(pop(cpu));
+        cpu->set_p(cpu->pop());
         cpu->set_flag(B, 0);
         break;
 
@@ -735,17 +735,17 @@ static int execute(struct CPU *cpu, struct instruction inst)
 
     /* Compare Memory and Accumulator: A - M (N, Z, C) */
     case CMP:
-        compare(cpu, cpu->a, cpu->read_byte(addr));
+        cpu->compare(cpu->a, cpu->read_byte(addr));
         break;
 
     /* Compare Index Register X to Memory: X - M (N, Z, C) */
     case CPX:
-        compare(cpu, cpu->x, cpu->read_byte(addr));
+        cpu->compare(cpu->x, cpu->read_byte(addr));
         break;
 
     /* Compare Index Register Y to Memory: Y - M (N, Z, C) */
     case CPY:
-        compare(cpu, cpu->y, cpu->read_byte(addr));
+        cpu->compare(cpu->y, cpu->read_byte(addr));
         break;
 
     /* Increment Memory by One: M + 1 -> M (N, Z) */
@@ -794,15 +794,15 @@ static int execute(struct CPU *cpu, struct instruction inst)
     /* Jump to Subroutine: push(PC + 2), [PC + 1] -> PCL, [PC + 2] -> PCH () */
     case JSR:
         /* the last byte of the jump instruction */
-        push_word(cpu, cpu->pc - 1);
+        cpu->push_word(cpu->pc - 1);
         cpu->set_pc(addr);
         break;
 
     /* Break Command: push(PC + 2), [FFFE] -> PCL, [FFFF] ->PCH (I) */
     case BRK:
         /* an extra byte of spacing for a break mark */
-        push_word(cpu, cpu->pc + 1);
-        push(cpu, cpu->p | B);
+        cpu->push_word(cpu->pc + 1);
+        cpu->push(cpu->p | B);
 
         cpu->set_flag(I, 1);
         cpu->set_pc(cpu->read_word(0xFFFE));
@@ -810,55 +810,55 @@ static int execute(struct CPU *cpu, struct instruction inst)
 
     /* Return from Interrupt: pop(P) pop(PC) (N, V, D, I, Z, C) */
     case RTI:
-        cpu->set_p(pop(cpu));
+        cpu->set_p(cpu->pop());
         cpu->set_flag(B, 0);
-        cpu->set_pc(pop_word(cpu));
+        cpu->set_pc(cpu->pop_word());
         break;
 
     /* Return from Subroutine: pop(PC), PC + 1 -> PC () */
     case RTS:
-        cpu->set_pc(pop_word(cpu));
+        cpu->set_pc(cpu->pop_word());
         cpu->set_pc(cpu->pc + 1);
         break;
 
     /* Branch on Carry Clear: () */
     case BCC:
-        branch_taken = branch_if(cpu, addr, cpu->get_flag(C) == 0);
+        branch_taken = cpu->branch_if(addr, cpu->get_flag(C) == 0);
         break;
 
     /* Branch on Carry Set: () */
     case BCS:
-        branch_taken = branch_if(cpu, addr, cpu->get_flag(C) == 1);
+        branch_taken = cpu->branch_if(addr, cpu->get_flag(C) == 1);
         break;
 
     /* Branch on Result Zero: () */
     case BEQ:
-        branch_taken = branch_if(cpu, addr, cpu->get_flag(Z) == 1);
+        branch_taken = cpu->branch_if(addr, cpu->get_flag(Z) == 1);
         break;
 
     /* Branch on Result Minus: () */
     case BMI:
-        branch_taken = branch_if(cpu, addr, cpu->get_flag(N) == 1);
+        branch_taken = cpu->branch_if(addr, cpu->get_flag(N) == 1);
         break;
 
     /* Branch on Result Not Zero: () */
     case BNE:
-        branch_taken = branch_if(cpu, addr, cpu->get_flag(Z) == 0);
+        branch_taken = cpu->branch_if(addr, cpu->get_flag(Z) == 0);
         break;
 
     /* Branch on Result Plus: () */
     case BPL:
-        branch_taken = branch_if(cpu, addr, cpu->get_flag(N) == 0);
+        branch_taken = cpu->branch_if(addr, cpu->get_flag(N) == 0);
         break;
 
     /* Branch on Overflow Clear: () */
     case BVC:
-        branch_taken = branch_if(cpu, addr, cpu->get_flag(V) == 0);
+        branch_taken = cpu->branch_if(addr, cpu->get_flag(V) == 0);
         break;
 
     /* Branch on Overflow Set: () */
     case BVS:
-        branch_taken = branch_if(cpu, addr, cpu->get_flag(V) == 1);
+        branch_taken = cpu->branch_if(addr, cpu->get_flag(V) == 1);
         break;
 
     /* Clear Carry Flag: 0 -> C (C) */
@@ -919,7 +919,7 @@ static int execute(struct CPU *cpu, struct instruction inst)
             const uint8_t data = cpu->read_byte(addr) - 1;
             cpu->update_zn(data);
             cpu->write_byte(addr, data);
-            compare(cpu, cpu->a, data);
+            cpu->compare(cpu->a, data);
         }
         break;
 
@@ -1026,11 +1026,11 @@ void CPU::HandleIRQ()
         // interrupt is not allowed
         return;
 
-    push_word(this, pc);
+    push_word(pc);
 
     set_flag(B, 0);
     set_flag(I, 1);
-    push(this, p);
+    push(p);
 
     set_pc(read_word(0xFFFE));
     cycles = 7;
@@ -1038,11 +1038,11 @@ void CPU::HandleIRQ()
 
 void CPU::HandleNMI()
 {
-    push_word(this, this->pc);
+    push_word(pc);
 
     set_flag(B, 0);
     set_flag(I, 1);
-    push(this, p);
+    push(p);
 
     set_pc(read_word(0xFFFA));
     cycles = 8;

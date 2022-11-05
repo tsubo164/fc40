@@ -61,6 +61,13 @@ struct CPU {
     void set_y(uint8_t val);
     void set_s(uint8_t val);
     void set_p(uint8_t val);
+    // push and pop
+    void push(uint8_t val);
+    uint8_t pop();
+    void push_word(uint16_t val);
+    uint16_t pop_word();
+    void compare(uint8_t a, uint8_t b);
+    bool branch_if(uint16_t addr, bool cond);
 };
 
 extern void set_controller_input(struct CPU *cpu, uint8_t id, uint8_t input);
