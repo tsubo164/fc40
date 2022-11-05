@@ -9,12 +9,12 @@ static uint16_t abs_indirect(const struct CPU *cpu, uint16_t abs)
 {
     if ((abs & 0x00FF) == 0x00FF) {
         // emulate page boundary hardware bug
-        return (peek_cpu_data(cpu, abs & 0xFF00) << 8) | peek_cpu_data(cpu, abs);
+        return (cpu->PeekData(abs & 0xFF00) << 8) | cpu->PeekData(abs);
     }
     else {
         // normal behavior
-        const uint16_t lo = peek_cpu_data(cpu, abs);
-        const uint16_t hi = peek_cpu_data(cpu, abs + 1);
+        const uint16_t lo = cpu->PeekData(abs);
+        const uint16_t hi = cpu->PeekData(abs + 1);
 
         return (hi << 8) | lo;
     }
@@ -22,16 +22,16 @@ static uint16_t abs_indirect(const struct CPU *cpu, uint16_t abs)
 
 static uint16_t zp_indirect(const struct CPU *cpu, uint8_t zp)
 {
-    const uint16_t lo = peek_cpu_data(cpu, zp & 0xFF);
-    const uint16_t hi = peek_cpu_data(cpu, (zp + 1) & 0xFF);
+    const uint16_t lo = cpu->PeekData(zp & 0xFF);
+    const uint16_t hi = cpu->PeekData((zp + 1) & 0xFF);
 
     return (hi << 8) | lo;
 }
 
 void PrintCpuStatus(const struct CPU *cpu)
 {
-    struct cpu_status stat;
-    get_cpu_status(cpu, &stat);
+    CpuStatus stat;
+    cpu->GetStatus(stat);
 
     const uint16_t pc = stat.pc;
     const uint8_t  a = stat.a;
@@ -62,41 +62,41 @@ void PrintCpuStatus(const struct CPU *cpu)
 
         const std::string inst = inst_name;
         if (inst != "JMP" && inst != "JSR") {
-            printf(" = %02X%n", peek_cpu_data(cpu, wd), &n);
+            printf(" = %02X%n", cpu->PeekData(wd), &n);
             N += n;
         }
     }
     else if (mode_name == "ABX") {
         printf("%02X %02X  %s $%04X,X @ %04X = %02X%n",
-                lo, hi, inst_name, wd, wd + x, peek_cpu_data(cpu, wd + x), &n);
+                lo, hi, inst_name, wd, wd + x, cpu->PeekData(wd + x), &n);
         N += n;
     }
     else if (mode_name == "ABY") {
         printf("%02X %02X  %s $%04X,Y @ %04X = %02X%n",
                 lo, hi, inst_name, wd, (wd + y) & 0xFFFF,
-                peek_cpu_data(cpu, (wd + y) & 0xFFFF), &n);
+                cpu->PeekData((wd + y) & 0xFFFF), &n);
         N += n;
     }
     else if (mode_name == "IZX") {
         const uint16_t addr = zp_indirect(cpu, lo + x);
         printf("%02X     %s ($%02X,X) @ %02X = %04X = %02X%n",
-                lo, inst_name, lo, (lo + x) & 0xFF, addr, peek_cpu_data(cpu, addr), &n);
+                lo, inst_name, lo, (lo + x) & 0xFF, addr, cpu->PeekData(addr), &n);
         N += n;
     }
     else if (mode_name == "IZY") {
         const uint16_t addr = zp_indirect(cpu, lo);
         printf("%02X     %s ($%02X),Y = %04X @ %04X = %02X%n",
-                lo, inst_name, lo, addr, (addr + y) & 0xFFFF, peek_cpu_data(cpu, addr + y), &n);
+                lo, inst_name, lo, addr, (addr + y) & 0xFFFF, cpu->PeekData(addr + y), &n);
         N += n;
     }
     else if (mode_name == "ZPX") {
         printf("%02X     %s $%02X,X @ %02X = %02X%n",
-                lo, inst_name, lo, (lo + x) & 0xFF, peek_cpu_data(cpu, (lo + x) & 0xFF), &n);
+                lo, inst_name, lo, (lo + x) & 0xFF, cpu->PeekData((lo + x) & 0xFF), &n);
         N += n;
     }
     else if (mode_name == "ZPY") {
         printf("%02X     %s $%02X,Y @ %02X = %02X%n",
-                lo, inst_name, lo, (lo + y) & 0xFF, peek_cpu_data(cpu, (lo + y) & 0xFF), &n);
+                lo, inst_name, lo, (lo + y) & 0xFF, cpu->PeekData((lo + y) & 0xFF), &n);
         N += n;
     }
     else if (mode_name == "REL") {
@@ -109,7 +109,7 @@ void PrintCpuStatus(const struct CPU *cpu)
     }
     else if (mode_name == "ZPG") {
         printf("%02X     %s $%02X = %02X %n",
-                lo, inst_name, lo, peek_cpu_data(cpu, lo), &n);
+                lo, inst_name, lo, cpu->PeekData(lo), &n);
         N += n;
     }
     else if (mode_name == "ACC") {

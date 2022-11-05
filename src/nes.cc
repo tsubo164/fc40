@@ -119,7 +119,7 @@ void NES::clock_dma()
 
     if (clock_ % 2 == 0) {
         // read
-        dma_data_ = cpu.ReadData((dma_page_ << 8) | dma_addr_);
+        dma_data_ = cpu.PeekData((dma_page_ << 8) | dma_addr_);
     }
     else {
         // write

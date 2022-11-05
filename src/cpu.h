@@ -15,6 +15,16 @@ struct Instruction {
     uint8_t cycles = 0;
 };
 
+struct CpuStatus {
+    uint16_t pc = 0;
+    uint8_t  a = 0, x = 0, y = 0, p = 0, s = 0;
+    uint8_t  lo = 0, hi = 0;
+    uint16_t wd = 0;
+    uint8_t  code = 0;
+    char inst_name[4] = {0};
+    char mode_name[4] = {0};
+};
+
 struct CPU {
     Cartridge *cart = nullptr;
     PPU *ppu;
@@ -45,11 +55,13 @@ struct CPU {
     void HandleNMI();
     void Clock();
 
+    // DMA
     void InputController(uint8_t controller_id, uint8_t input);
     bool IsSuspended() const;
     void Resume();
     uint8_t GetDmaPage() const;
-    uint8_t ReadData(uint16_t addr) const;
+    uint8_t PeekData(uint16_t addr) const;
+    void GetStatus(CpuStatus &stat) const;
 
     // read and write
     void write_byte(uint16_t addr, uint8_t data);
@@ -84,19 +96,6 @@ struct CPU {
     // instruction
     int execute(Instruction inst);
 };
-
-struct cpu_status {
-    uint16_t pc;
-    uint8_t  a, x, y, p, s;
-    uint8_t  lo, hi;
-    uint16_t wd;
-    uint8_t  code;
-    char inst_name[4];
-    char mode_name[4];
-};
-
-extern void get_cpu_status(const struct CPU *cpu, struct cpu_status *stat);
-extern uint8_t peek_cpu_data(const struct CPU *cpu, uint16_t addr);
 
 } // namespace
 

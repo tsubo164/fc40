@@ -1079,32 +1079,27 @@ uint8_t CPU::GetDmaPage() const
     return dma_page;
 }
 
-uint8_t CPU::ReadData(uint16_t addr) const
+uint8_t CPU::PeekData(uint16_t addr) const
 {
     return peek_byte(addr);
 }
 
-void get_cpu_status(const struct CPU *cpu, struct cpu_status *stat)
+void CPU::GetStatus(CpuStatus &stat) const
 {
-    stat->pc = cpu->pc;
-    stat->a  = cpu->a;
-    stat->x  = cpu->x;
-    stat->y  = cpu->y;
-    stat->p  = cpu->p;
-    stat->s  = cpu->s;
+    stat.pc = pc;
+    stat.a  = a;
+    stat.x  = x;
+    stat.y  = y;
+    stat.p  = p;
+    stat.s  = s;
 
-    stat->code = cpu->peek_byte(stat->pc + 0);
-    stat->lo   = cpu->peek_byte(stat->pc + 1);
-    stat->hi   = cpu->peek_byte(stat->pc + 2);
-    stat->wd   = (stat->hi << 8) | stat->lo;
+    stat.code = peek_byte(stat.pc + 0);
+    stat.lo   = peek_byte(stat.pc + 1);
+    stat.hi   = peek_byte(stat.pc + 2);
+    stat.wd   = (stat.hi << 8) | stat.lo;
 
-    strcpy(stat->inst_name, opcode_name_table[stat->code]);
-    strcpy(stat->mode_name, addr_mode_name_table[addr_mode_table[stat->code]]);
-}
-
-uint8_t peek_cpu_data(const struct CPU *cpu, uint16_t addr)
-{
-    return cpu->peek_byte(addr);
+    strcpy(stat.inst_name, opcode_name_table[stat.code]);
+    strcpy(stat.mode_name, addr_mode_name_table[addr_mode_table[stat.code]]);
 }
 
 } // namespace
