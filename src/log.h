@@ -3,9 +3,9 @@
 
 namespace nes {
 
-struct CPU;
+class CPU;
 
-extern void PrintCpuStatus(const struct CPU *cpu);
+extern void PrintCpuStatus(const CPU *cpu);
 
 } // namespace
 

@@ -18,8 +18,8 @@ public:
 
     FrameBuffer fbuf;
     FrameBuffer patt;
-    struct CPU cpu = {0};
     PPU ppu = {fbuf};
+    CPU cpu = {ppu};
 
     void PowerUp();
     void ShutDown();

@@ -5,7 +5,7 @@
 
 namespace nes {
 
-static uint16_t abs_indirect(const struct CPU *cpu, uint16_t abs)
+static uint16_t abs_indirect(const CPU *cpu, uint16_t abs)
 {
     if ((abs & 0x00FF) == 0x00FF) {
         // emulate page boundary hardware bug
@@ -20,7 +20,7 @@ static uint16_t abs_indirect(const struct CPU *cpu, uint16_t abs)
     }
 }
 
-static uint16_t zp_indirect(const struct CPU *cpu, uint8_t zp)
+static uint16_t zp_indirect(const CPU *cpu, uint8_t zp)
 {
     const uint16_t lo = cpu->PeekData(zp & 0xFF);
     const uint16_t hi = cpu->PeekData((zp + 1) & 0xFF);
@@ -28,7 +28,7 @@ static uint16_t zp_indirect(const struct CPU *cpu, uint8_t zp)
     return (hi << 8) | lo;
 }
 
-void PrintCpuStatus(const struct CPU *cpu)
+void PrintCpuStatus(const CPU *cpu)
 {
     CpuStatus stat;
     cpu->GetStatus(stat);

@@ -30,7 +30,7 @@ void NES::PowerUp()
     LoadPatternTable(patt, cart_);
 
     // CPU and PPU
-    cpu.ppu = &ppu;
+    //cpu.ppu = &ppu;
     cpu.PowerUp();
     ppu.PowerUp();
 }
@@ -42,7 +42,7 @@ void NES::ShutDown()
 void NES::InsertCartridge(Cartridge *cart)
 {
     cart_ = cart;
-    cpu.cart = cart_;
+    cpu.SetCartride(cart_);
     ppu.SetCartride(cart_);
 }
 

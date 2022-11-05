@@ -23,28 +23,28 @@ void CPU::write_byte(uint16_t addr, uint8_t data)
         wram[addr & 0x07FF] = data;
     }
     else if (addr == 0x2000) {
-        ppu->WriteControl(data);
+        ppu_.WriteControl(data);
     }
     else if (addr == 0x2001) {
-        ppu->WriteMask(data);
+        ppu_.WriteMask(data);
     }
     else if (addr == 0x2002) {
         // PPU status not writable
     }
     else if (addr == 0x2003) {
-        ppu->WriteOamAddress(data);
+        ppu_.WriteOamAddress(data);
     }
     else if (addr == 0x2004) {
-        ppu->WriteOamData(data);
+        ppu_.WriteOamData(data);
     }
     else if (addr == 0x2005) {
-        ppu->WriteScroll(data);
+        ppu_.WriteScroll(data);
     }
     else if (addr == 0x2006) {
-        ppu->WriteAddress(data);
+        ppu_.WriteAddress(data);
     }
     else if (addr == 0x2007) {
-        ppu->WriteData(data);
+        ppu_.WriteData(data);
     }
     else if (addr >= 0x2008 && addr <= 0x3FFF) {
         // PPU register mirrored every 8
@@ -108,7 +108,7 @@ void CPU::write_byte(uint16_t addr, uint8_t data)
         apu.WriteFrameCounter(data);
     }
     else {
-        cart->WriteProg(addr, data);
+        cart_->WriteProg(addr, data);
     }
 }
 
@@ -124,13 +124,13 @@ uint8_t CPU::read_byte(uint16_t addr)
         // PPU mask not readable
     }
     else if (addr == 0x2002) {
-        return ppu->ReadStatus();
+        return ppu_.ReadStatus();
     }
     else if (addr == 0x2003) {
         // PPU oam address not readable
     }
     else if (addr == 0x2004) {
-        return ppu->ReadOamData();
+        return ppu_.ReadOamData();
     }
     else if (addr == 0x2005) {
         // PPU scroll not readable
@@ -139,7 +139,7 @@ uint8_t CPU::read_byte(uint16_t addr)
         // PPU address not readable
     }
     else if (addr == 0x2007) {
-        return ppu->ReadData();
+        return ppu_.ReadData();
     }
     else if (addr >= 0x2008 && addr <= 0x3FFF) {
         // PPU register mirrored every 8
@@ -152,7 +152,7 @@ uint8_t CPU::read_byte(uint16_t addr)
         return data;
     }
     else {
-        return cart->ReadProg(addr);
+        return cart_->ReadProg(addr);
     }
 
     return 0;
@@ -161,7 +161,7 @@ uint8_t CPU::read_byte(uint16_t addr)
 uint8_t CPU::peek_byte(uint16_t addr) const
 {
     if (addr == 0x2002) {
-        return ppu->PeekStatus();
+        return ppu_.PeekStatus();
     }
     else if (addr >= 0x4016 && addr <= 0x4017) {
         const int id = addr & 0x001;
@@ -988,6 +988,11 @@ int CPU::execute(Instruction inst)
     return inst.cycles + page_crossed + branch_taken;
 }
 
+void CPU::SetCartride(Cartridge *cart)
+{
+    cart_ = cart;
+}
+
 void CPU::PowerUp()
 {
     set_pc(read_word(0xFFFC));
@@ -1100,6 +1105,16 @@ void CPU::GetStatus(CpuStatus &stat) const
 
     strcpy(stat.inst_name, opcode_name_table[stat.code]);
     strcpy(stat.mode_name, addr_mode_name_table[addr_mode_table[stat.code]]);
+}
+
+void CPU::SetPC(uint16_t addr)
+{
+    pc = addr;
+}
+
+int CPU::GetCycles() const
+{
+    return cycles;
 }
 
 } // namespace

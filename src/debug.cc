@@ -7,13 +7,13 @@
 
 namespace nes {
 
-void LogCpuStatus(struct CPU *cpu, int max_lines)
+void LogCpuStatus(CPU *cpu, int max_lines)
 {
     uint16_t log_line = 0;
-    cpu->pc = 0xC000;
+    cpu->SetPC(0xC000);
 
     while (log_line < max_lines) {
-        if (cpu->cycles == 0) {
+        if (cpu->GetCycles() == 0) {
             PrintCpuStatus(cpu);
             log_line++;
         }
