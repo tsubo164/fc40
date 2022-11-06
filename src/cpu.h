@@ -59,26 +59,26 @@ public:
 private:
     Cartridge *cart_ = nullptr;
     PPU &ppu_;
-    APU apu;
-    int cycles = 0;
-    int suspended = 0;
+    APU apu_;
+    int cycles_ = 0;
+    bool suspended_ = false;
 
     // registers
-    uint8_t a = 0;
-    uint8_t x = 0;
-    uint8_t y = 0;
-    uint8_t s = 0; // stack pointer
-    uint8_t p = 0; // processor status
-    uint16_t pc = 0;
+    uint8_t a_ = 0;
+    uint8_t x_ = 0;
+    uint8_t y_ = 0;
+    uint8_t s_ = 0; // stack pointer
+    uint8_t p_ = 0; // processor status
+    uint16_t pc_ = 0;
 
     // 4 2KB ram. 3 of them are mirroring
-    uint8_t wram[2048] = {0};
+    uint8_t wram_[2048] = {0};
 
-    uint8_t controller_input[2] = {0};
-    uint8_t controller_state[2] = {0};
+    uint8_t controller_input_[2] = {0};
+    uint8_t controller_state_[2] = {0};
 
     // dma
-    uint8_t dma_page = 0;
+    uint8_t dma_page_ = 0;
 
     // read and write
     void write_byte(uint16_t addr, uint8_t data);

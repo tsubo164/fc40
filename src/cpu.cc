@@ -19,7 +19,7 @@ enum status_flag {
 void CPU::write_byte(uint16_t addr, uint8_t data)
 {
     if (addr >= 0x0000 && addr <= 0x1FFF) {
-        wram[addr & 0x07FF] = data;
+        wram_[addr & 0x07FF] = data;
     }
     else if (addr == 0x2000) {
         ppu_.WriteControl(data);
@@ -50,61 +50,61 @@ void CPU::write_byte(uint16_t addr, uint8_t data)
         write_byte(0x2000 | (addr & 0x007), data);
     }
     else if (addr == 0x4000) {
-        apu.WriteSquare1Volume(data);
+        apu_.WriteSquare1Volume(data);
     }
     else if (addr == 0x4001) {
-        apu.WriteSquare1Sweep(data);
+        apu_.WriteSquare1Sweep(data);
     }
     else if (addr == 0x4002) {
-        apu.WriteSquare1Lo(data);
+        apu_.WriteSquare1Lo(data);
     }
     else if (addr == 0x4003) {
-        apu.WriteSquare1Hi(data);
+        apu_.WriteSquare1Hi(data);
     }
     else if (addr == 0x4004) {
-        apu.WriteSquare2Volume(data);
+        apu_.WriteSquare2Volume(data);
     }
     else if (addr == 0x4005) {
-        apu.WriteSquare2Sweep(data);
+        apu_.WriteSquare2Sweep(data);
     }
     else if (addr == 0x4006) {
-        apu.WriteSquare2Lo(data);
+        apu_.WriteSquare2Lo(data);
     }
     else if (addr == 0x4007) {
-        apu.WriteSquare2Hi(data);
+        apu_.WriteSquare2Hi(data);
     }
     else if (addr == 0x4008) {
-        apu.WriteTriangleLinear(data);
+        apu_.WriteTriangleLinear(data);
     }
     else if (addr == 0x400A) {
-        apu.WriteTriangleLo(data);
+        apu_.WriteTriangleLo(data);
     }
     else if (addr == 0x400B) {
-        apu.WriteTriangleHi(data);
+        apu_.WriteTriangleHi(data);
     }
     else if (addr == 0x400C) {
-        apu.WriteNoiseVolume(data);
+        apu_.WriteNoiseVolume(data);
     }
     else if (addr == 0x400E) {
-        apu.WriteNoiseLo(data);
+        apu_.WriteNoiseLo(data);
     }
     else if (addr == 0x400F) {
-        apu.WriteNoiseHi(data);
+        apu_.WriteNoiseHi(data);
     }
     else if (addr == 0x4014) {
         // DMA
-        suspended = 1;
-        dma_page = data;
+        suspended_ = true;
+        dma_page_ = data;
     }
     else if (addr == 0x4015) {
-        apu.WriteStatus(data);
+        apu_.WriteStatus(data);
     }
     else if (addr == 0x4016) {
         const int id = addr & 0x001;
-        controller_state[id] = controller_input[id];
+        controller_state_[id] = controller_input_[id];
     }
     else if (addr == 0x4017) {
-        apu.WriteFrameCounter(data);
+        apu_.WriteFrameCounter(data);
     }
     else {
         cart_->WriteProg(addr, data);
@@ -114,7 +114,7 @@ void CPU::write_byte(uint16_t addr, uint8_t data)
 uint8_t CPU::read_byte(uint16_t addr)
 {
     if (addr >= 0x0000 && addr <= 0x1FFF) {
-        return wram[addr & 0x07FF];
+        return wram_[addr & 0x07FF];
     }
     else if (addr == 0x2000) {
         // PPU control not readable
@@ -146,8 +146,8 @@ uint8_t CPU::read_byte(uint16_t addr)
     }
     else if (addr >= 0x4016 && addr <= 0x4017) {
         const int id = addr & 0x001;
-        const uint8_t data = (controller_state[id] & 0x80) > 0;
-        controller_state[id] <<= 1;
+        const uint8_t data = (controller_state_[id] & 0x80) > 0;
+        controller_state_[id] <<= 1;
         return data;
     }
     else {
@@ -164,7 +164,7 @@ uint8_t CPU::peek_byte(uint16_t addr) const
     }
     else if (addr >= 0x4016 && addr <= 0x4017) {
         const int id = addr & 0x001;
-        return (controller_state[id] & 0x80) > 0;
+        return (controller_state_[id] & 0x80) > 0;
     }
 
     return const_cast<CPU*>(this)->read_byte(addr);
@@ -188,7 +188,7 @@ uint16_t CPU::read_word(uint16_t addr)
 
 uint8_t CPU::fetch()
 {
-    return read_byte(pc++);
+    return read_byte(pc_++);
 }
 
 uint16_t CPU::fetch_word()
@@ -264,10 +264,10 @@ uint16_t CPU::fetch_address(int mode, int *page_crossed)
         return fetch_word();
 
     case ABX:
-        return abs_index(fetch_word(), x, page_crossed);
+        return abs_index(fetch_word(), x_, page_crossed);
 
     case ABY:
-        return abs_index(fetch_word(), y, page_crossed);
+        return abs_index(fetch_word(), y_, page_crossed);
 
     case ACC:
         // no address for register
@@ -275,7 +275,7 @@ uint16_t CPU::fetch_address(int mode, int *page_crossed)
 
     case IMM:
         // address where the immediate value is stored
-        return pc++;
+        return pc_++;
 
     case IMP:
         // no address
@@ -286,32 +286,32 @@ uint16_t CPU::fetch_address(int mode, int *page_crossed)
 
     case IZX:
         // addr = {[arg + X], [arg + X + 1]}
-        return zp_indirect(fetch() + x);
+        return zp_indirect(fetch() + x_);
 
     case IZY:
         {
             // addr = {[arg], [arg + 1]} + Y
             const uint16_t addr = zp_indirect(fetch());
-            if (is_page_crossing(addr, y))
+            if (is_page_crossing(addr, y_))
                 *page_crossed = 1;
-            return addr + y;
+            return addr + y_;
         }
 
     case REL:
         {
-            // fetch data first, then add it to the pc
+            // fetch data first, then add it to the PC
             const uint8_t offset = fetch();
-            return pc + (int8_t) offset;
+            return pc_ + (int8_t) offset;
         }
 
     case ZPG:
         return fetch();
 
     case ZPX:
-        return (fetch() + x) & 0x00FF;
+        return (fetch() + x_) & 0x00FF;
 
     case ZPY:
-        return (fetch() + y) & 0x00FF;
+        return (fetch() + y_) & 0x00FF;
 
     default:
         return 0;
@@ -410,20 +410,20 @@ static const int8_t cycle_table[] = {
 
 void CPU::set_pc(uint16_t addr)
 {
-    pc = addr;
+    pc_ = addr;
 }
 
 void CPU::set_flag(uint8_t flag, uint8_t val)
 {
     if (val)
-        p |= flag;
+        p_ |= flag;
     else
-        p &= ~flag;
+        p_ &= ~flag;
 }
 
 uint8_t CPU::get_flag(uint8_t flag) const
 {
-    return (p & flag) > 0;
+    return (p_ & flag) > 0;
 }
 
 uint8_t CPU::update_zn(uint8_t val)
@@ -435,42 +435,42 @@ uint8_t CPU::update_zn(uint8_t val)
 
 void CPU::set_a(uint8_t val)
 {
-    a = val;
-    update_zn(a);
+    a_ = val;
+    update_zn(a_);
 }
 
 void CPU::set_x(uint8_t val)
 {
-    x = val;
-    update_zn(x);
+    x_ = val;
+    update_zn(x_);
 }
 
 void CPU::set_y(uint8_t val)
 {
-    y = val;
-    update_zn(y);
+    y_ = val;
+    update_zn(y_);
 }
 
 void CPU::set_s(uint8_t val)
 {
-    s = val;
+    s_ = val;
 }
 
 void CPU::set_p(uint8_t val)
 {
-    p = val | U;
+    p_ = val | U;
 }
 
 void CPU::push(uint8_t val)
 {
-    write_byte(0x0100 | s, val);
-    set_s(s - 1);
+    write_byte(0x0100 | s_, val);
+    set_s(s_ - 1);
 }
 
 uint8_t CPU::pop()
 {
-    set_s(s + 1);
-    return read_byte(0x0100 | s);
+    set_s(s_ + 1);
+    return read_byte(0x0100 | s_);
 }
 
 void CPU::push_word(uint16_t val)
@@ -487,10 +487,10 @@ uint16_t CPU::pop_word()
     return (hi << 8) | lo;
 }
 
-void CPU::compare(uint8_t a, uint8_t b)
+void CPU::compare(uint8_t a_, uint8_t b)
 {
-    set_flag(C, a >= b);
-    update_zn(a - b);
+    set_flag(C, a_ >= b);
+    update_zn(a_ - b);
 }
 
 bool CPU::branch_if(uint16_t addr, bool cond)
@@ -510,10 +510,9 @@ static bool is_positive(uint8_t val)
 void CPU::add_a_m(uint8_t data)
 {
     const uint16_t m = data;
-    //const uint16_t a = a;
     const uint16_t c = get_flag(C);
-    const uint16_t r = a + m + c;
-    const int A = is_positive(a);
+    const uint16_t r = a_ + m + c;
+    const int A = is_positive(a_);
     const int M = is_positive(m);
     const int R = is_positive(r);
 
@@ -559,57 +558,57 @@ int CPU::execute(Instruction inst)
 
     // Store Accumulator in Memory: A -> M ()
     case STA:
-        write_byte(addr, a);
+        write_byte(addr, a_);
         break;
 
     // Store Index Register X in Memory: X -> M ()
     case STX:
-        write_byte(addr, x);
+        write_byte(addr, x_);
         break;
 
     // Store Index Register Y in Memory: Y -> M ()
     case STY:
-        write_byte(addr, y);
+        write_byte(addr, y_);
         break;
 
     // Transfer Accumulator to Index X: A -> X (N, Z)
     case TAX:
-        set_x(a);
+        set_x(a_);
         break;
 
     // Transfer Accumulator to Index Y: A -> Y (N, Z)
     case TAY:
-        set_y(a);
+        set_y(a_);
         break;
 
     // Transfer Stack Pointer to Index X: S -> X (N, Z)
     case TSX:
-        set_x(s);
+        set_x(s_);
         break;
 
     // Transfer Index X to Accumulator: X -> A (N, Z)
     case TXA:
-        set_a(x);
+        set_a(x_);
         break;
 
     // Transfer Index X to Stack Pointer: X -> S ()
     case TXS:
-        set_s(x);
+        set_s(x_);
         break;
 
     // Transfer Index Y to Accumulator: Y -> A (N, Z)
     case TYA:
-        set_a(y);
+        set_a(y_);
         break;
 
     // Push Accumulator on Stack: ()
     case PHA:
-        push(a);
+        push(a_);
         break;
 
     // Push Processor Status on Stack: ()
     case PHP:
-        push(p | B);
+        push(p_ | B);
         break;
 
     // Pull Accumulator from Stack: (N, Z)
@@ -626,7 +625,7 @@ int CPU::execute(Instruction inst)
     // Arithmetic Shift Left: C <- /M7...M0/ <- 0 (N, Z, C)
     case ASL:
         if (mode == ACC) {
-            const uint8_t data = a;
+            const uint8_t data = a_;
             set_flag(C, data & 0x80);
             set_a(data << 1);
         } else {
@@ -641,7 +640,7 @@ int CPU::execute(Instruction inst)
     // Logical Shift Right: 0 -> /M7...M0/ -> C (N, Z, C)
     case LSR:
         if (mode == ACC) {
-            const uint8_t data = a;
+            const uint8_t data = a_;
             set_flag(C, data & 0x01);
             set_a(data >> 1);
         } else {
@@ -657,7 +656,7 @@ int CPU::execute(Instruction inst)
     case ROL:
         if (mode == ACC) {
             const uint8_t carry = get_flag(C);
-            const uint8_t data = a;
+            const uint8_t data = a_;
             set_flag(C, data & 0x80);
             set_a((data << 1) | carry);
         } else {
@@ -674,7 +673,7 @@ int CPU::execute(Instruction inst)
     case ROR:
         if (mode == ACC) {
             const uint8_t carry = get_flag(C);
-            const uint8_t data = a;
+            const uint8_t data = a_;
             set_flag(C, data & 0x01);
             set_a((data >> 1) | (carry << 7));
         } else {
@@ -689,24 +688,24 @@ int CPU::execute(Instruction inst)
 
     // AND Memory with Accumulator: A & M -> A (N, Z)
     case AND:
-        set_a(a & read_byte(addr));
+        set_a(a_ & read_byte(addr));
         break;
 
     // Exclusive OR Memory with Accumulator: A ^ M -> A (N, Z)
     case EOR:
-        set_a(a ^ read_byte(addr));
+        set_a(a_ ^ read_byte(addr));
         break;
 
     // OR Memory with Accumulator: A | M -> A (N, Z)
     case ORA:
-        set_a(a | read_byte(addr));
+        set_a(a_ | read_byte(addr));
         break;
 
     // Test Bits in Memory with Accumulator: A & M (N, V, Z)
     case BIT:
         {
             const uint8_t data = read_byte(addr);
-            set_flag(Z, (a & data) == 0x00);
+            set_flag(Z, (a_ & data) == 0x00);
             set_flag(N, data & N);
             set_flag(V, data & V);
         }
@@ -728,17 +727,17 @@ int CPU::execute(Instruction inst)
 
     // Compare Memory and Accumulator: A - M (N, Z, C)
     case CMP:
-        compare(a, read_byte(addr));
+        compare(a_, read_byte(addr));
         break;
 
     // Compare Index Register X to Memory: X - M (N, Z, C)
     case CPX:
-        compare(x, read_byte(addr));
+        compare(x_, read_byte(addr));
         break;
 
     // Compare Index Register Y to Memory: Y - M (N, Z, C)
     case CPY:
-        compare(y, read_byte(addr));
+        compare(y_, read_byte(addr));
         break;
 
     // Increment Memory by One: M + 1 -> M (N, Z)
@@ -752,12 +751,12 @@ int CPU::execute(Instruction inst)
 
     // Increment Index Register X by One: X + 1 -> X (N, Z)
     case INX:
-        set_x(x + 1);
+        set_x(x_ + 1);
         break;
 
     // Increment Index Register Y by One: Y + 1 -> Y (N, Z)
     case INY:
-        set_y(y + 1);
+        set_y(y_ + 1);
         break;
 
     // Decrement Memory by One: M - 1 -> M (N, Z)
@@ -771,12 +770,12 @@ int CPU::execute(Instruction inst)
 
     // Decrement Index Register X by One: X - 1 -> X (N, Z)
     case DEX:
-        set_x(x - 1);
+        set_x(x_ - 1);
         break;
 
     // Decrement Index Register Y by One: Y - 1 -> Y (N, Z)
     case DEY:
-        set_y(y - 1);
+        set_y(y_ - 1);
         break;
 
     // Jump Indirect: [PC + 1] -> PCL, [PC + 2] -> PCH ()
@@ -787,15 +786,15 @@ int CPU::execute(Instruction inst)
     // Jump to Subroutine: push(PC + 2), [PC + 1] -> PCL, [PC + 2] -> PCH ()
     case JSR:
         // the last byte of the jump instruction
-        push_word(pc - 1);
+        push_word(pc_ - 1);
         set_pc(addr);
         break;
 
     // Break Command: push(PC + 2), [FFFE] -> PCL, [FFFF] ->PCH (I)
     case BRK:
         // an extra byte of spacing for a break mark
-        push_word(pc + 1);
-        push(p | B);
+        push_word(pc_ + 1);
+        push(p_ | B);
 
         set_flag(I, 1);
         set_pc(read_word(0xFFFE));
@@ -811,7 +810,7 @@ int CPU::execute(Instruction inst)
     // Return from Subroutine: pop(PC), PC + 1 -> PC ()
     case RTS:
         set_pc(pop_word());
-        set_pc(pc + 1);
+        set_pc(pc_ + 1);
         break;
 
     // Branch on Carry Clear: ()
@@ -898,12 +897,12 @@ int CPU::execute(Instruction inst)
     // Load Accumulator and Index Register X from Memory: M -> A, X (N, Z)
     case LAX:
         set_a(read_byte(addr));
-        set_x(a);
+        set_x(a_);
         break;
 
     // Store Accumulator AND Index Register X in Memory: A & X -> M ()
     case SAX:
-        write_byte(addr, a & x);
+        write_byte(addr, a_ & x_);
         break;
 
     // Decrement Memory by One then Compare with Accumulator: M - 1 -> M, A - M (N, Z, C)
@@ -912,7 +911,7 @@ int CPU::execute(Instruction inst)
             const uint8_t data = read_byte(addr) - 1;
             update_zn(data);
             write_byte(addr, data);
-            compare(a, data);
+            compare(a_, data);
         }
         break;
 
@@ -936,7 +935,7 @@ int CPU::execute(Instruction inst)
             data <<= 1;
             update_zn(data);
             write_byte(addr, data);
-            set_a(a | data);
+            set_a(a_ | data);
         }
         break;
 
@@ -949,7 +948,7 @@ int CPU::execute(Instruction inst)
             data = (data << 1) | carry;
             update_zn(data);
             write_byte(addr, data);
-            set_a(a & data);
+            set_a(a_ & data);
         }
         break;
 
@@ -962,7 +961,7 @@ int CPU::execute(Instruction inst)
             data >>= 1;
             update_zn(data);
             write_byte(addr, data);
-            set_a(a ^ data);
+            set_a(a_ ^ data);
         }
         break;
 
@@ -1002,25 +1001,25 @@ void CPU::PowerUp()
     set_s(0xFD);
     set_p(0x00 | I);
 
-    apu.PowerUp();
+    apu_.PowerUp();
 }
 
 void CPU::Reset()
 {
     set_pc(read_word(0xFFFC));
 
-    set_s(s - 3);
+    set_s(s_ - 3);
     set_flag(I, 1);
 
     // takes cycles
-    cycles = 8;
+    cycles_ = 8;
 
-    apu.Reset();
+    apu_.Reset();
 }
 
 void CPU::Clock()
 {
-    if (cycles == 0) {
+    if (cycles_ == 0) {
         uint8_t code, cycs;
         Instruction inst;
 
@@ -1028,15 +1027,15 @@ void CPU::Clock()
         inst = decode(code);
         cycs = execute(inst);
 
-        cycles = cycs;
+        cycles_ = cycs;
     }
 
-    cycles--;
+    cycles_--;
 }
 
 void CPU::ClockAPU()
 {
-    apu.Clock();
+    apu_.Clock();
 }
 
 void CPU::HandleIRQ()
@@ -1045,57 +1044,57 @@ void CPU::HandleIRQ()
         // interrupt is not allowed
         return;
 
-    push_word(pc);
+    push_word(pc_);
 
     set_flag(B, 0);
     set_flag(I, 1);
-    push(p);
+    push(p_);
 
     set_pc(read_word(0xFFFE));
-    cycles = 7;
+    cycles_ = 7;
 }
 
 void CPU::HandleNMI()
 {
-    push_word(pc);
+    push_word(pc_);
 
     set_flag(B, 0);
     set_flag(I, 1);
-    push(p);
+    push(p_);
 
     set_pc(read_word(0xFFFA));
-    cycles = 8;
+    cycles_ = 8;
 }
 
 void CPU::ClearIRQ()
 {
-    apu.ClearIRQ();
+    apu_.ClearIRQ();
 }
 
 bool CPU::IsSetIRQ() const
 {
-    return apu.IsSetIRQ();
+    return apu_.IsSetIRQ();
 }
 
 void CPU::InputController(uint8_t controller_id, uint8_t input)
 {
-    controller_input[controller_id] = input;
+    controller_input_[controller_id] = input;
 }
 
 bool CPU::IsSuspended() const
 {
-    return suspended;
+    return suspended_;
 }
 
 void CPU::Resume()
 {
-    suspended = 0;
-    dma_page = 0x00;
+    suspended_ = false;
+    dma_page_ = 0x00;
 }
 
 uint8_t CPU::GetDmaPage() const
 {
-    return dma_page;
+    return dma_page_;
 }
 
 uint8_t CPU::PeekData(uint16_t addr) const
@@ -1105,12 +1104,12 @@ uint8_t CPU::PeekData(uint16_t addr) const
 
 void CPU::GetStatus(CpuStatus &stat) const
 {
-    stat.pc = pc;
-    stat.a  = a;
-    stat.x  = x;
-    stat.y  = y;
-    stat.p  = p;
-    stat.s  = s;
+    stat.pc = pc_;
+    stat.a  = a_;
+    stat.x  = x_;
+    stat.y  = y_;
+    stat.p  = p_;
+    stat.s  = s_;
 
     stat.code = peek_byte(stat.pc + 0);
     stat.lo   = peek_byte(stat.pc + 1);
@@ -1123,12 +1122,12 @@ void CPU::GetStatus(CpuStatus &stat) const
 
 void CPU::SetPC(uint16_t addr)
 {
-    pc = addr;
+    pc_ = addr;
 }
 
 int CPU::GetCycles() const
 {
-    return cycles;
+    return cycles_;
 }
 
 } // namespace
