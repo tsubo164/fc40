@@ -241,6 +241,22 @@ void APU::WriteNoiseHi(uint8_t data)
     write_noise_hi(noise_, data);
 }
 
+uint8_t APU::ReadStatus() const
+{
+    // $4015 read | IF-D NT21 | DMC interrupt (I), frame interrupt (F),
+    //            |           | DMC active (D), length counter > 0 (N/T/2/1)
+    uint8_t data = 0x00;
+
+    data |= (irq_generated_ == true)   << 7;
+    data |= (frame_interrupt_ == true) << 6;
+    data |= (noise_.length > 0)        << 3;
+    data |= (triangle_.length > 0)     << 2;
+    data |= (pulse2_.length > 0)       << 1;
+    data |= (pulse1_.length > 0)       << 0;
+
+    return data;
+}
+
 static float calculate_pulse_level(uint8_t pulse1_, uint8_t pulse2_)
 {
     // Linear Approximation sounds less cracking/popping

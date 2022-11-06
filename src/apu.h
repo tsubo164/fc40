@@ -109,6 +109,7 @@ public:
     void WriteNoiseHi(uint8_t data);
 
     // read registers
+    uint8_t ReadStatus() const;
 
 private:
     double audio_time_ = 0.;
