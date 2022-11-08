@@ -137,7 +137,6 @@ static void write_noise_hi(NoiseChannel &noise, uint8_t data)
 
 void APU::WriteStatus(uint8_t data)
 {
-
     // $4015 write | ---D NT21 | Enable DMC (D), noise (N), triangle (T),
     // and pulse channels (2/1)
     pulse1_.enabled = (data & 0x01);
@@ -168,7 +167,9 @@ void APU::WriteFrameCounter(uint8_t data)
     //              | If the mode flag is set, then both "quarter frame" and
     //              | "half frame" signals are also generated.
     mode_ = (data >> 7) & 0x01;
-    frame_interrupt_ = ((data >> 6) & 0x01) == 0;
+    inhibit_interrupt_ = (data >> 6) & 0x01;
+    if (inhibit_interrupt_)
+        frame_interrupt_ = false;
 }
 
 void APU::WriteSquare1Volume(uint8_t data)
@@ -241,18 +242,22 @@ void APU::WriteNoiseHi(uint8_t data)
     write_noise_hi(noise_, data);
 }
 
-uint8_t APU::ReadStatus() const
+uint8_t APU::ReadStatus()
 {
     // $4015 read | IF-D NT21 | DMC interrupt (I), frame interrupt (F),
     //            |           | DMC active (D), length counter > 0 (N/T/2/1)
     uint8_t data = 0x00;
 
-    data |= (irq_generated_ == true)   << 7;
-    data |= (frame_interrupt_ == true) << 6;
-    data |= (noise_.length > 0)        << 3;
-    data |= (triangle_.length > 0)     << 2;
-    data |= (pulse2_.length > 0)       << 1;
-    data |= (pulse1_.length > 0)       << 0;
+    //data |= (inhibit_interrupt_)   << 7;
+    data |= (frame_interrupt_)     << 6;
+    data |= (noise_.length > 0)    << 3;
+    data |= (triangle_.length > 0) << 2;
+    data |= (pulse2_.length > 0)   << 1;
+    data |= (pulse1_.length > 0)   << 0;
+
+    // Reading this register clears the frame interrupt flag
+    // (but not the DMC interrupt flag).
+    frame_interrupt_ = false;
 
     return data;
 }
@@ -528,8 +533,8 @@ void APU::clock_linear_counter()
 
 void APU::clock_frame_interrupt()
 {
-    if (frame_interrupt_)
-        irq_generated_ = true;
+    if (inhibit_interrupt_ == false)
+        frame_interrupt_ = true;
 }
 
 void APU::clock_sequencer_step4()
@@ -650,12 +655,12 @@ void APU::Reset()
 
 void APU::ClearIRQ()
 {
-    irq_generated_ = false;
+    frame_interrupt_ = false;
 }
 
 bool APU::IsSetIRQ() const
 {
-    return irq_generated_;
+    return frame_interrupt_;
 }
 
 } // namespace

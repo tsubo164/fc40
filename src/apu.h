@@ -109,7 +109,7 @@ public:
     void WriteNoiseHi(uint8_t data);
 
     // read registers
-    uint8_t ReadStatus() const;
+    uint8_t ReadStatus();
 
 private:
     double audio_time_ = 0.;
@@ -117,8 +117,8 @@ private:
     uint32_t cycle_ = 0;
 
     uint8_t mode_ = 0;
+    bool inhibit_interrupt_ = false;
     bool frame_interrupt_ = false;
-    bool irq_generated_ = false;
 
     PulseChannel pulse1_ = {1}, pulse2_ = {2};
     TriangleChannel triangle_;
