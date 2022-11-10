@@ -1,5 +1,6 @@
 #include "mapper.h"
 #include "mapper_002.h"
+#include "mapper_003.h"
 
 namespace nes {
 
@@ -79,6 +80,10 @@ std::shared_ptr<Mapper> new_mapper(int id,
 
     case 2:
         m = new Mapper_002(prog_rom, prog_size, char_rom, char_size);
+        break;
+
+    case 3:
+        m = new Mapper_003(prog_rom, prog_size, char_rom, char_size);
         break;
 
     default:

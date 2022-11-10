@@ -1,0 +1,50 @@
+#include "mapper_003.h"
+
+namespace nes {
+
+Mapper_003::Mapper_003(const uint8_t *prog_rom, size_t prog_size,
+        const uint8_t *char_rom, size_t char_size) :
+    Mapper(prog_rom, prog_size, char_rom, char_size)
+{
+    prog_nbanks_ = prog_size / 0x4000; // 16KB
+    char_nbanks_ = char_size / 0x2000; // 8KB
+
+    char_bank_ = 0;
+}
+
+Mapper_003::~Mapper_003()
+{
+}
+
+uint8_t Mapper_003::do_read_prog(uint16_t addr) const
+{
+    if (addr >= 0x8000 && addr <= 0xFFFF) {
+        if (prog_nbanks_ == 1) // 16K ROM 
+            return prog_rom_[addr & 0x3FFF];
+        if (prog_nbanks_ == 2) // 32K ROM
+            return prog_rom_[addr & 0x7FFF];
+    }
+    return 0;
+}
+
+void Mapper_003::do_write_prog(uint16_t addr, uint8_t data)
+{
+    if (addr >= 0x8000 && addr <= 0xFFFF)
+        char_bank_ = data & 0x03;
+}
+
+uint8_t Mapper_003::do_read_char(uint16_t addr) const
+{
+    if (addr >= 0x0000 && addr <= 0x1FFF) {
+        const uint32_t a = char_bank_ * 0x2000 + addr;
+        return char_rom_[a];
+    } else {
+        return 0xFF;
+    }
+}
+
+void Mapper_003::do_write_char(uint16_t addr, uint8_t data)
+{
+}
+
+} // namespace
