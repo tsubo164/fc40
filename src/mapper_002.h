@@ -13,9 +13,10 @@ public:
            const uint8_t *char_rom, size_t char_size);
     virtual ~Mapper_002();
 
-protected:
-
 private:
+    int prog_nbanks_ = 1;
+    int char_nbanks_ = 1;
+
     int prog_bank_ = 0;
     int prog_fixed_ = 0;
     uint8_t char_ram_[0x2000] = {0x00};

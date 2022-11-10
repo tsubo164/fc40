@@ -19,15 +19,21 @@ public:
     void WriteChar(uint16_t addr, uint8_t data);
 
 protected:
-    int prog_nbanks_ = 1;
-    int char_nbanks_ = 1;
+    uint8_t read_prog_rom(uint16_t addr) const;
+    uint8_t read_char_rom(uint16_t addr) const;
+    size_t prog_size() const;
+    size_t char_size() const;
 
+private:
     const uint8_t *prog_rom_ = nullptr;
     const uint8_t *char_rom_ = nullptr;
     size_t prog_size_ = 0;
     size_t char_size_ = 0;
 
 private:
+    int prog_nbanks_ = 1;
+    int char_nbanks_ = 1;
+
     virtual uint8_t do_read_prog(uint16_t addr) const;
     virtual void do_write_prog(uint16_t addr, uint8_t data);
     virtual uint8_t do_read_char(uint16_t addr) const;

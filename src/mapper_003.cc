@@ -20,9 +20,9 @@ uint8_t Mapper_003::do_read_prog(uint16_t addr) const
 {
     if (addr >= 0x8000 && addr <= 0xFFFF) {
         if (prog_nbanks_ == 1) // 16K ROM 
-            return prog_rom_[addr & 0x3FFF];
+            return read_prog_rom(addr & 0x3FFF);
         if (prog_nbanks_ == 2) // 32K ROM
-            return prog_rom_[addr & 0x7FFF];
+            return read_prog_rom(addr & 0x7FFF);
     }
     return 0;
 }
@@ -37,7 +37,7 @@ uint8_t Mapper_003::do_read_char(uint16_t addr) const
 {
     if (addr >= 0x0000 && addr <= 0x1FFF) {
         const uint32_t a = char_bank_ * 0x2000 + addr;
-        return char_rom_[a];
+        return read_char_rom(a);
     } else {
         return 0xFF;
     }

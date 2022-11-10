@@ -21,11 +21,11 @@ uint8_t Mapper_002::do_read_prog(uint16_t addr) const
 {
     if (addr >= 0x8000 && addr <= 0xBFFF) {
         const uint32_t a = prog_bank_ * 0x4000 + (addr & 0x3FFF);
-        return prog_rom_[a];
+        return read_prog_rom(a);
     }
     else if (addr >= 0xC000 && addr <= 0xFFFF) {
         const uint32_t a = prog_fixed_ * 0x4000 + (addr & 0x3FFF);
-        return prog_rom_[a];
+        return read_prog_rom(a);
     }
     else {
         return 0;
