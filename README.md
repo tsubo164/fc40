@@ -7,6 +7,7 @@
 - Written in C++
 - Requires GLFW and OpenAL
 - Supports mapper 0 (200+ games)
+- Partically supports mapper 1, 2 and 3
 
 ## Features
 - Game pad support
