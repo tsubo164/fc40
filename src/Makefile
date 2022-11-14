@@ -8,7 +8,7 @@ LDFLAGS := -lglfw -framework Cocoa -framework OpenGL -framework IOKit $(LIBRARY)
 RM      := rm -f
 
 SRCS    := apu cartridge cpu debug display framebuffer log main mapper \
-           mapper_000 mapper_002 mapper_003 nes ppu sound
+           mapper_000 mapper_001 mapper_002 mapper_003 nes ppu sound
 
 .PHONY: clean test
 
