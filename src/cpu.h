@@ -91,7 +91,7 @@ private:
     // address
     uint16_t abs_indirect(uint16_t abs) const;
     uint16_t zp_indirect(uint8_t zp) const;
-    uint16_t fetch_address(int mode, int *page_crossed);
+    uint16_t fetch_address(int mode, bool *page_crossed);
     // flags and registers
     void set_pc(uint16_t addr);
     void set_flag(uint8_t flag, uint8_t val);

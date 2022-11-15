@@ -20,7 +20,10 @@ public:
     uint8_t ReadChar(uint16_t addr) const;
     void WriteChar(uint16_t addr, uint8_t data);
 
-    int MapperID() const { return mapper_id_; };
+    int GetMapperID() const { return mapper_id_; };
+    size_t GetProgSize() const { return prog_size_; };
+    size_t GetCharSize() const { return char_size_; };
+
     bool IsMapperSupported() const { return mapper_ != nullptr; };
     bool IsVerticalMirroring() const { return mirroring_ == 1; }
 

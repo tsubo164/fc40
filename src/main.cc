@@ -31,7 +31,7 @@ int main(int argc, char **argv)
     }
 
     if (!cart.IsMapperSupported()) {
-        std::cerr << "mapper " << static_cast<int>(cart.MapperID())
+        std::cerr << "mapper " << static_cast<int>(cart.GetMapperID())
                   << " is not supported." << std::endl;
         return -1;
     }
@@ -39,10 +39,16 @@ int main(int argc, char **argv)
     nes.InsertCartridge(&cart);
     nes.PowerUp();
 
-    if (log_mode)
+    if (log_mode) {
         LogCpuStatus(&nes.cpu, 8980);
-    else
+    }
+    else {
+        printf("iNES Mapper : %4d\n", cart.GetMapperID());
+        printf("PRG Size    : %4ld KB\n", cart.GetProgSize() / 1024);
+        printf("CHR Size    : %4ld KB\n", cart.GetCharSize() / 1024);
+
         nes.PlayGame();
+    }
 
     nes.ShutDown();
 

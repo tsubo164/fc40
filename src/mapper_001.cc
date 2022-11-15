@@ -67,7 +67,7 @@ void Mapper_001::do_write_prog(uint16_t addr, uint8_t data)
         // |       |
         // |       +- Data bit to be shifted into shift register, LSB first
         // +--------- A write with bit set will reset shift register
-        //            and write Control with (Control OR $0C), 
+        //            and write Control with (Control OR $0C),
         //            locking PRG ROM at $C000-$FFFF to the last bank.
         if (data & 0x80) {
             shift_register_ = 0x10;
@@ -185,7 +185,7 @@ void Mapper_001::set_prog_bank()
     // RPPPP
     // |||||
     // |++++- Select 16 KB PRG ROM bank (low bit ignored in 32 KB mode)
-    // +----- MMC1B and later: PRG RAM chip enable 
+    // +----- MMC1B and later: PRG RAM chip enable
     //        (0: enabled; 1: disabled; ignored on MMC1A)
     //        MMC1A: Bit 3 bypasses fixed bank logic in 16K mode
     //        (0: affected; 1: bypassed)

@@ -228,12 +228,12 @@ static const uint8_t addr_mode_table[] = {
 /*0xF0*/ REL, IZY, IMP, IZY, ZPX, ZPX, ZPX, ZPX, IMP, ABY, IMP, ABY, ABX, ABX, ABX, ABX
 };
 
-static uint8_t is_page_crossing(uint16_t addr, uint8_t addend)
+static bool is_page_crossing(uint16_t addr, uint8_t addend)
 {
     return (addr & 0x00FF) + (addend & 0x00FF) > 0x00FF;
 }
 
-static uint16_t abs_index(uint16_t abs, uint8_t idx, int *page_crossed)
+static uint16_t abs_index(uint16_t abs, uint8_t idx, bool *page_crossed)
 {
     *page_crossed = is_page_crossing(abs, idx);
     return abs + idx;
@@ -257,7 +257,7 @@ uint16_t CPU::zp_indirect(uint8_t zp) const
     return (hi << 8) | lo;
 }
 
-uint16_t CPU::fetch_address(int mode, int *page_crossed)
+uint16_t CPU::fetch_address(int mode, bool *page_crossed)
 {
     *page_crossed = 0;
 
@@ -490,10 +490,10 @@ uint16_t CPU::pop_word()
     return (hi << 8) | lo;
 }
 
-void CPU::compare(uint8_t a_, uint8_t b)
+void CPU::compare(uint8_t a, uint8_t b)
 {
-    set_flag(C, a_ >= b);
-    update_zn(a_ - b);
+    set_flag(C, a >= b);
+    update_zn(a - b);
 }
 
 bool CPU::branch_if(uint16_t addr, bool cond)
@@ -537,7 +537,7 @@ static Instruction decode(uint8_t code)
 
 int CPU::execute(Instruction inst)
 {
-    int page_crossed = 0;
+    bool page_crossed = false;
     int branch_taken = 0;
     const uint8_t mode = inst.addr_mode;
     const uint16_t addr = fetch_address(mode, &page_crossed);
