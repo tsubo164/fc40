@@ -31,6 +31,8 @@ public:
     void UpdateFrame();
     void InputController(uint8_t id, uint8_t input);
 
+    const Cartridge *GetCartridge() const { return cart_; }
+
 private:
     uint64_t clock_ = 0;
     uint64_t frame_ = 0;

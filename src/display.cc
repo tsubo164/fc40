@@ -4,6 +4,7 @@
 #include "framebuffer.h"
 #include "nes.h"
 #include "ppu.h"
+#include "debug.h"
 
 namespace nes {
 
@@ -106,6 +107,8 @@ int Display::Open()
         }
         else if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS && key.p == 0) {
             show_patt_ = !show_patt_;
+            if (show_patt_)
+                LoadPatternTable(nes_.patt, nes_.GetCartridge());
             key.p = 1;
         }
         else if (glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE && key.p == 1) {

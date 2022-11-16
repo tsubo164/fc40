@@ -16,8 +16,8 @@ public:
 
 private:
     NES &nes_;
-    int show_guide_ = 0;
-    int show_patt_ = 0;
+    bool show_guide_ = 0;
+    bool show_patt_ = 0;
 
     void render() const;
 };
