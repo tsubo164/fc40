@@ -58,6 +58,22 @@ bool PPU::is_rendering_sprite() const
     return mask_ & MASK_SHOW_SPRITE;
 }
 
+bool PPU::is_rendering_left_bg(int x) const
+{
+    if (x >= 0 && x <= 7)
+        return mask_ & MASK_SHOW_BG_LEFT;
+    else
+        return true;
+}
+
+bool PPU::is_rendering_left_sprite(int x) const
+{
+    if (x >= 0 && x <= 7)
+        return mask_ & MASK_SHOW_SPRITE_LEFT;
+    else
+        return true;
+}
+
 void PPU::enter_vblank()
 {
     set_stat(STAT_VERTICAL_BLANK, 1);
@@ -656,13 +672,13 @@ Color PPU::lookup_pixel_color(Pixel pix) const
 
 void PPU::render_pixel(int x, int y)
 {
-    Pixel bg = {0}, fg = {0}, out = {0};
-    Color col = {0};
+    Pixel bg, fg, out;
+    Color col;
 
-    if (is_rendering_bg())
+    if (is_rendering_bg() && is_rendering_left_bg(x))
         bg = get_pixel_bg();
 
-    if (is_rendering_sprite() && y != 0)
+    if (is_rendering_sprite() && y != 0 && is_rendering_left_sprite(x))
         fg = get_pixel_fg();
 
     out = composite_pixels(bg, fg);
@@ -871,7 +887,7 @@ void PPU::WriteOamData(uint8_t data)
 
 void PPU::WriteScroll(uint8_t data)
 {
-    if (write_toggle_ == 0) {
+    if (write_toggle_ == false) {
         // Coarse X and fine x
         // t: ....... ...ABCDE <- d: ABCDE...
         // x:              FGH <- d: .....FGH
@@ -891,7 +907,7 @@ void PPU::WriteScroll(uint8_t data)
 
 void PPU::WriteAddress(uint8_t addr)
 {
-    if (write_toggle_ == 0) {
+    if (write_toggle_ == false) {
         // High byte
         // t: .CDEFGH ........ <- d: ..CDEFGH
         //        <unused>     <- d: AB......

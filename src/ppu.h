@@ -112,6 +112,8 @@ private:
     bool get_ctrl(uint8_t flag) const;
     bool is_rendering_bg() const;
     bool is_rendering_sprite() const;
+    bool is_rendering_left_bg(int x) const;
+    bool is_rendering_left_sprite(int x) const;
     void enter_vblank();
     void leave_vblank();
     int address_increment() const;
