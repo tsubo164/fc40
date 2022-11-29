@@ -57,8 +57,12 @@ void NES::PlayGame()
     InitSound();
     send_initial_samples();
 
+    is_playing_ = true;
+
     disp.Open();
     FinishSound();
+
+    is_playing_ = false;
 }
 
 void NES::UpdateFrame()
@@ -101,6 +105,18 @@ void NES::UpdateFrame()
 void NES::InputController(uint8_t id, uint8_t input)
 {
     cpu.InputController(id, input);
+}
+
+void NES::Play()
+{
+    PlaySamples();
+    is_playing_ = true;
+}
+
+void NES::Pause()
+{
+    PauseSamples();
+    is_playing_ = false;
 }
 
 void NES::clock_dma()

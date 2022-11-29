@@ -14,7 +14,7 @@ const int RESX = 256;
 const int RESY = 240;
 
 struct KeyState {
-    int g = 0, p = 0, r = 0;
+    bool g = 0, p = 0, r = 0, space = 0;
 };
 
 static void init_gl();
@@ -65,8 +65,10 @@ int Display::Open()
             f = 0;
         }
 
-        // Update framebuffer
-        nes_.UpdateFrame();
+        if (nes_.IsPlaying()) {
+            // Update framebuffer
+            nes_.UpdateFrame();
+        }
 
         // Render here
         render();
@@ -100,26 +102,37 @@ int Display::Open()
         // Keys
         if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS && key.g == 0) {
             show_guide_ = !show_guide_;
-            key.g = 1;
+            key.g = true;
         }
         else if (glfwGetKey(window, GLFW_KEY_G) == GLFW_RELEASE && key.g == 1) {
-            key.g = 0;
+            key.g = false;
         }
         else if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS && key.p == 0) {
             show_patt_ = !show_patt_;
             if (show_patt_)
                 LoadPatternTable(nes_.patt, nes_.GetCartridge());
-            key.p = 1;
+            key.p = true;
         }
         else if (glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE && key.p == 1) {
-            key.p = 0;
+            key.p = false;
         }
         else if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && key.r == 0) {
             nes_.PushResetButton();
-            key.r = 1;
+            key.r = true;
         }
         else if (glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE && key.r == 1) {
-            key.r = 0;
+            key.r = false;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && key.space == 0) {
+            if (nes_.IsPlaying())
+                nes_.Pause();
+            else
+                nes_.Play();
+
+            key.space = true;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_RELEASE && key.space == 1) {
+            key.space = false;
         }
         else if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
             break;

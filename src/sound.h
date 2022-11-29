@@ -11,6 +11,7 @@ extern void FinishSound();
 extern void PushSample(float sample);
 extern void SendSamples();
 extern void PlaySamples();
+extern void PauseSamples();
 
 } // namespace
 

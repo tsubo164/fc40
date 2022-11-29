@@ -140,4 +140,9 @@ void PlaySamples()
     }
 }
 
+void PauseSamples()
+{
+    alSourcePause(source);
+}
+
 } // namespace

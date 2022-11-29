@@ -33,6 +33,10 @@ public:
 
     const Cartridge *GetCartridge() const { return cart_; }
 
+    void Play();
+    void Pause();
+    bool IsPlaying() const { return is_playing_; }
+
 private:
     uint64_t clock_ = 0;
     uint64_t frame_ = 0;
@@ -44,6 +48,8 @@ private:
     uint8_t dma_addr_ = 0;
     uint8_t dma_page_ = 0;
     uint8_t dma_data_ = 0;
+
+    bool is_playing_ = false;
 
     void clock_dma();
 };
