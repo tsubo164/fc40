@@ -37,12 +37,15 @@ public:
     void Reset();
     void Clock();
     void ClockAPU();
+    bool IsEndOfInstruction() const { return cycles_ == 0; }
 
     // interrupts
     void HandleIRQ();
     void HandleNMI();
-    void ClearIRQ();
     bool IsSetIRQ() const;
+    bool IsIrqDelay() const;
+    void IrqDelayOff() { is_irq_delay_ = false; }
+    bool IsRTI() const;
 
     // DMA
     void InputController(uint8_t controller_id, uint8_t input);
@@ -54,6 +57,7 @@ public:
 
     // debug
     void SetPC(uint16_t addr);
+    uint16_t GetPC() { return pc_; }
     int GetCycles() const;
 
 private:
@@ -62,6 +66,9 @@ private:
     APU apu_;
     int cycles_ = 0;
     bool suspended_ = false;
+
+    uint8_t last_inst_ = 0;
+    bool is_irq_delay_ = false;
 
     // registers
     uint8_t a_ = 0;

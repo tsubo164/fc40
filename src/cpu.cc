@@ -546,6 +546,8 @@ int CPU::execute(Instruction inst)
 
     // Load Accumulator with Memory: M -> A (N, Z)
     case LDA:
+        //if (peek_byte(addr) == 0x02)
+        //    printf("%04X  LDA <- %02X\n", pc_, peek_byte(addr));
         set_a(read_byte(addr));
         break;
 
@@ -730,6 +732,8 @@ int CPU::execute(Instruction inst)
 
     // Compare Memory and Accumulator: A - M (N, Z, C)
     case CMP:
+        //if (peek_byte(addr) == 0x80)
+        //    printf("%04X  CMP A: %02X\n", pc_, a_);
         compare(a_, read_byte(addr));
         break;
 
@@ -808,6 +812,7 @@ int CPU::execute(Instruction inst)
         set_p(pop());
         set_flag(B, 0);
         set_pc(pop_word());
+        //set_flag(I, 1);
         break;
 
     // Return from Subroutine: pop(PC), PC + 1 -> PC ()
@@ -868,6 +873,7 @@ int CPU::execute(Instruction inst)
 
     // Clear Interrupt Disable: 0 -> I (I)
     case CLI:
+        //printf("%04X  CLI\n", pc_);
         set_flag(I, 0);
         break;
 
@@ -888,11 +894,13 @@ int CPU::execute(Instruction inst)
 
     // Set Interrupt Disable: 1 -> I (I)
     case SEI:
+        //printf("%04X  SEI\n", pc_);
         set_flag(I, 1);
         break;
 
     // No Operation: ()
     case NOP:
+        //printf("%04X  NOP\n", pc_);
         break;
 
     // XXX Undocumented --------------------------------
@@ -986,6 +994,15 @@ int CPU::execute(Instruction inst)
         break;
     }
 
+    if (inst.opcode == CLI ||
+        inst.opcode == SEI ||
+        inst.opcode == PLP) {
+        is_irq_delay_ = !is_irq_delay_;
+    }
+    else {
+        is_irq_delay_ = false;
+    }
+
     return inst.cycles + page_crossed + branch_taken;
 }
 
@@ -1031,6 +1048,7 @@ void CPU::Clock()
         cycs = execute(inst);
 
         cycles_ = cycs;
+        last_inst_ = inst.opcode;
     }
 
     cycles_--;
@@ -1043,15 +1061,18 @@ void CPU::ClockAPU()
 
 void CPU::HandleIRQ()
 {
-    if (get_flag(I))
-        // interrupt is not allowed
-        return;
+    //if (get_flag(I))
+    //    // interrupt is not allowed
+    //    return;
+
+    //printf("%04X ---- HandleIRQ() ----\n", pc_);
 
     push_word(pc_);
 
     set_flag(B, 0);
-    set_flag(I, 1);
+    //set_flag(I, 1);
     push(p_);
+    set_flag(I, 1);
 
     set_pc(read_word(0xFFFE));
     cycles_ = 7;
@@ -1069,14 +1090,23 @@ void CPU::HandleNMI()
     cycles_ = 8;
 }
 
-void CPU::ClearIRQ()
-{
-    apu_.ClearIRQ();
-}
-
 bool CPU::IsSetIRQ() const
 {
+    if (get_flag(I))
+        // interrupt is not allowed
+        return false;
+
     return apu_.IsSetIRQ();
+}
+
+bool CPU::IsIrqDelay() const
+{
+    return is_irq_delay_;
+}
+
+bool CPU::IsRTI() const
+{
+    return last_inst_ == RTI;
 }
 
 void CPU::InputController(uint8_t controller_id, uint8_t input)

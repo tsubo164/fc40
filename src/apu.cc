@@ -170,6 +170,11 @@ void APU::WriteFrameCounter(uint8_t data)
     inhibit_interrupt_ = (data >> 6) & 0x01;
     if (inhibit_interrupt_)
         frame_interrupt_ = false;
+
+    // TODO
+    // After 3 or 4 CPU clock cycles*, the timer is reset.
+    // If the mode flag is set, then both "quarter frame" and "half frame" signals
+    // are also generated.
 }
 
 void APU::WriteSquare1Volume(uint8_t data)
@@ -651,11 +656,6 @@ void APU::Reset()
 
     // On power-up, the shift register is loaded with the value 1.
     noise_.shift = 1;
-}
-
-void APU::ClearIRQ()
-{
-    frame_interrupt_ = false;
 }
 
 bool APU::IsSetIRQ() const

@@ -83,7 +83,6 @@ public:
     void Reset();
 
     // interrupts
-    void ClearIRQ();
     bool IsSetIRQ() const;
 
     // write registers

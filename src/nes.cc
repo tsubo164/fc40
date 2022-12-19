@@ -79,17 +79,30 @@ void NES::UpdateFrame()
             else
                 cpu.Clock();
 
+            if (cpu.IsRTI())
+                irq_detected_ = false;
+
+            if (cpu.IsEndOfInstruction()) {
+                if (ppu.IsSetNMI()) {
+                    ppu.ClearNMI();
+                    cpu.HandleNMI();
+                }
+                else if (irq_detected_) {
+                    if (cpu.IsIrqDelay()) {
+                        //printf("delayed!\n");
+                    }
+                    else {
+                        cpu.HandleIRQ();
+                        irq_detected_ = false;
+                    }
+                }
+            }
+
             cpu.ClockAPU();
         }
 
-        if (ppu.IsSetNMI()) {
-            ppu.ClearNMI();
-            cpu.HandleNMI();
-        }
-
         if (cpu.IsSetIRQ()) {
-            cpu.ClearIRQ();
-            cpu.HandleIRQ();
+            irq_detected_ = true;
         }
 
         clock_++;
