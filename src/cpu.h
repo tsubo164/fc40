@@ -70,6 +70,12 @@ private:
     uint8_t last_inst_ = 0;
     bool is_irq_delay_ = false;
 
+    uint8_t opcode_register_ = 0;
+public:
+    // interrupts
+    bool irq_signal_ = false;
+private:
+
     // registers
     uint8_t a_ = 0;
     uint8_t x_ = 0;

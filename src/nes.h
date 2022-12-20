@@ -51,8 +51,6 @@ private:
 
     bool is_playing_ = false;
 
-    bool irq_detected_ = false;
-
     void clock_dma();
 };
 

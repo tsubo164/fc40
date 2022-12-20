@@ -1049,21 +1049,71 @@ void CPU::Clock()
 
         cycles_ = cycs;
         last_inst_ = inst.opcode;
+        opcode_register_ = inst.opcode;
+
+        // The RTI instruction affects IRQ inhibition immediately.
+        // If an IRQ is pending and an RTI is executed that clears the I flag,
+        // the CPU will invoke the IRQ handler immediately after RTI finishes executing.
+        // This is due to RTI restoring the I flag from the stack before polling
+        // for interrupts.
+        if (opcode_register_ == RTI)
+            irq_signal_ = false;
     }
 
     cycles_--;
+
+    if (cycles_ == 0) {
+        // The output from the edge detector and level detector are polled
+        // at certain points to detect pending interrupts. For most instructions,
+        // this polling happens during the final cycle of the instruction,
+        // before the opcode fetch for the next instruction.
+        if (irq_signal_ && !get_flag(I)) {
+            // If the polling operation detects that an interrupt has been asserted,
+            // the next "instruction" executed is the interrupt sequence.
+            //HandleIRQ();
+            //irq_signal_ = false;
+        }
+
+        // The CLI, SEI, and PLP instructions on the other hand change the I flag
+        // after polling for interrupts (like all two-cycle instructions they poll
+        // the interrupt lines at the end of the first cycle), meaning they can
+        // effectively delay an interrupt until after the next instruction.
+        switch (opcode_register_) {
+        // Clear Interrupt Disable: 0 -> I (I)
+        case CLI:
+            //set_flag(I, 0);
+            break;
+
+        // Set Interrupt Disable: 1 -> I (I)
+        case SEI:
+            //set_flag(I, 1);
+            break;
+
+        // Pull Processor Status from Stack: (N, V, D, I, Z, C)
+        case PLP:
+            //set_p(pop());
+            //set_flag(B, 0);
+            break;
+
+        default:
+            break;
+        }
+    }
 }
 
 void CPU::ClockAPU()
 {
     apu_.Clock();
+
+    if (apu_.IsSetIRQ())
+        irq_signal_ = true;
 }
 
 void CPU::HandleIRQ()
 {
-    //if (get_flag(I))
-    //    // interrupt is not allowed
-    //    return;
+    if (get_flag(I))
+        // interrupt is not allowed
+        return;
 
     //printf("%04X ---- HandleIRQ() ----\n", pc_);
 
@@ -1076,6 +1126,8 @@ void CPU::HandleIRQ()
 
     set_pc(read_word(0xFFFE));
     cycles_ = 7;
+
+    irq_signal_ = false;
 }
 
 void CPU::HandleNMI()
@@ -1092,10 +1144,6 @@ void CPU::HandleNMI()
 
 bool CPU::IsSetIRQ() const
 {
-    if (get_flag(I))
-        // interrupt is not allowed
-        return false;
-
     return apu_.IsSetIRQ();
 }
 
