@@ -623,8 +623,7 @@ int CPU::execute(Instruction inst)
 
     // Pull Processor Status from Stack: (N, V, D, I, Z, C)
     case PLP:
-        set_p(pop());
-        set_flag(B, 0);
+        // Will be executed after polling interrupts
         break;
 
     // Arithmetic Shift Left: C <- /M7...M0/ <- 0 (N, Z, C)
@@ -874,7 +873,7 @@ int CPU::execute(Instruction inst)
     // Clear Interrupt Disable: 0 -> I (I)
     case CLI:
         //printf("%04X  CLI\n", pc_);
-        set_flag(I, 0);
+        // Will be executed after polling interrupts
         break;
 
     // Clear Overflow Flag: 0 -> V (V)
@@ -895,7 +894,7 @@ int CPU::execute(Instruction inst)
     // Set Interrupt Disable: 1 -> I (I)
     case SEI:
         //printf("%04X  SEI\n", pc_);
-        set_flag(I, 1);
+        // Will be executed after polling interrupts
         break;
 
     // No Operation: ()
@@ -994,16 +993,31 @@ int CPU::execute(Instruction inst)
         break;
     }
 
-    if (inst.opcode == CLI ||
-        inst.opcode == SEI ||
-        inst.opcode == PLP) {
-        is_irq_delay_ = !is_irq_delay_;
-    }
-    else {
-        is_irq_delay_ = false;
-    }
-
     return inst.cycles + page_crossed + branch_taken;
+}
+
+void CPU::execute_delayed()
+{
+    switch (opcode_register_) {
+    // Clear Interrupt Disable: 0 -> I (I)
+    case CLI:
+        set_flag(I, 0);
+        break;
+
+    // Set Interrupt Disable: 1 -> I (I)
+    case SEI:
+        set_flag(I, 1);
+        break;
+
+    // Pull Processor Status from Stack: (N, V, D, I, Z, C)
+    case PLP:
+        set_p(pop());
+        set_flag(B, 0);
+        break;
+
+    default:
+        break;
+    }
 }
 
 void CPU::SetCartride(Cartridge *cart)
@@ -1039,6 +1053,7 @@ void CPU::Reset()
 
 void CPU::Clock()
 {
+    // The first cycle
     if (cycles_ == 0) {
         uint8_t code, cycs;
         Instruction inst;
@@ -1048,7 +1063,6 @@ void CPU::Clock()
         cycs = execute(inst);
 
         cycles_ = cycs;
-        last_inst_ = inst.opcode;
         opcode_register_ = inst.opcode;
 
         // The RTI instruction affects IRQ inhibition immediately.
@@ -1062,42 +1076,28 @@ void CPU::Clock()
 
     cycles_--;
 
+    // The last cycle
     if (cycles_ == 0) {
         // The output from the edge detector and level detector are polled
         // at certain points to detect pending interrupts. For most instructions,
         // this polling happens during the final cycle of the instruction,
         // before the opcode fetch for the next instruction.
-        if (irq_signal_ && !get_flag(I)) {
+        if (ppu_.IsSetNMI()) {
+            handle_nmi();
+            ppu_.ClearNMI();
+        }
+        else if (irq_signal_ && !get_flag(I)) {
             // If the polling operation detects that an interrupt has been asserted,
             // the next "instruction" executed is the interrupt sequence.
-            //HandleIRQ();
-            //irq_signal_ = false;
+            handle_irq();
+            irq_signal_ = false;
         }
 
         // The CLI, SEI, and PLP instructions on the other hand change the I flag
         // after polling for interrupts (like all two-cycle instructions they poll
         // the interrupt lines at the end of the first cycle), meaning they can
         // effectively delay an interrupt until after the next instruction.
-        switch (opcode_register_) {
-        // Clear Interrupt Disable: 0 -> I (I)
-        case CLI:
-            //set_flag(I, 0);
-            break;
-
-        // Set Interrupt Disable: 1 -> I (I)
-        case SEI:
-            //set_flag(I, 1);
-            break;
-
-        // Pull Processor Status from Stack: (N, V, D, I, Z, C)
-        case PLP:
-            //set_p(pop());
-            //set_flag(B, 0);
-            break;
-
-        default:
-            break;
-        }
+        execute_delayed();
     }
 }
 
@@ -1109,13 +1109,10 @@ void CPU::ClockAPU()
         irq_signal_ = true;
 }
 
-void CPU::HandleIRQ()
+void CPU::handle_irq()
 {
-    if (get_flag(I))
-        // interrupt is not allowed
-        return;
-
     //printf("%04X ---- HandleIRQ() ----\n", pc_);
+    //printf("    I: %d\n", get_flag(I));
 
     push_word(pc_);
 
@@ -1126,11 +1123,9 @@ void CPU::HandleIRQ()
 
     set_pc(read_word(0xFFFE));
     cycles_ = 7;
-
-    irq_signal_ = false;
 }
 
-void CPU::HandleNMI()
+void CPU::handle_nmi()
 {
     push_word(pc_);
 
@@ -1142,19 +1137,9 @@ void CPU::HandleNMI()
     cycles_ = 8;
 }
 
-bool CPU::IsSetIRQ() const
+bool CPU::is_set_irq() const
 {
     return apu_.IsSetIRQ();
-}
-
-bool CPU::IsIrqDelay() const
-{
-    return is_irq_delay_;
-}
-
-bool CPU::IsRTI() const
-{
-    return last_inst_ == RTI;
 }
 
 void CPU::InputController(uint8_t controller_id, uint8_t input)

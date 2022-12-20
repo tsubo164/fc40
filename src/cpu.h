@@ -39,14 +39,6 @@ public:
     void ClockAPU();
     bool IsEndOfInstruction() const { return cycles_ == 0; }
 
-    // interrupts
-    void HandleIRQ();
-    void HandleNMI();
-    bool IsSetIRQ() const;
-    bool IsIrqDelay() const;
-    void IrqDelayOff() { is_irq_delay_ = false; }
-    bool IsRTI() const;
-
     // DMA
     void InputController(uint8_t controller_id, uint8_t input);
     bool IsSuspended() const;
@@ -67,14 +59,8 @@ private:
     int cycles_ = 0;
     bool suspended_ = false;
 
-    uint8_t last_inst_ = 0;
-    bool is_irq_delay_ = false;
-
     uint8_t opcode_register_ = 0;
-public:
-    // interrupts
     bool irq_signal_ = false;
-private:
 
     // registers
     uint8_t a_ = 0;
@@ -125,6 +111,11 @@ private:
     void add_a_m(uint8_t data);
     // instruction
     int execute(Instruction inst);
+    void execute_delayed();
+    // interrupts
+    void handle_irq();
+    void handle_nmi();
+    bool is_set_irq() const;
 };
 
 } // namespace
