@@ -61,6 +61,7 @@ private:
 
     uint8_t opcode_register_ = 0;
     bool irq_signal_ = false;
+    bool irq_invoking_ = false;
 
     // registers
     uint8_t a_ = 0;

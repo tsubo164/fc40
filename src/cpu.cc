@@ -811,7 +811,6 @@ int CPU::execute(Instruction inst)
         set_p(pop());
         set_flag(B, 0);
         set_pc(pop_word());
-        //set_flag(I, 1);
         break;
 
     // Return from Subroutine: pop(PC), PC + 1 -> PC ()
@@ -872,7 +871,6 @@ int CPU::execute(Instruction inst)
 
     // Clear Interrupt Disable: 0 -> I (I)
     case CLI:
-        //printf("%04X  CLI\n", pc_);
         // Will be executed after polling interrupts
         break;
 
@@ -893,13 +891,11 @@ int CPU::execute(Instruction inst)
 
     // Set Interrupt Disable: 1 -> I (I)
     case SEI:
-        //printf("%04X  SEI\n", pc_);
         // Will be executed after polling interrupts
         break;
 
     // No Operation: ()
     case NOP:
-        //printf("%04X  NOP\n", pc_);
         break;
 
     // XXX Undocumented --------------------------------
@@ -1070,26 +1066,33 @@ void CPU::Clock()
         // the CPU will invoke the IRQ handler immediately after RTI finishes executing.
         // This is due to RTI restoring the I flag from the stack before polling
         // for interrupts.
-        if (opcode_register_ == RTI)
-            irq_signal_ = false;
     }
 
     cycles_--;
 
     // The last cycle
     if (cycles_ == 0) {
+        if (irq_invoking_) {
+            // the last cycle of interrupt invoking
+            irq_invoking_ = false;
+            return;
+        }
+
+        bool is_nmi_pending = false;
+        bool is_irq_pending = false;
+
         // The output from the edge detector and level detector are polled
         // at certain points to detect pending interrupts. For most instructions,
         // this polling happens during the final cycle of the instruction,
         // before the opcode fetch for the next instruction.
         if (ppu_.IsSetNMI()) {
-            handle_nmi();
+            is_nmi_pending = true;
             ppu_.ClearNMI();
         }
         else if (irq_signal_ && !get_flag(I)) {
             // If the polling operation detects that an interrupt has been asserted,
             // the next "instruction" executed is the interrupt sequence.
-            handle_irq();
+            is_irq_pending = true;
             irq_signal_ = false;
         }
 
@@ -1098,6 +1101,15 @@ void CPU::Clock()
         // the interrupt lines at the end of the first cycle), meaning they can
         // effectively delay an interrupt until after the next instruction.
         execute_delayed();
+
+        if (is_nmi_pending) {
+            handle_nmi();
+            irq_invoking_ = true;
+        }
+        else if (is_irq_pending) {
+            handle_irq();
+            irq_invoking_ = true;
+        }
     }
 }
 
@@ -1112,7 +1124,6 @@ void CPU::ClockAPU()
 void CPU::handle_irq()
 {
     //printf("%04X ---- HandleIRQ() ----\n", pc_);
-    //printf("    I: %d\n", get_flag(I));
 
     push_word(pc_);
 
