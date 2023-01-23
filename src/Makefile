@@ -1,8 +1,8 @@
 CC      := g++
 DEF     := -D GL_SILENCE_DEPRECATION
 OPT     := -O2
-INCLUDE := -I/usr/local/Cellar/openal-soft/1.22.1/include/AL
-LIBRARY := -L/usr/local/Cellar/openal-soft/1.22.1/lib -lopenal
+INCLUDE := -I/usr/local/Cellar/openal-soft/1.22.2/include/AL
+LIBRARY := -L/usr/local/Cellar/openal-soft/1.22.2/lib -lopenal
 CFLAGS  := $(DEF) $(OPT) $(INCLUDE) -Wall --pedantic-errors --std=c++14 -c
 LDFLAGS := -lglfw -framework Cocoa -framework OpenGL -framework IOKit $(LIBRARY)
 RM      := rm -f
