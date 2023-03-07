@@ -13,6 +13,7 @@ struct Instruction {
     uint8_t opcode = 0;
     uint8_t addr_mode = 0;
     uint8_t cycles = 0;
+    uint8_t bytes = 0;
 };
 
 struct CpuStatus {
@@ -37,7 +38,6 @@ public:
     void Reset();
     void Clock();
     void ClockAPU();
-    bool IsEndOfInstruction() const { return cycles_ == 0; }
 
     // DMA
     void InputController(uint8_t controller_id, uint8_t input);
@@ -49,7 +49,7 @@ public:
 
     // debug
     void SetPC(uint16_t addr);
-    uint16_t GetPC() { return pc_; }
+    uint16_t GetPC();
     int GetCycles() const;
 
 private:
@@ -118,6 +118,9 @@ private:
     void handle_nmi();
     bool is_set_irq() const;
 };
+
+Instruction Decode(uint8_t code);
+const char *GetMnemonic(uint8_t code);
 
 } // namespace
 

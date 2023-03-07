@@ -5,9 +5,9 @@
 #include "debug.h"
 #include "log.h"
 
-using namespace nes;
+#include "disassemble.h"
 
-void Disassemble(CPU *cpu);
+using namespace nes;
 
 int main(int argc, char **argv)
 {
@@ -43,7 +43,8 @@ int main(int argc, char **argv)
     nes.PowerUp();
 
     if (0) {
-        Disassemble(&nes.cpu);
+        AssemblyCode assem;
+        Disassemble(assem, cart);
         return 0;
     }
 
@@ -61,63 +62,4 @@ int main(int argc, char **argv)
     nes.ShutDown();
 
     return 0;
-}
-
-void Disassemble(CPU *cpu)
-{
-    cpu->SetPC(0x0000);
-
-    for (;;) {
-        PrintCpuStatus(cpu);
-
-        int bytes = 1;
-        CpuStatus stat;
-        cpu->GetStatus(stat);
-        const std::string mode_name = stat.mode_name;
-
-        if (mode_name == "IND") {
-            bytes = 3;
-        }
-        else if (mode_name == "ABS") {
-            bytes = 3;
-        }
-        else if (mode_name == "ABX") {
-            bytes = 3;
-        }
-        else if (mode_name == "ABY") {
-            bytes = 3;
-        }
-        else if (mode_name == "IZX") {
-            bytes = 2;
-        }
-        else if (mode_name == "IZY") {
-            bytes = 2;
-        }
-        else if (mode_name == "ZPX") {
-            bytes = 2;
-        }
-        else if (mode_name == "ZPY") {
-            bytes = 2;
-        }
-        else if (mode_name == "REL") {
-            bytes = 3;
-        }
-        else if (mode_name == "IMM") {
-            bytes = 2;
-        }
-        else if (mode_name == "ZPG") {
-            bytes = 2;
-        }
-        else if (mode_name == "ACC") {
-            bytes = 1;
-        }
-        else if (mode_name == "IMP") {
-            bytes = 1;
-        }
-
-        if (cpu->GetPC() + bytes > 0xFFFF)
-            break;
-
-        cpu->SetPC(cpu->GetPC() + bytes);
-    }
 }

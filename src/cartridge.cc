@@ -59,4 +59,12 @@ void Cartridge::WriteChar(uint16_t addr, uint8_t data)
     mapper_->WriteChar(addr, data);
 }
 
+uint8_t Cartridge::PeekProg(uint32_t physical_addr) const
+{
+    if (physical_addr < GetProgSize())
+        return prog_rom_[physical_addr];
+    else
+        return 0;
+}
+
 } // namespace

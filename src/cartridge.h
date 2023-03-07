@@ -27,6 +27,8 @@ public:
     bool IsMapperSupported() const { return mapper_ != nullptr; };
     bool IsVerticalMirroring() const { return mirroring_ == 1; }
 
+    uint8_t PeekProg(uint32_t physical_addr) const;
+
 private:
     uint8_t mirroring_ = 0;
     int mapper_id_ = -1;

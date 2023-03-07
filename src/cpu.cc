@@ -321,6 +321,23 @@ uint16_t CPU::fetch_address(int mode, bool *page_crossed)
     }
 }
 
+static uint8_t get_instruction_bytes(int addr_mode)
+{
+    switch (addr_mode) {
+    case ABS: case ABX: case ABY: case IND:
+        return 3;
+
+    case IMM: case IZX: case IZY: case ZPG: case ZPX: case ZPY: case REL:
+        return 2;
+
+    case ACC: case IMP:
+        return 1;
+
+    default:
+        return 0;
+    }
+}
+
 enum opcode {
     // illegal
     ILL = 0,
@@ -531,6 +548,7 @@ static Instruction decode(uint8_t code)
     inst.opcode    = opcode_table[code];
     inst.addr_mode = addr_mode_table[code];
     inst.cycles    = cycle_table[code];
+    inst.bytes     = get_instruction_bytes(inst.addr_mode);
 
     return inst;
 }
@@ -1202,9 +1220,24 @@ void CPU::SetPC(uint16_t addr)
     pc_ = addr;
 }
 
+uint16_t CPU::GetPC()
+{
+    return pc_;
+}
+
 int CPU::GetCycles() const
 {
     return cycles_;
+}
+
+Instruction Decode(uint8_t code)
+{
+    return decode(code);
+}
+
+const char *GetMnemonic(uint8_t code)
+{
+    return opcode_name_table[code];
 }
 
 } // namespace
