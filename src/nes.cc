@@ -42,6 +42,8 @@ void NES::InsertCartridge(Cartridge *cart)
     cart_ = cart;
     cpu.SetCartride(cart_);
     ppu.SetCartride(cart_);
+
+    Disassemble(assem_, *cart);
 }
 
 void NES::PushResetButton()
@@ -67,6 +69,18 @@ void NES::PlayGame()
 
 void NES::UpdateFrame()
 {
+    static bool is_printing = false;
+    if (!IsPlaying()) {
+        if (!is_printing) {
+            GetCodeLine(assem_, cpu.GetPC() - 0x8000, cpu.GetPC() - 0x8000);
+            is_printing = true;
+        }
+        return;
+    }
+    else {
+        is_printing =false;
+    }
+
     if (frame_ % AUDIO_DELAY_FRAME == 0)
         PlaySamples();
 

@@ -65,10 +65,8 @@ int Display::Open()
             f = 0;
         }
 
-        if (nes_.IsPlaying()) {
-            // Update framebuffer
-            nes_.UpdateFrame();
-        }
+        // Update framebuffer
+        nes_.UpdateFrame();
 
         // Render here
         render();

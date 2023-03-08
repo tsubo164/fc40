@@ -23,6 +23,8 @@ struct AssemblyCode {
 };
 
 extern void Disassemble(AssemblyCode &assem, const Cartridge &cart);
+extern void GetCodeLine(const AssemblyCode &assem,
+        uint32_t physical_addr, uint16_t virtual_addr);
 
 } // namespace
 

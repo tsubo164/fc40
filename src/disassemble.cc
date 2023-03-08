@@ -20,32 +20,37 @@ void Disassemble(AssemblyCode &assem, const Cartridge &cart)
         line.hi   = cart.PeekProg(addr + 2);
         line.wd   = (line.hi << 8) | line.lo;
 
+        const uint32_t index_to_add = assem.instructions_.size();
         assem.instructions_.push_back(line);
-        assem.addr_map_.insert({addr, assem.instructions_.size()});
+        assem.addr_map_.insert({addr, index_to_add});
 
         addr += inst.bytes;
 
         if (addr > PROG_SIZE)
             break;
     }
+}
 
-    for (const auto &line: assem.instructions_) {
+void GetCodeLine(const AssemblyCode &assem,
+        uint32_t physical_addr, uint16_t virtual_addr)
+{
+    const uint32_t index = assem.addr_map_.at(physical_addr);
+    const Code line = assem.instructions_[index];
 
-        switch (line.inst.bytes) {
-        case 1:
-            printf("%04X  %02X        %s\n", line.addr, line.code, GetMnemonic(line.code));
-            break;
+    switch (line.inst.bytes) {
+    case 1:
+        printf("%04X  %02X        %s\n", line.addr, line.code, GetMnemonic(line.code));
+        break;
 
-        case 2:
-            printf("%04X  %02X %02X     %s\n", line.addr, line.code, line.lo,
-                    GetMnemonic(line.code));
-            break;
+    case 2:
+        printf("%04X  %02X %02X     %s\n", line.addr, line.code, line.lo,
+                GetMnemonic(line.code));
+        break;
 
-        case 3:
-            printf("%04X  %02X %02X %02X  %s\n", line.addr, line.code, line.lo, line.hi,
-                    GetMnemonic(line.code));
-            break;
-        }
+    case 3:
+        printf("%04X  %02X %02X %02X  %s\n", line.addr, line.code, line.lo, line.hi,
+                GetMnemonic(line.code));
+        break;
     }
 }
 
