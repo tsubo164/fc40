@@ -42,8 +42,6 @@ void NES::InsertCartridge(Cartridge *cart)
     cart_ = cart;
     cpu.SetCartride(cart_);
     ppu.SetCartride(cart_);
-
-    Disassemble(assem_, *cart);
 }
 
 void NES::PushResetButton()
@@ -89,7 +87,7 @@ void NES::UpdateFrame()
             printf("%02X %02X %02X %04X\n", stat.a, stat.x, stat.y, stat.s);
 
             AssemblyCode assem;
-            Disassemble2(assem, *cart_);
+            Disassemble(assem, *cart_);
 
             auto found = assem.addr_map_.find(cpu.GetPC());
 

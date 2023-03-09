@@ -3,8 +3,8 @@
 
 #include <unordered_map>
 #include <cstdint>
+#include "instruction.h"
 #include "cartridge.h"
-#include "cpu.h"
 
 namespace nes {
 
@@ -23,10 +23,6 @@ struct AssemblyCode {
 };
 
 extern void Disassemble(AssemblyCode &assem, const Cartridge &cart);
-extern void GetCodeLine(const AssemblyCode &assem,
-        uint32_t physical_addr, uint16_t virtual_addr);
-
-extern void Disassemble2(AssemblyCode &assem, const Cartridge &cart);
 extern void PrintLine(const Code &line);
 
 } // namespace

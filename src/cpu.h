@@ -2,19 +2,13 @@
 #define CPU_H
 
 #include <cstdint>
+#include "instruction.h"
 #include "apu.h"
 
 namespace nes {
 
 class Cartridge;
 class PPU;
-
-struct Instruction {
-    uint8_t opcode = 0;
-    uint8_t addr_mode = 0;
-    uint8_t cycles = 0;
-    uint8_t bytes = 0;
-};
 
 struct CpuStatus {
     uint16_t pc = 0;
@@ -59,7 +53,7 @@ private:
     int cycles_ = 0;
     bool suspended_ = false;
 
-    uint8_t opcode_register_ = 0;
+    uint8_t op_register_ = 0;
     bool irq_signal_ = false;
     bool irq_invoking_ = false;
 
@@ -118,9 +112,6 @@ private:
     void handle_nmi();
     bool is_set_irq() const;
 };
-
-Instruction Decode(uint8_t code);
-const char *GetMnemonic(uint8_t code);
 
 } // namespace
 

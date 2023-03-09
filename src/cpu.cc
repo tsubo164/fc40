@@ -5,7 +5,7 @@
 
 namespace nes {
 
-enum status_flag {
+enum StatusFlag {
     C = 1 << 0, // carry
     Z = 1 << 1, // zero
     I = 1 << 2, // disable interrupts
@@ -202,32 +202,6 @@ uint16_t CPU::fetch_word()
     return (hi << 8) | lo;
 }
 
-enum addr_mode {ABS, ABX, ABY, ACC, IMM, IMP, IND, IZX, IZY, REL, ZPG, ZPX, ZPY};
-
-static const char addr_mode_name_table[][4] = {
-    "ABS","ABX","ABY","ACC","IMM","IMP","IND","IZX","IZY","REL","ZPG","ZPX","ZPY"
-};
-
-static const uint8_t addr_mode_table[] = {
-//       +00  +01  +02  +03  +04  +05  +06  +07  +08  +09  +0A  +0B  +0C  +0D  +0E  +0F
-/*0x00*/ IMP, IZX, IMP, IZX, ZPG, ZPG, ZPG, ZPG, IMP, IMM, ACC, IMM, ABS, ABS, ABS, ABS,
-/*0x10*/ REL, IZY, IMP, IZY, ZPX, ZPX, ZPX, ZPX, IMP, ABY, IMP, ABY, ABX, ABX, ABX, ABX,
-/*0x20*/ ABS, IZX, IMP, IZX, ZPG, ZPG, ZPG, ZPG, IMP, IMM, ACC, IMM, ABS, ABS, ABS, ABS,
-/*0x30*/ REL, IZY, IMP, IZY, ZPX, ZPX, ZPX, ZPX, IMP, ABY, IMP, ABY, ABX, ABX, ABX, ABX,
-/*0x40*/ IMP, IZX, IMP, IZX, ZPG, ZPG, ZPG, ZPG, IMP, IMM, ACC, IMM, ABS, ABS, ABS, ABS,
-/*0x50*/ REL, IZY, IMP, IZY, ZPX, ZPX, ZPX, ZPX, IMP, ABY, IMP, ABY, ABX, ABX, ABX, ABX,
-/*0x60*/ IMP, IZX, IMP, IZX, ZPG, ZPG, ZPG, ZPG, IMP, IMM, ACC, IMM, IND, ABS, ABS, ABS,
-/*0x70*/ REL, IZY, IMP, IZY, ZPX, ZPX, ZPX, ZPX, IMP, ABY, IMP, ABY, ABX, ABX, ABX, ABX,
-/*0x80*/ IMM, IZX, IMM, IZX, ZPG, ZPG, ZPG, ZPG, IMP, IMM, IMP, IMM, ABS, ABS, ABS, ABS,
-/*0x90*/ REL, IZY, IMP, IZY, ZPX, ZPX, ZPY, ZPY, IMP, ABY, IMP, ABY, ABX, ABX, ABY, ABY,
-/*0xA0*/ IMM, IZX, IMM, IZX, ZPG, ZPG, ZPG, ZPG, IMP, IMM, IMP, IMM, ABS, ABS, ABS, ABS,
-/*0xB0*/ REL, IZY, IMP, IZY, ZPX, ZPX, ZPY, ZPY, IMP, ABY, IMP, ABY, ABX, ABX, ABY, ABY,
-/*0xC0*/ IMM, IZX, IMM, IZX, ZPG, ZPG, ZPG, ZPG, IMP, IMM, IMP, IMM, ABS, ABS, ABS, ABS,
-/*0xD0*/ REL, IZY, IMP, IZY, ZPX, ZPX, ZPX, ZPX, IMP, ABY, IMP, ABY, ABX, ABX, ABX, ABX,
-/*0xE0*/ IMM, IZX, IMM, IZX, ZPG, ZPG, ZPG, ZPG, IMP, IMM, IMP, IMM, ABS, ABS, ABS, ABS,
-/*0xF0*/ REL, IZY, IMP, IZY, ZPX, ZPX, ZPX, ZPX, IMP, ABY, IMP, ABY, ABX, ABX, ABX, ABX
-};
-
 static bool is_page_crossing(uint16_t addr, uint8_t addend)
 {
     return (addr & 0x00FF) + (addend & 0x00FF) > 0x00FF;
@@ -320,113 +294,6 @@ uint16_t CPU::fetch_address(int mode, bool *page_crossed)
         return 0;
     }
 }
-
-static uint8_t get_instruction_bytes(int addr_mode)
-{
-    switch (addr_mode) {
-    case ABS: case ABX: case ABY: case IND:
-        return 3;
-
-    case IMM: case IZX: case IZY: case ZPG: case ZPX: case ZPY: case REL:
-        return 2;
-
-    case ACC: case IMP:
-        return 1;
-
-    default:
-        return 0;
-    }
-}
-
-enum opcode {
-    // illegal
-    ILL = 0,
-    // load and store
-    LDA, LDX, LDY, STA, STX, STY,
-    // transfer
-    TAX, TAY, TSX, TXA, TXS, TYA,
-    // stack
-    PHA, PHP, PLA, PLP,
-    // shift
-    ASL, LSR, ROL, ROR,
-    // logic
-    AND, EOR, ORA, BIT,
-    // arithmetic
-    ADC, SBC, CMP, CPX, CPY,
-    // increment and decrement
-    INC, INX, INY, DEC, DEX, DEY,
-    // control
-    JMP, JSR, BRK, RTI, RTS,
-    // branch
-    BCC, BCS, BEQ, BMI, BNE, BPL, BVC, BVS,
-    // flag
-    CLC, CLD, CLI, CLV, SEC, SED, SEI,
-    // XXX undocumented. there are actually some more ops.
-    LAX, SAX, DCP, ISC, SLO, RLA, SRE, RRA,
-    // no op
-    NOP
-};
-
-static const uint8_t opcode_table[] = {
-//      00   01   02   03   04   05   06   07   08   09   0A   0B   0C   0D   0E   0F
-/*00*/ BRK, ORA,   0, SLO, NOP, ORA, ASL, SLO, PHP, ORA, ASL,   0, NOP, ORA, ASL, SLO,
-/*10*/ BPL, ORA,   0, SLO, NOP, ORA, ASL, SLO, CLC, ORA, NOP, SLO, NOP, ORA, ASL, SLO,
-/*20*/ JSR, AND,   0, RLA, BIT, AND, ROL, RLA, PLP, AND, ROL,   0, BIT, AND, ROL, RLA,
-/*30*/ BMI, AND,   0, RLA, NOP, AND, ROL, RLA, SEC, AND, NOP, RLA, NOP, AND, ROL, RLA,
-/*40*/ RTI, EOR,   0, SRE, NOP, EOR, LSR, SRE, PHA, EOR, LSR,   0, JMP, EOR, LSR, SRE,
-/*50*/ BVC, EOR,   0, SRE, NOP, EOR, LSR, SRE, CLI, EOR, NOP, SRE, NOP, EOR, LSR, SRE,
-/*60*/ RTS, ADC,   0, RRA, NOP, ADC, ROR, RRA, PLA, ADC, ROR,   0, JMP, ADC, ROR, RRA,
-/*70*/ BVS, ADC,   0, RRA, NOP, ADC, ROR, RRA, SEI, ADC, NOP, RRA, NOP, ADC, ROR, RRA,
-/*80*/ NOP, STA, NOP, SAX, STY, STA, STX, SAX, DEY, NOP, TXA,   0, STY, STA, STX, SAX,
-/*90*/ BCC, STA,   0,   0, STY, STA, STX, SAX, TYA, STA, TXS,   0,   0, STA,   0,   0,
-/*A0*/ LDY, LDA, LDX, LAX, LDY, LDA, LDX, LAX, TAY, LDA, TAX, LAX, LDY, LDA, LDX, LAX,
-/*B0*/ BCS, LDA,   0, LAX, LDY, LDA, LDX, LAX, CLV, LDA, TSX,   0, LDY, LDA, LDX, LAX,
-/*C0*/ CPY, CMP, NOP, DCP, CPY, CMP, DEC, DCP, INY, CMP, DEX,   0, CPY, CMP, DEC, DCP,
-/*D0*/ BNE, CMP,   0, DCP, NOP, CMP, DEC, DCP, CLD, CMP, NOP, DCP, NOP, CMP, DEC, DCP,
-/*E0*/ CPX, SBC, NOP, ISC, CPX, SBC, INC, ISC, INX, SBC, NOP, SBC, CPX, SBC, INC, ISC,
-/*F0*/ BEQ, SBC,   0, ISC, NOP, SBC, INC, ISC, SED, SBC, NOP, ISC, NOP, SBC, INC, ISC
-};
-
-#define ILLEG "???"
-static const char opcode_name_table[][4] = {
-"BRK","ORA",ILLEG,"SLO","NOP","ORA","ASL","SLO","PHP","ORA","ASL",ILLEG,"NOP","ORA","ASL","SLO",
-"BPL","ORA",ILLEG,"SLO","NOP","ORA","ASL","SLO","CLC","ORA","NOP","SLO","NOP","ORA","ASL","SLO",
-"JSR","AND",ILLEG,"RLA","BIT","AND","ROL","RLA","PLP","AND","ROL",ILLEG,"BIT","AND","ROL","RLA",
-"BMI","AND",ILLEG,"RLA","NOP","AND","ROL","RLA","SEC","AND","NOP","RLA","NOP","AND","ROL","RLA",
-"RTI","EOR",ILLEG,"SRE","NOP","EOR","LSR","SRE","PHA","EOR","LSR",ILLEG,"JMP","EOR","LSR","SRE",
-"BVC","EOR",ILLEG,"SRE","NOP","EOR","LSR","SRE","CLI","EOR","NOP","SRE","NOP","EOR","LSR","SRE",
-"RTS","ADC",ILLEG,"RRA","NOP","ADC","ROR","RRA","PLA","ADC","ROR",ILLEG,"JMP","ADC","ROR","RRA",
-"BVS","ADC",ILLEG,"RRA","NOP","ADC","ROR","RRA","SEI","ADC","NOP","RRA","NOP","ADC","ROR","RRA",
-"NOP","STA","NOP","SAX","STY","STA","STX","SAX","DEY","NOP","TXA",ILLEG,"STY","STA","STX","SAX",
-"BCC","STA",ILLEG,ILLEG,"STY","STA","STX","SAX","TYA","STA","TXS",ILLEG,ILLEG,"STA",ILLEG,ILLEG,
-"LDY","LDA","LDX","LAX","LDY","LDA","LDX","LAX","TAY","LDA","TAX","LAX","LDY","LDA","LDX","LAX",
-"BCS","LDA",ILLEG,"LAX","LDY","LDA","LDX","LAX","CLV","LDA","TSX",ILLEG,"LDY","LDA","LDX","LAX",
-"CPY","CMP","NOP","DCP","CPY","CMP","DEC","DCP","INY","CMP","DEX",ILLEG,"CPY","CMP","DEC","DCP",
-"BNE","CMP",ILLEG,"DCP","NOP","CMP","DEC","DCP","CLD","CMP","NOP","DCP","NOP","CMP","DEC","DCP",
-"CPX","SBC","NOP","ISC","CPX","SBC","INC","ISC","INX","SBC","NOP","SBC","CPX","SBC","INC","ISC",
-"BEQ","SBC",ILLEG,"ISC","NOP","SBC","INC","ISC","SED","SBC","NOP","ISC","NOP","SBC","INC","ISC"
-};
-#undef ILLEG
-
-static const int8_t cycle_table[] = {
-//     00  01  02  03  04  05  06  07  08  09  0A  0B  0C  0D  0E  0F
-/*00*/  7,  6,  0,  8,  3,  3,  5,  5,  3,  2,  2,  2,  4,  4,  6,  6,
-/*10*/  2,  5,  0,  8,  4,  4,  6,  6,  2,  4,  2,  7,  4,  4,  7,  7,
-/*20*/  6,  6,  0,  8,  3,  3,  5,  5,  4,  2,  2,  2,  4,  4,  6,  6,
-/*30*/  2,  5,  0,  8,  4,  4,  6,  6,  2,  4,  2,  7,  4,  4,  7,  7,
-/*40*/  6,  6,  0,  8,  3,  3,  5,  5,  3,  2,  2,  2,  3,  4,  6,  6,
-/*50*/  2,  5,  0,  8,  4,  4,  6,  6,  2,  4,  2,  7,  4,  4,  7,  7,
-/*60*/  6,  6,  0,  8,  3,  3,  5,  5,  4,  2,  2,  2,  5,  4,  6,  6,
-/*70*/  2,  5,  0,  8,  4,  4,  6,  6,  2,  4,  2,  7,  4,  4,  7,  7,
-/*80*/  2,  6,  2,  6,  3,  3,  3,  3,  2,  2,  2,  2,  4,  4,  4,  4,
-/*90*/  2,  6,  0,  6,  4,  4,  4,  4,  2,  5,  2,  5,  5,  5,  5,  5,
-/*A0*/  2,  6,  2,  6,  3,  3,  3,  3,  2,  2,  2,  2,  4,  4,  4,  4,
-/*B0*/  2,  5,  0,  5,  4,  4,  4,  4,  2,  4,  2,  4,  4,  4,  4,  4,
-/*C0*/  2,  6,  2,  8,  3,  3,  5,  5,  2,  2,  2,  2,  4,  4,  6,  6,
-/*D0*/  2,  5,  0,  8,  4,  4,  6,  6,  2,  4,  2,  7,  4,  4,  7,  7,
-/*E0*/  2,  6,  2,  8,  3,  3,  5,  5,  2,  2,  2,  2,  4,  4,  6,  6,
-/*F0*/  2,  5,  0,  8,  4,  4,  6,  6,  2,  4,  2,  7,  4,  4,  7,  7
-};
 
 void CPU::set_pc(uint16_t addr)
 {
@@ -543,14 +410,7 @@ void CPU::add_a_m(uint8_t data)
 
 static Instruction decode(uint8_t code)
 {
-    Instruction inst;
-
-    inst.opcode    = opcode_table[code];
-    inst.addr_mode = addr_mode_table[code];
-    inst.cycles    = cycle_table[code];
-    inst.bytes     = get_instruction_bytes(inst.addr_mode);
-
-    return inst;
+    return Decode(code);
 }
 
 int CPU::execute(Instruction inst)
@@ -560,7 +420,7 @@ int CPU::execute(Instruction inst)
     const uint8_t mode = inst.addr_mode;
     const uint16_t addr = fetch_address(mode, &page_crossed);
 
-    switch (inst.opcode) {
+    switch (inst.operation) {
 
     // Load Accumulator with Memory: M -> A (N, Z)
     case LDA:
@@ -1008,7 +868,7 @@ int CPU::execute(Instruction inst)
 
 void CPU::execute_delayed()
 {
-    switch (opcode_register_) {
+    switch (op_register_) {
     // Clear Interrupt Disable: 0 -> I (I)
     case CLI:
         set_flag(I, 0);
@@ -1073,7 +933,7 @@ void CPU::Clock()
         cycs = execute(inst);
 
         cycles_ = cycs;
-        opcode_register_ = inst.opcode;
+        op_register_ = inst.operation;
 
         // The RTI instruction affects IRQ inhibition immediately.
         // If an IRQ is pending and an RTI is executed that clears the I flag,
@@ -1205,8 +1065,9 @@ void CPU::GetStatus(CpuStatus &stat) const
     stat.hi   = peek_byte(stat.pc + 2);
     stat.wd   = (stat.hi << 8) | stat.lo;
 
-    strcpy(stat.inst_name, opcode_name_table[stat.code]);
-    strcpy(stat.mode_name, addr_mode_name_table[addr_mode_table[stat.code]]);
+    const Instruction inst = decode(stat.code);
+    strcpy(stat.inst_name, GetOperationName(inst.operation));
+    strcpy(stat.mode_name, GetAddressingModeName(inst.addr_mode));
 }
 
 void CPU::SetPC(uint16_t addr)
@@ -1222,16 +1083,6 @@ uint16_t CPU::GetPC()
 int CPU::GetCycles() const
 {
     return cycles_;
-}
-
-Instruction Decode(uint8_t code)
-{
-    return decode(code);
-}
-
-const char *GetMnemonic(uint8_t code)
-{
-    return opcode_name_table[code];
 }
 
 } // namespace
