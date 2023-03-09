@@ -69,16 +69,33 @@ void NES::PlayGame()
 
 void NES::UpdateFrame()
 {
-    static bool is_printing = false;
     if (!IsPlaying()) {
-        if (!is_printing) {
-            GetCodeLine(assem_, cpu.GetPC() - 0x8000, cpu.GetPC() - 0x8000);
-            is_printing = true;
+        if (need_disassemble_) {
+            AssemblyCode assem;
+            Disassemble2(assem, *cart_);
+
+            auto found = assem.addr_map_.find(cpu.GetPC());
+            printf("==============================\n");
+
+            if (found != assem.addr_map_.end()) {
+                const int index = found->second;
+                for (int i = index - 16; i < index + 16; i++) {
+                    if (i == index)
+                        printf(" -> ");
+                    else
+                        printf("    ");
+                    PrintLine(assem.instructions_[i]);
+                }
+            }
+            else {
+                printf("NOT FOUND PC!!! %04X\n", cpu.GetPC());
+            }
+
+            need_disassemble_ = false;
         }
-        return;
-    }
-    else {
-        is_printing =false;
+
+        if (!is_stepping_)
+            return;
     }
 
     if (frame_ % AUDIO_DELAY_FRAME == 0)
@@ -94,6 +111,12 @@ void NES::UpdateFrame()
                 cpu.Clock();
 
             cpu.ClockAPU();
+
+            if (is_stepping_ && cpu.GetCycles() == 0) {
+                is_stepping_ = false;
+                need_disassemble_ = true;
+                return;
+            }
         }
 
         clock_++;
@@ -115,12 +138,25 @@ void NES::Play()
 {
     PlaySamples();
     is_playing_ = true;
+    is_stepping_ = false;
 }
 
 void NES::Pause()
 {
     PauseSamples();
     is_playing_ = false;
+    need_disassemble_ = true;
+}
+
+bool NES::IsPlaying() const
+{
+    return is_playing_;
+}
+
+void NES::Step()
+{
+    if (!IsPlaying())
+        is_stepping_ = true;
 }
 
 void NES::clock_dma()

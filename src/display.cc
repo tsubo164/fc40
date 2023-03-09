@@ -14,7 +14,7 @@ const int RESX = 256;
 const int RESY = 240;
 
 struct KeyState {
-    bool g = 0, p = 0, r = 0, space = 0;
+    bool g = 0, p = 0, r = 0, space = 0, tab = 0;
 };
 
 static void init_gl();
@@ -131,6 +131,13 @@ int Display::Open()
         }
         else if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_RELEASE && key.space == 1) {
             key.space = false;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS && key.tab == 0) {
+            nes_.Step();
+            key.tab = true;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_RELEASE && key.tab == 1) {
+            key.tab = false;
         }
         else if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
             break;

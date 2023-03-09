@@ -36,7 +36,8 @@ public:
 
     void Play();
     void Pause();
-    bool IsPlaying() const { return is_playing_; }
+    bool IsPlaying() const;
+    void Step();
 
 private:
     uint64_t clock_ = 0;
@@ -52,6 +53,8 @@ private:
     uint8_t dma_data_ = 0;
 
     bool is_playing_ = false;
+    bool is_stepping_ = false;
+    bool need_disassemble_ = false;
 
     void clock_dma();
 };
