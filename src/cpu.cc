@@ -564,8 +564,6 @@ int CPU::execute(Instruction inst)
 
     // Load Accumulator with Memory: M -> A (N, Z)
     case LDA:
-        //if (peek_byte(addr) == 0x02)
-        //    printf("%04X  LDA <- %02X\n", pc_, peek_byte(addr));
         set_a(read_byte(addr));
         break;
 
@@ -749,8 +747,6 @@ int CPU::execute(Instruction inst)
 
     // Compare Memory and Accumulator: A - M (N, Z, C)
     case CMP:
-        //if (peek_byte(addr) == 0x80)
-        //    printf("%04X  CMP A: %02X\n", pc_, a_);
         compare(a_, read_byte(addr));
         break;
 
@@ -1141,8 +1137,6 @@ void CPU::ClockAPU()
 
 void CPU::handle_irq()
 {
-    //printf("%04X ---- HandleIRQ() ----\n", pc_);
-
     push_word(pc_);
 
     set_flag(B, 0);

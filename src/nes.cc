@@ -115,6 +115,7 @@ void NES::UpdateFrame()
             if (is_stepping_ && cpu.GetCycles() == 0) {
                 is_stepping_ = false;
                 need_disassemble_ = true;
+                clock_++;
                 return;
             }
         }

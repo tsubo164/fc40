@@ -5,8 +5,6 @@
 #include "debug.h"
 #include "log.h"
 
-#include "disassemble.h"
-
 using namespace nes;
 
 int main(int argc, char **argv)
@@ -41,12 +39,6 @@ int main(int argc, char **argv)
 
     nes.InsertCartridge(&cart);
     nes.PowerUp();
-
-    if (0) {
-        AssemblyCode assem;
-        Disassemble(assem, cart);
-        return 0;
-    }
 
     if (log_mode) {
         LogCpuStatus(&nes.cpu, 8980);
