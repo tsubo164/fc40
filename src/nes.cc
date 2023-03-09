@@ -71,11 +71,27 @@ void NES::UpdateFrame()
 {
     if (!IsPlaying()) {
         if (need_disassemble_) {
+            printf("==============================\n");
+            CpuStatus stat;
+            cpu.GetStatus(stat);
+            uint8_t mask = (0x01 << 7);
+            printf("C Z I D B U V N\n");
+            for (int i = 0; i < 8; i++) {
+                const bool on = (stat.p & mask);
+                if (i > 0)
+                    printf(" ");
+                printf("%c", on ? '1' : '-');
+                mask >>= 1;
+            }
+            printf("\n");
+
+            printf(" A  X  Y   SP\n");
+            printf("%02X %02X %02X %04X\n", stat.a, stat.x, stat.y, stat.s);
+
             AssemblyCode assem;
             Disassemble2(assem, *cart_);
 
             auto found = assem.addr_map_.find(cpu.GetPC());
-            printf("==============================\n");
 
             if (found != assem.addr_map_.end()) {
                 const int index = found->second;
