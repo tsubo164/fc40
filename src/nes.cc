@@ -98,7 +98,9 @@ void NES::UpdateFrame()
                         printf(" -> ");
                     else
                         printf("    ");
-                    PrintLine(assem.instructions_[i]);
+
+                    const std::string line = GetCodeString(assem.instructions_[i]);
+                    printf("%s\n", line.c_str());
                 }
             }
             else {

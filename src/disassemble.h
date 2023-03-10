@@ -3,6 +3,7 @@
 
 #include <unordered_map>
 #include <cstdint>
+#include <string>
 #include "instruction.h"
 #include "cartridge.h"
 
@@ -24,6 +25,7 @@ struct AssemblyCode {
 
 extern void Disassemble(AssemblyCode &assem, const Cartridge &cart);
 extern void PrintLine(const Code &line);
+std::string GetCodeString(const Code &line);
 
 } // namespace
 
