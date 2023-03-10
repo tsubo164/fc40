@@ -1075,7 +1075,7 @@ void CPU::SetPC(uint16_t addr)
     pc_ = addr;
 }
 
-uint16_t CPU::GetPC()
+uint16_t CPU::GetPC() const
 {
     return pc_;
 }
@@ -1083,6 +1083,16 @@ uint16_t CPU::GetPC()
 int CPU::GetCycles() const
 {
     return cycles_;
+}
+
+uint16_t CPU::GetAbsoluteIndirect(uint16_t abs) const
+{
+    return abs_indirect(abs);
+}
+
+uint16_t CPU::GetZeroPageIndirect(uint8_t zp) const
+{
+    return zp_indirect(zp);
 }
 
 } // namespace

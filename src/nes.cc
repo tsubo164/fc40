@@ -100,7 +100,15 @@ void NES::UpdateFrame()
                         printf("    ");
 
                     const std::string line = GetCodeString(assem.instructions_[i]);
-                    printf("%s\n", line.c_str());
+                    printf("%s", line.c_str());
+
+                    if (i == index) {
+                        const std::string mem = GetMemoryString(assem.instructions_[i], cpu);
+                        printf("%s\n", mem.c_str());
+                    }
+                    else {
+                        printf("\n");
+                    }
                 }
             }
             else {

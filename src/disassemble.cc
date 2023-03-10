@@ -27,29 +27,10 @@ void Disassemble(AssemblyCode &assem, const Cartridge &cart)
     }
 }
 
-void PrintLine(const Code &line)
-{
-    switch (line.inst.bytes) {
-    case 1:
-        printf("%04X  %02X        %s\n", line.addr, line.code,
-                GetOperationName(line.inst.operation));
-        break;
-
-    case 2:
-        printf("%04X  %02X %02X     %s\n", line.addr, line.code, line.lo,
-                GetOperationName(line.inst.operation));
-        break;
-
-    case 3:
-        printf("%04X  %02X %02X %02X  %s\n", line.addr, line.code, line.lo, line.hi,
-                GetOperationName(line.inst.operation));
-        break;
-    }
-}
-
 std::string GetCodeString(const Code &line)
 {
-    static char buf[1024] = {'\0'};
+    constexpr size_t SIZE = 64;
+    char buf[SIZE] = {'\0'};
     const char *op_name = GetOperationName(line.inst.operation);
     const uint16_t addr = line.addr;
     const uint8_t code = line.code;
@@ -59,64 +40,64 @@ std::string GetCodeString(const Code &line)
 
     switch (line.inst.bytes) {
     case 1:
-        sprintf(buf, "%04X  %02X        %s", addr, code, op_name);
+        snprintf(buf, SIZE, "%04X  %02X        %s", addr, code, op_name);
         break;
 
     case 2:
-        sprintf(buf, "%04X  %02X %02X     %s", addr, code, lo, op_name);
+        snprintf(buf, SIZE, "%04X  %02X %02X     %s", addr, code, lo, op_name);
         break;
 
     case 3:
-        sprintf(buf, "%04X  %02X %02X %02X  %s", addr, code, lo, hi, op_name);
+        snprintf(buf, SIZE, "%04X  %02X %02X %02X  %s", addr, code, lo, hi, op_name);
         break;
     }
 
     std::string result = buf;
-    buf[0] = '\0';
 
     switch (line.inst.addr_mode) {
+    case IND:
+        snprintf(buf, SIZE, "($%04X)", wd);
+        break;
+
     case ABS:
-        sprintf(buf, "$%04X", wd);
+        snprintf(buf, SIZE, "$%04X", wd);
         break;
 
     case ABX:
-        sprintf(buf, "$%04X,X", wd);
+        snprintf(buf, SIZE, "$%04X,X", wd);
         break;
 
     case ABY:
-        sprintf(buf, "$%04X,Y", wd);
-        break;
-
-    case IND:
-        sprintf(buf, "($%04X)", wd);
+        snprintf(buf, SIZE, "$%04X,Y", wd);
         break;
 
     case IZX:
-        sprintf(buf, "($%02X,X)", lo);
+        snprintf(buf, SIZE, "($%02X,X)", lo);
         break;
 
     case IZY:
-        sprintf(buf, "($%02X),Y", lo);
+        snprintf(buf, SIZE, "($%02X),Y", lo);
         break;
 
     case REL:
-        sprintf(buf, "$%04X", (addr + 2) + static_cast<int8_t>(lo));
+        snprintf(buf, SIZE, "$%04X", (addr + 2) + static_cast<int8_t>(lo));
         break;
 
     case ZPG: case ZPX: case ZPY:
-        sprintf(buf, "$%02X", lo);
+        snprintf(buf, SIZE, "$%02X", lo);
         break;
 
     case IMM:
-        sprintf(buf, "#$%02X", lo);
+        snprintf(buf, SIZE, "#$%02X", lo);
         break;
 
     case ACC:
-        sprintf(buf, " A");
+        snprintf(buf, SIZE, "A");
         break;
 
     case IMP:
     default:
+        buf[0] = '\0';
         break;
     }
 
@@ -124,6 +105,72 @@ std::string GetCodeString(const Code &line)
         result += std::string(" ") + buf;
 
     return result;
+}
+
+std::string GetMemoryString(const Code &line, const CPU &cpu)
+{
+    constexpr size_t SIZE = 32;
+    char buf[SIZE] = {'\0'};
+    const uint8_t lo = line.lo;
+    const uint16_t wd = line.wd;
+
+    CpuStatus stat;
+    cpu.GetStatus(stat);
+    const uint8_t  x = stat.x;
+    const uint8_t  y = stat.y;
+
+    switch (line.inst.addr_mode) {
+    case IND:
+        snprintf(buf, SIZE, " = %04X", cpu.GetAbsoluteIndirect(wd));
+        break;
+
+    case ABS:
+        if (line.inst.operation != JMP && line.inst.operation != JSR)
+            snprintf(buf, SIZE, " = %02X", cpu.PeekData(wd));
+        break;
+
+    case ABX:
+        snprintf(buf, SIZE, " @ %04X = %02X", wd + x, cpu.PeekData(wd + x));
+        break;
+
+    case ABY:
+        snprintf(buf, SIZE, " @ %04X = %02X",
+                (wd + y) & 0xFFFF, cpu.PeekData((wd + y) & 0xFFFF));
+        break;
+
+    case IZX:
+        {
+            const uint16_t zpi = cpu.GetZeroPageIndirect(lo + x);
+            snprintf(buf, SIZE, " @ %02X = %04X = %02X",
+                    (lo + x) & 0xFF, zpi, cpu.PeekData(zpi));
+        }
+        break;
+
+    case IZY:
+        {
+            const uint16_t zpi = cpu.GetZeroPageIndirect(lo);
+            snprintf(buf, SIZE, " = %04X @ %04X = %02X",
+                    zpi, (zpi + y) & 0xFFFF, cpu.PeekData(zpi + y));
+        }
+        break;
+
+    case ZPX:
+        snprintf(buf, SIZE, " @ %02X = %02X", (lo + x) & 0xFF, cpu.PeekData((lo + x) & 0xFF));
+        break;
+
+    case ZPY:
+        snprintf(buf, SIZE, " @ %02X = %02X", (lo + y) & 0xFF, cpu.PeekData((lo + y) & 0xFF));
+        break;
+
+    case ZPG:
+        snprintf(buf, SIZE, " = %02X", cpu.PeekData(lo));
+        break;
+
+    default:
+        break;
+    }
+
+    return buf;
 }
 
 } // namespace

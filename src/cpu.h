@@ -43,8 +43,10 @@ public:
 
     // debug
     void SetPC(uint16_t addr);
-    uint16_t GetPC();
+    uint16_t GetPC() const;
     int GetCycles() const;
+    uint16_t GetAbsoluteIndirect(uint16_t abs) const;
+    uint16_t GetZeroPageIndirect(uint8_t zp) const;
 
 private:
     Cartridge *cart_ = nullptr;

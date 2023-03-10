@@ -6,6 +6,7 @@
 #include <string>
 #include "instruction.h"
 #include "cartridge.h"
+#include "cpu.h"
 
 namespace nes {
 
@@ -24,8 +25,8 @@ struct AssemblyCode {
 };
 
 extern void Disassemble(AssemblyCode &assem, const Cartridge &cart);
-extern void PrintLine(const Code &line);
 std::string GetCodeString(const Code &line);
+std::string GetMemoryString(const Code &line, const CPU &cpu);
 
 } // namespace
 
