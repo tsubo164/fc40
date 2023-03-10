@@ -24,6 +24,7 @@ struct AssemblyCode {
     std::unordered_map<uint32_t,size_t> addr_map_;
 };
 
+Code DisassembleLine(const CPU &cpu, uint16_t addr);
 extern void Disassemble(AssemblyCode &assem, const Cartridge &cart);
 std::string GetCodeString(const Code &line);
 std::string GetMemoryString(const Code &line, const CPU &cpu);

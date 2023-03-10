@@ -3,7 +3,6 @@
 #include "nes.h"
 #include "cartridge.h"
 #include "debug.h"
-#include "log.h"
 
 using namespace nes;
 
@@ -41,7 +40,7 @@ int main(int argc, char **argv)
     nes.PowerUp();
 
     if (log_mode) {
-        LogCpuStatus(&nes.cpu, 8980);
+        LogCpuStatus(nes.cpu, 8980);
     }
     else {
         printf("iNES Mapper : %4d\n", cart.GetMapperID());

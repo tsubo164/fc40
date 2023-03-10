@@ -3,6 +3,22 @@
 
 namespace nes {
 
+Code DisassembleLine(const CPU &cpu, uint16_t addr)
+{
+    const uint8_t code = cpu.PeekData(addr);
+    const Instruction inst = Decode(code);
+
+    Code line;
+    line.inst = inst;
+    line.addr = addr;
+    line.code = code;
+    line.lo   = cpu.PeekData(addr + 1);
+    line.hi   = cpu.PeekData(addr + 2);
+    line.wd   = (line.hi << 8) | line.lo;
+
+    return line;
+}
+
 void Disassemble(AssemblyCode &assem, const Cartridge &cart)
 {
     uint32_t addr = 0x0000;
@@ -83,8 +99,16 @@ std::string GetCodeString(const Code &line)
         snprintf(buf, SIZE, "$%04X", (addr + 2) + static_cast<int8_t>(lo));
         break;
 
-    case ZPG: case ZPX: case ZPY:
+    case ZPG:
         snprintf(buf, SIZE, "$%02X", lo);
+        break;
+
+    case ZPX:
+        snprintf(buf, SIZE, "$%02X,X", lo);
+        break;
+
+    case ZPY:
+        snprintf(buf, SIZE, "$%02X,Y", lo);
         break;
 
     case IMM:

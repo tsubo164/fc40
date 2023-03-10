@@ -1,23 +1,47 @@
 #include <cstdint>
+#include <string>
 #include "debug.h"
+#include "disassemble.h"
 #include "framebuffer.h"
 #include "cartridge.h"
 #include "cpu.h"
-#include "log.h"
 
 namespace nes {
 
-void LogCpuStatus(CPU *cpu, int max_lines)
+static void print_cpu_status(const CPU &cpu)
+{
+    CpuStatus stat;
+    cpu.GetStatus(stat);
+    const uint16_t pc = stat.pc;
+    const uint8_t  a = stat.a;
+    const uint8_t  x = stat.x;
+    const uint8_t  y = stat.y;
+    const uint8_t  p = stat.p;
+    const uint8_t  s = stat.s;
+
+    const Code line = DisassembleLine(cpu, pc);
+    const std::string code_str = GetCodeString(line);
+    const std::string mem_str = GetMemoryString(line, cpu);
+    const int padding = 48 - code_str.length() - mem_str.length();
+
+    printf("%s%s", code_str.c_str(), mem_str.c_str());
+    printf("%*s", padding, " ");
+    printf("A:%02X X:%02X Y:%02X P:%02X SP:%02X", a, x, y, p, s);
+
+    printf("\n");
+}
+
+void LogCpuStatus(CPU &cpu, int max_lines)
 {
     uint16_t log_line = 0;
-    cpu->SetPC(0xC000);
+    cpu.SetPC(0xC000);
 
     while (log_line < max_lines) {
-        if (cpu->GetCycles() == 0) {
-            PrintCpuStatus(cpu);
+        if (cpu.GetCycles() == 0) {
+            print_cpu_status(cpu);
             log_line++;
         }
-        cpu->Clock();
+        cpu.Clock();
     }
 }
 
