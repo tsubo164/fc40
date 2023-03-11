@@ -69,51 +69,7 @@ void NES::UpdateFrame()
 {
     if (!IsPlaying()) {
         if (need_disassemble_) {
-            printf("==============================\n");
-            const CpuStatus stat = cpu.GetStatus();
-            uint8_t mask = (0x01 << 7);
-            printf("C Z I D B U V N\n");
-            for (int i = 0; i < 8; i++) {
-                const bool on = (stat.p & mask);
-                if (i > 0)
-                    printf(" ");
-                printf("%c", on ? '1' : '-');
-                mask >>= 1;
-            }
-            printf("\n");
-
-            printf(" A  X  Y   SP\n");
-            printf("%02X %02X %02X %04X\n", stat.a, stat.x, stat.y, stat.s);
-
-            AssemblyCode assem;
-            Disassemble(assem, *cart_);
-
-            auto found = assem.addr_map_.find(cpu.GetPC());
-
-            if (found != assem.addr_map_.end()) {
-                const int index = found->second;
-                for (int i = index - 16; i < index + 16; i++) {
-                    if (i == index)
-                        printf(" -> ");
-                    else
-                        printf("    ");
-
-                    const std::string line = GetCodeString(assem.instructions_[i]);
-                    printf("%s", line.c_str());
-
-                    if (i == index) {
-                        const std::string mem = GetMemoryString(assem.instructions_[i], cpu);
-                        printf("%s\n", mem.c_str());
-                    }
-                    else {
-                        printf("\n");
-                    }
-                }
-            }
-            else {
-                printf("NOT FOUND PC!!! %04X\n", cpu.GetPC());
-            }
-
+            print_disassemble();
             need_disassemble_ = false;
         }
 
@@ -219,6 +175,65 @@ static void send_initial_samples()
     for (int i = 0; i < N; i++)
         PushSample(0.);
     SendSamples();
+}
+
+static void print_cpu_status(CpuStatus stat)
+{
+    const char indent[] = "    ";
+    uint8_t mask = (0x01 << 7);
+    printf(indent);
+    printf("N V U B D I Z C\n");
+    printf(indent);
+    for (int i = 0; i < 8; i++) {
+        const bool on = (stat.p & mask);
+        if (i > 0)
+            printf(" ");
+        printf("%c", on ? '1' : '-');
+        mask >>= 1;
+    }
+    printf("\n");
+
+    printf(indent);
+    printf("A  X  Y  SP\n");
+    printf(indent);
+    printf("%02X %02X %02X %02X\n", stat.a, stat.x, stat.y, stat.s);
+}
+
+void NES::print_disassemble() const
+{
+    printf("==============================\n");
+    print_cpu_status(cpu.GetStatus());
+    printf("------------------------------\n");
+
+    AssemblyCode assem;
+    Disassemble(assem, *cart_);
+
+    const int index = assem.FindCode(cpu.GetPC());
+    if (index != -1) {
+        const int start = std::max(index - 16, 0);
+        const int end   = std::min(index + 16, assem.GetCount());
+
+        for (int i = start; i < end; i++) {
+            const Code code = assem.GetCode(i);
+            const std::string line = GetCodeString(code);
+
+            if (i == index) {
+                printf(" -> ");
+                printf("%s", line.c_str());
+
+                const std::string mem = GetMemoryString(code, cpu);
+                printf("%s", mem.c_str());
+            } else {
+                printf("    ");
+                printf("%s", line.c_str());
+            }
+
+            printf("\n");
+        }
+    }
+    else {
+        printf("NOT FOUND PC!!! %04X\n", cpu.GetPC());
+    }
 }
 
 } // namespace

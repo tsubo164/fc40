@@ -57,6 +57,7 @@ private:
     bool need_disassemble_ = false;
 
     void clock_dma();
+    void print_disassemble() const;
 };
 
 } // namespace

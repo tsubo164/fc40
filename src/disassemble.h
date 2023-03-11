@@ -20,6 +20,10 @@ struct Code {
 };
 
 struct AssemblyCode {
+    int FindCode(uint16_t addr) const;
+    Code GetCode(int index) const;
+    int GetCount() const;
+
     std::vector<Code> instructions_; 
     std::unordered_map<uint32_t,size_t> addr_map_;
 };
