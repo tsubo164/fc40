@@ -57,25 +57,18 @@ void NES::PlayGame()
     InitSound();
     send_initial_samples();
 
-    is_playing_ = true;
+    state_ = Running;
 
     disp.Open();
     FinishSound();
 
-    is_playing_ = false;
+    state_ = Stopped;
 }
 
 void NES::UpdateFrame()
 {
-    if (!IsPlaying()) {
-        if (need_disassemble_) {
-            print_disassemble();
-            need_disassemble_ = false;
-        }
-
-        if (!is_stepping_)
-            return;
-    }
+    if (state_ == Stopped)
+        return;
 
     if (frame_ % AUDIO_DELAY_FRAME == 0)
         PlaySamples();
@@ -91,9 +84,9 @@ void NES::UpdateFrame()
 
             cpu.ClockAPU();
 
-            if (is_stepping_ && cpu.GetCycles() == 0) {
-                is_stepping_ = false;
-                need_disassemble_ = true;
+            if (state_ == Stepping && cpu.GetCycles() == 0) {
+                state_ = Stopped;
+                print_disassemble();
                 clock_++;
                 return;
             }
@@ -114,29 +107,26 @@ void NES::InputController(uint8_t id, uint8_t input)
     cpu.InputController(id, input);
 }
 
-void NES::Play()
+void NES::Run()
 {
     PlaySamples();
-    is_playing_ = true;
-    is_stepping_ = false;
+    state_ = Running;
 }
 
-void NES::Pause()
+void NES::Stop()
 {
     PauseSamples();
-    is_playing_ = false;
-    need_disassemble_ = true;
+    Step();
 }
 
-bool NES::IsPlaying() const
+bool NES::IsRunning() const
 {
-    return is_playing_;
+    return state_ == Running;
 }
 
 void NES::Step()
 {
-    if (!IsPlaying())
-        is_stepping_ = true;
+    state_ = Stepping;
 }
 
 void NES::clock_dma()

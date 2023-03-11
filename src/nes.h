@@ -34,9 +34,9 @@ public:
 
     const Cartridge *GetCartridge() const { return cart_; }
 
-    void Play();
-    void Pause();
-    bool IsPlaying() const;
+    void Run();
+    void Stop();
+    bool IsRunning() const;
     void Step();
 
 private:
@@ -52,9 +52,12 @@ private:
     uint8_t dma_page_ = 0;
     uint8_t dma_data_ = 0;
 
-    bool is_playing_ = false;
-    bool is_stepping_ = false;
-    bool need_disassemble_ = false;
+    // state
+    enum EmulatorState {
+        Running = 0,
+        Stopped,
+        Stepping,
+    } state_ = Running;
 
     void clock_dma();
     void print_disassemble() const;

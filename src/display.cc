@@ -122,10 +122,10 @@ int Display::Open()
             key.r = false;
         }
         else if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && key.space == 0) {
-            if (nes_.IsPlaying())
-                nes_.Pause();
+            if (nes_.IsRunning())
+                nes_.Stop();
             else
-                nes_.Play();
+                nes_.Run();
 
             key.space = true;
         }
