@@ -4,7 +4,7 @@
 
 namespace nes {
 
-int AssemblyCode::FindCode(uint16_t addr) const
+int Assembly::FindCode(uint16_t addr) const
 {
     auto found = addr_map_.find(addr);
 
@@ -14,14 +14,14 @@ int AssemblyCode::FindCode(uint16_t addr) const
         return -1;
 }
 
-Code AssemblyCode::GetCode(int index) const
+Code Assembly::GetCode(int index) const
 {
     assert(index >= 0 && index < GetCount());
 
     return instructions_[index];
 }
 
-int AssemblyCode::GetCount() const
+int Assembly::GetCount() const
 {
     return instructions_.size();
 }
@@ -42,7 +42,7 @@ Code DisassembleLine(const CPU &cpu, uint16_t addr)
     return line;
 }
 
-void Disassemble(AssemblyCode &assem, const Cartridge &cart)
+void Disassemble(Assembly &assem, const Cartridge &cart)
 {
     uint32_t addr = 0x0000;
 

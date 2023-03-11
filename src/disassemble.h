@@ -19,7 +19,7 @@ struct Code {
     uint16_t wd;
 };
 
-struct AssemblyCode {
+struct Assembly {
     int FindCode(uint16_t addr) const;
     Code GetCode(int index) const;
     int GetCount() const;
@@ -29,7 +29,7 @@ struct AssemblyCode {
 };
 
 Code DisassembleLine(const CPU &cpu, uint16_t addr);
-extern void Disassemble(AssemblyCode &assem, const Cartridge &cart);
+extern void Disassemble(Assembly &assem, const Cartridge &cart);
 std::string GetCodeString(const Code &line);
 std::string GetMemoryString(const Code &line, const CPU &cpu);
 

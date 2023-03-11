@@ -185,13 +185,39 @@ static void print_cpu_status(CpuStatus stat)
     printf("%s%02X %02X %02X %02X\n", indent, stat.a, stat.x, stat.y, stat.s);
 }
 
+static void print_code(const Code &code)
+{
+    const std::string code_str = GetCodeString(code);
+
+    printf("    %s\n", code_str.c_str());
+}
+
+static void print_current_code(const Code &code, const CPU &cpu)
+{
+    const std::string code_str = GetCodeString(code);
+    const std::string mem_str = GetMemoryString(code, cpu);
+
+    printf(" -> %s%s\n", code_str.c_str(), mem_str.c_str());
+}
+
+static int find_nearest_next(const Assembly &assem, uint16_t pc)
+{
+    for (int i = 0; i < assem.GetCount(); i++) {
+        const Code code = assem.GetCode(i);
+
+        if (code.addr > pc)
+            return i;
+    }
+    return -1;
+}
+
 void NES::print_disassemble() const
 {
     printf("==============================\n");
     print_cpu_status(cpu.GetStatus());
     printf("------------------------------\n");
 
-    AssemblyCode assem;
+    Assembly assem;
     Disassemble(assem, *cart_);
 
     const int index = assem.FindCode(cpu.GetPC());
@@ -199,26 +225,30 @@ void NES::print_disassemble() const
         const int start = std::max(index - 16, 0);
         const int end   = std::min(index + 16, assem.GetCount());
 
-        for (int i = start; i < end; i++) {
-            const Code code = assem.GetCode(i);
-            const std::string line = GetCodeString(code);
+        for (int i = start; i < index; i++)
+            print_code(assem.GetCode(i));
 
-            if (i == index) {
-                printf(" -> ");
-                printf("%s", line.c_str());
+        print_current_code(assem.GetCode(index), cpu);
 
-                const std::string mem = GetMemoryString(code, cpu);
-                printf("%s", mem.c_str());
-            } else {
-                printf("    ");
-                printf("%s", line.c_str());
-            }
-
-            printf("\n");
-        }
+        for (int i = index + 1; i <= end; i++)
+            print_code(assem.GetCode(i));
     }
     else {
-        printf("NOT FOUND PC!!! %04X\n", cpu.GetPC());
+        const uint16_t pc = cpu.GetPC();
+        const int next_index = find_nearest_next(assem, pc);
+
+        const int start = std::max(next_index - 16, 0);
+        const int end   = std::min(next_index + 16, assem.GetCount());
+
+        for (int i = start; i < next_index; i++)
+            print_code(assem.GetCode(i));
+
+        printf("\033[0;31m");
+        print_current_code(DisassembleLine(cpu, pc), cpu);
+        printf("\033[0;39m");
+
+        for (int i = next_index; i < end; i++)
+            print_code(assem.GetCode(i));
     }
 }
 

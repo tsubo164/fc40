@@ -44,7 +44,6 @@ private:
     uint64_t frame_ = 0;
 
     Cartridge *cart_ = nullptr;
-    AssemblyCode assem_;
 
     // dma
     int dma_wait_ = 0;
