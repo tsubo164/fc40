@@ -170,23 +170,19 @@ static void send_initial_samples()
 static void print_cpu_status(CpuStatus stat)
 {
     const char indent[] = "    ";
+    printf("%sN V U B D I Z C\n", indent);
+
+    char flags[] = "- - - - - - - -\n";
     uint8_t mask = (0x01 << 7);
-    printf(indent);
-    printf("N V U B D I Z C\n");
-    printf(indent);
+
     for (int i = 0; i < 8; i++) {
-        const bool on = (stat.p & mask);
-        if (i > 0)
-            printf(" ");
-        printf("%c", on ? '1' : '-');
+        flags[i * 2] = (stat.p & mask) ? '1' : '-';
         mask >>= 1;
     }
-    printf("\n");
+    printf("%s%s", indent, flags);
 
-    printf(indent);
-    printf("A  X  Y  SP\n");
-    printf(indent);
-    printf("%02X %02X %02X %02X\n", stat.a, stat.x, stat.y, stat.s);
+    printf("%sA  X  Y  SP\n", indent);
+    printf("%s%02X %02X %02X %02X\n", indent, stat.a, stat.x, stat.y, stat.s);
 }
 
 void NES::print_disassemble() const

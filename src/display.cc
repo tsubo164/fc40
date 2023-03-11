@@ -133,7 +133,8 @@ int Display::Open()
             key.space = false;
         }
         else if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS && key.tab == 0) {
-            nes_.Step();
+            if (!nes_.IsRunning())
+                nes_.Step();
             key.tab = true;
         }
         else if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_RELEASE && key.tab == 1) {
