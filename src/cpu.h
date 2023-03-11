@@ -13,11 +13,6 @@ class PPU;
 struct CpuStatus {
     uint16_t pc = 0;
     uint8_t  a = 0, x = 0, y = 0, p = 0, s = 0;
-    uint8_t  lo = 0, hi = 0;
-    uint16_t wd = 0;
-    uint8_t  code = 0;
-    char inst_name[4] = {0};
-    char mode_name[4] = {0};
 };
 
 class CPU {
@@ -39,9 +34,9 @@ public:
     void Resume();
     uint8_t GetDmaPage() const;
     uint8_t PeekData(uint16_t addr) const;
-    void GetStatus(CpuStatus &stat) const;
 
     // debug
+    CpuStatus GetStatus() const;
     void SetPC(uint16_t addr);
     uint16_t GetPC() const;
     int GetCycles() const;

@@ -138,8 +138,7 @@ std::string GetMemoryString(const Code &line, const CPU &cpu)
     const uint8_t lo = line.lo;
     const uint16_t wd = line.wd;
 
-    CpuStatus stat;
-    cpu.GetStatus(stat);
+    const CpuStatus stat = cpu.GetStatus();
     const uint8_t  x = stat.x;
     const uint8_t  y = stat.y;
 

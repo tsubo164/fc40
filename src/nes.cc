@@ -70,8 +70,7 @@ void NES::UpdateFrame()
     if (!IsPlaying()) {
         if (need_disassemble_) {
             printf("==============================\n");
-            CpuStatus stat;
-            cpu.GetStatus(stat);
+            const CpuStatus stat = cpu.GetStatus();
             uint8_t mask = (0x01 << 7);
             printf("C Z I D B U V N\n");
             for (int i = 0; i < 8; i++) {

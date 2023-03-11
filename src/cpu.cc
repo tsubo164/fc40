@@ -1051,8 +1051,10 @@ uint8_t CPU::PeekData(uint16_t addr) const
     return peek_byte(addr);
 }
 
-void CPU::GetStatus(CpuStatus &stat) const
+CpuStatus CPU::GetStatus() const
 {
+    CpuStatus stat;
+
     stat.pc = pc_;
     stat.a  = a_;
     stat.x  = x_;
@@ -1060,14 +1062,7 @@ void CPU::GetStatus(CpuStatus &stat) const
     stat.p  = p_;
     stat.s  = s_;
 
-    stat.code = peek_byte(stat.pc + 0);
-    stat.lo   = peek_byte(stat.pc + 1);
-    stat.hi   = peek_byte(stat.pc + 2);
-    stat.wd   = (stat.hi << 8) | stat.lo;
-
-    const Instruction inst = decode(stat.code);
-    strcpy(stat.inst_name, GetOperationName(inst.operation));
-    strcpy(stat.mode_name, GetAddressingModeName(inst.addr_mode));
+    return stat;
 }
 
 void CPU::SetPC(uint16_t addr)
