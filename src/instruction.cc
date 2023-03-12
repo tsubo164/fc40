@@ -23,7 +23,7 @@ static const uint8_t addr_mode_table[] = {
 /*0xF0*/ REL, IZY, IMP, IZY, ZPX, ZPX, ZPX, ZPX, IMP, ABY, IMP, ABY, ABX, ABX, ABX, ABX
 };
 
-static const uint8_t opcode_table[] = {
+static const uint8_t operation_table[] = {
 //      00   01   02   03   04   05   06   07   08   09   0A   0B   0C   0D   0E   0F
 /*00*/ BRK, ORA,   0, SLO, NOP, ORA, ASL, SLO, PHP, ORA, ASL,   0, NOP, ORA, ASL, SLO,
 /*10*/ BPL, ORA,   0, SLO, NOP, ORA, ASL, SLO, CLC, ORA, NOP, SLO, NOP, ORA, ASL, SLO,
@@ -108,13 +108,13 @@ const char *GetOperationName(uint8_t oper)
 }
 #undef E
 
-Instruction Decode(uint8_t code)
+Instruction Decode(uint8_t opcode)
 {
     Instruction inst;
 
-    inst.operation = opcode_table[code];
-    inst.addr_mode = addr_mode_table[code];
-    inst.cycles    = cycle_table[code];
+    inst.operation = operation_table[opcode];
+    inst.addr_mode = addr_mode_table[opcode];
+    inst.cycles    = cycle_table[opcode];
     inst.bytes     = get_instruction_bytes(inst.addr_mode);
 
     return inst;

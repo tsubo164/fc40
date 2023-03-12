@@ -1,14 +1,22 @@
+#include "disassemble.h"
 #include <cassert>
 #include <cstdio>
-#include "disassemble.h"
 
 namespace nes {
 
+Assembly::Assembly()
+{
+}
+
+Assembly::~Assembly()
+{
+}
+
 int Assembly::FindCode(uint16_t addr) const
 {
-    auto found = addr_map_.find(addr);
+    auto found = addr_to_code_.find(addr);
 
-    if (found != addr_map_.end())
+    if (found != addr_to_code_.end())
         return found->second;
     else
         return -1;
@@ -18,82 +26,73 @@ Code Assembly::GetCode(int index) const
 {
     assert(index >= 0 && index < GetCount());
 
-    return instructions_[index];
+    return codes_[index];
 }
 
 int Assembly::GetCount() const
 {
-    return instructions_.size();
+    return codes_.size();
 }
 
 Code DisassembleLine(const CPU &cpu, uint16_t addr)
 {
-    const uint8_t code = cpu.PeekData(addr);
-    const Instruction inst = Decode(code);
+    const uint8_t opcode = cpu.PeekData(addr);
+    const Instruction inst = Decode(opcode);
 
-    Code line;
-    line.inst = inst;
-    line.addr = addr;
-    line.code = code;
-    line.lo   = cpu.PeekData(addr + 1);
-    line.hi   = cpu.PeekData(addr + 2);
-    line.wd   = (line.hi << 8) | line.lo;
+    Code code;
+    code.instruction = inst;
+    code.address = addr;
+    code.opcode  = opcode;
+    code.lo      = cpu.PeekData(addr + 1);
+    code.hi      = cpu.PeekData(addr + 2);
+    code.word    = (code.hi << 8) | code.lo;
 
-    return line;
+    return code;
 }
 
-void Disassemble(Assembly &assem, const Cartridge &cart)
+void Assembly::DisassembleProgram(const CPU &cpu)
 {
     uint32_t addr = 0x0000;
 
     while (addr <= 0xFFFF) {
-        Code line;
-        const uint8_t code = cart.ReadProg(addr);
-        const Instruction inst = Decode(code);
+        const Code code = DisassembleLine(cpu, addr);
+        const uint32_t index_to_add = codes_.size();
 
-        line.inst = inst;
-        line.addr = addr;
-        line.code = code;
-        line.lo   = cart.ReadProg(addr + 1);
-        line.hi   = cart.ReadProg(addr + 2);
-        line.wd   = (line.hi << 8) | line.lo;
+        codes_.push_back(code);
+        addr_to_code_.insert({addr, index_to_add});
 
-        const uint32_t index_to_add = assem.instructions_.size();
-        assem.instructions_.push_back(line);
-        assem.addr_map_.insert({addr, index_to_add});
-
-        addr += inst.bytes;
+        addr += code.instruction.bytes;
     }
 }
 
-std::string GetCodeString(const Code &line)
+std::string GetCodeString(const Code &code)
 {
     constexpr size_t SIZE = 64;
     char buf[SIZE] = {'\0'};
-    const char *op_name = GetOperationName(line.inst.operation);
-    const uint16_t addr = line.addr;
-    const uint8_t code = line.code;
-    const uint8_t lo = line.lo;
-    const uint8_t hi = line.hi;
-    const uint16_t wd = line.wd;
+    const char *op_name = GetOperationName(code.instruction.operation);
+    const uint16_t addr = code.address;
+    const uint8_t op = code.opcode;
+    const uint8_t lo = code.lo;
+    const uint8_t hi = code.hi;
+    const uint16_t wd = code.word;
 
-    switch (line.inst.bytes) {
+    switch (code.instruction.bytes) {
     case 1:
-        snprintf(buf, SIZE, "%04X  %02X        %s", addr, code, op_name);
+        snprintf(buf, SIZE, "%04X  %02X        %s", addr, op, op_name);
         break;
 
     case 2:
-        snprintf(buf, SIZE, "%04X  %02X %02X     %s", addr, code, lo, op_name);
+        snprintf(buf, SIZE, "%04X  %02X %02X     %s", addr, op, lo, op_name);
         break;
 
     case 3:
-        snprintf(buf, SIZE, "%04X  %02X %02X %02X  %s", addr, code, lo, hi, op_name);
+        snprintf(buf, SIZE, "%04X  %02X %02X %02X  %s", addr, op, lo, hi, op_name);
         break;
     }
 
     std::string result = buf;
 
-    switch (line.inst.addr_mode) {
+    switch (code.instruction.addr_mode) {
     case IND:
         snprintf(buf, SIZE, "($%04X)", wd);
         break;
@@ -154,24 +153,24 @@ std::string GetCodeString(const Code &line)
     return result;
 }
 
-std::string GetMemoryString(const Code &line, const CPU &cpu)
+std::string GetMemoryString(const Code &code, const CPU &cpu)
 {
     constexpr size_t SIZE = 32;
     char buf[SIZE] = {'\0'};
-    const uint8_t lo = line.lo;
-    const uint16_t wd = line.wd;
+    const uint8_t lo = code.lo;
+    const uint16_t wd = code.word;
 
     const CpuStatus stat = cpu.GetStatus();
     const uint8_t  x = stat.x;
     const uint8_t  y = stat.y;
 
-    switch (line.inst.addr_mode) {
+    switch (code.instruction.addr_mode) {
     case IND:
         snprintf(buf, SIZE, " = %04X", cpu.GetAbsoluteIndirect(wd));
         break;
 
     case ABS:
-        if (line.inst.operation != JMP && line.inst.operation != JSR)
+        if (code.instruction.operation != JMP && code.instruction.operation != JSR)
             snprintf(buf, SIZE, " = %02X", cpu.PeekData(wd));
         break;
 

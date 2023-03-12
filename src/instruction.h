@@ -32,7 +32,7 @@ struct Instruction {
 const char *GetAddressingModeName(uint8_t mode);
 const char *GetOperationName(uint8_t oper);
 
-Instruction Decode(uint8_t code);
+Instruction Decode(uint8_t opcode);
 
 } // namespace
 

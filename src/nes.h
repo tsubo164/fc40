@@ -1,11 +1,11 @@
 #ifndef NES_H
 #define NES_H
 
-#include <cstdint>
 #include "cpu.h"
 #include "ppu.h"
 #include "disassemble.h"
 #include "framebuffer.h"
+#include <cstdint>
 
 namespace nes {
 

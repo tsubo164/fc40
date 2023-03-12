@@ -408,9 +408,9 @@ void CPU::add_a_m(uint8_t data)
     set_a(r);
 }
 
-static Instruction decode(uint8_t code)
+static Instruction decode(uint8_t opcode)
 {
-    return Decode(code);
+    return Decode(opcode);
 }
 
 int CPU::execute(Instruction inst)

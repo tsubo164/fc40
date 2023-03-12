@@ -205,7 +205,7 @@ static int find_nearest_next(const Assembly &assem, uint16_t pc)
     for (int i = 0; i < assem.GetCount(); i++) {
         const Code code = assem.GetCode(i);
 
-        if (code.addr > pc)
+        if (code.address > pc)
             return i;
     }
     return -1;
@@ -218,7 +218,7 @@ void NES::print_disassemble() const
     printf("------------------------------\n");
 
     Assembly assem;
-    Disassemble(assem, *cart_);
+    assem.DisassembleProgram(cpu);
 
     const int index = assem.FindCode(cpu.GetPC());
     if (index != -1) {
