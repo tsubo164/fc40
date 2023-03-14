@@ -60,7 +60,7 @@ static void write_pulse_hi(PulseChannel &pulse, uint8_t data)
     //
     // The sequencer is immediately restarted at the first value of the current sequence.
     // The envelope is also restarted. The period divider is not reset.
-    pulse.length = length_table[data >> 3];
+    pulse.length = pulse.enabled ? length_table[data >> 3] : 0;
     pulse.timer_period = ((data & 0x07) << 8) | (pulse.timer_period & 0x00FF);
     pulse.sequence_pos = 0;
     pulse.envelope.start = true;
@@ -92,7 +92,7 @@ static void write_triangle_hi(TriangleChannel &tri, uint8_t data)
     // $400B     | llll.lHHH | Length counter load and timer high (write)
     // bits 2-0  | ---- -HHH | Timer high 3 bits
     // Side effects | Sets the linear counter reload flag
-    tri.length = length_table[data >> 3];
+    tri.length = tri.enabled ? length_table[data >> 3] : 0;
     tri.timer_period = ((data & 0x07) << 8) | (tri.timer_period & 0x00FF);
     tri.linear_reload = 1;
 }
@@ -131,7 +131,7 @@ static void write_noise_lo(NoiseChannel &noise, uint8_t data)
 static void write_noise_hi(NoiseChannel &noise, uint8_t data)
 {
     // $400F | llll.l--- | Length counter load and envelope restart (write)
-    noise.length = length_table[data >> 3];
+    noise.length = noise.enabled ? length_table[data >> 3] : 0;
     noise.envelope.start = true;
 }
 
@@ -139,6 +139,10 @@ void APU::WriteStatus(uint8_t data)
 {
     // $4015 write | ---D NT21 | Enable DMC (D), noise (N), triangle (T),
     // and pulse channels (2/1)
+
+    // When the enabled bit is cleared (via $4015), the length counter is forced to 0
+    // and cannot be changed until enabled is set again (the length counter's previous
+    // value is lost). There is no immediate effect when enabled is set.
     pulse1_.enabled = (data & 0x01);
     if (!pulse1_.enabled)
         pulse1_.length = 0;
@@ -251,6 +255,17 @@ uint8_t APU::ReadStatus()
 {
     // $4015 read | IF-D NT21 | DMC interrupt (I), frame interrupt (F),
     //            |           | DMC active (D), length counter > 0 (N/T/2/1)
+    uint8_t data = PeekStatus();
+
+    // Reading this register clears the frame interrupt flag
+    // (but not the DMC interrupt flag).
+    frame_interrupt_ = false;
+
+    return data;
+}
+
+uint8_t APU::PeekStatus() const
+{
     uint8_t data = 0x00;
 
     //data |= (inhibit_interrupt_)   << 7;
@@ -259,10 +274,6 @@ uint8_t APU::ReadStatus()
     data |= (triangle_.length > 0) << 2;
     data |= (pulse2_.length > 0)   << 1;
     data |= (pulse1_.length > 0)   << 0;
-
-    // Reading this register clears the frame interrupt flag
-    // (but not the DMC interrupt flag).
-    frame_interrupt_ = false;
 
     return data;
 }

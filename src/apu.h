@@ -109,6 +109,7 @@ public:
 
     // read registers
     uint8_t ReadStatus();
+    uint8_t PeekStatus() const;
 
 private:
     double audio_time_ = 0.;
