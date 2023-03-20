@@ -979,4 +979,14 @@ ObjectAttribute PPU::ReadOam(int index) const
     return get_sprite(index);
 }
 
+int PPU::GetCycle() const
+{
+    return cycle_;
+}
+
+int PPU::GetScanline() const
+{
+    return scanline_;
+}
+
 } // namespace

@@ -6,8 +6,11 @@ namespace nes {
 class FrameBuffer;
 class Cartridge;
 class CPU;
+class PPU;
+class NES;
 
-extern void LogCpuStatus(CPU &cpu, int max_lines);
+extern void PrintCpuStatus(const CPU &cpu, const PPU &ppu);
+extern void LogCpuStatus(NES &nes, int max_lines);
 
 extern void LoadPatternTable(FrameBuffer &fb, const Cartridge *cart);
 

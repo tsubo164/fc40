@@ -40,7 +40,7 @@ int main(int argc, char **argv)
     nes.PowerUp();
 
     if (log_mode) {
-        LogCpuStatus(nes.cpu, 8980);
+        LogCpuStatus(nes, 8991);
     }
     else {
         printf("iNES Mapper : %4d\n", cart.GetMapperID());

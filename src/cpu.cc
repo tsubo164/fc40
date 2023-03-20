@@ -2,6 +2,7 @@
 #include "cpu.h"
 #include "ppu.h"
 #include "cartridge.h"
+#include "debug.h"
 
 namespace nes {
 
@@ -281,7 +282,13 @@ uint16_t CPU::fetch_address(int mode, bool *page_crossed)
         {
             // fetch data first, then add it to the PC
             const uint8_t offset = fetch();
-            return pc_ + (int8_t) offset;
+            const uint16_t old_pc = pc_;
+            const uint16_t new_pc = pc_ + static_cast<int8_t>(offset);
+
+            if ((old_pc & 0xFF00) != (new_pc & 0xFF00))
+                *page_crossed = 1;
+
+            return new_pc;
         }
 
     case ZPG:
@@ -419,7 +426,7 @@ static Instruction decode(uint8_t opcode)
 int CPU::execute(Instruction inst)
 {
     bool page_crossed = false;
-    int branch_taken = 0;
+    bool branch_taken = false;
     const uint8_t mode = inst.addr_mode;
     const uint16_t addr = fetch_address(mode, &page_crossed);
 
@@ -866,6 +873,19 @@ int CPU::execute(Instruction inst)
         break;
     }
 
+    // Adjust page crossed
+    switch (inst.operation) {
+    case ASL: case DEC: case INC: case LSR: case ROL: case ROR: case STA:
+    case DCP: case ISC: case RLA: case RRA: case SLO: case SRE:
+        page_crossed = 0;
+        break;
+
+    case BCC: case BCS: case BEQ: case BMI:
+    case BNE: case BPL: case BVC: case BVS:
+        page_crossed = branch_taken ? page_crossed : 0;
+        break;
+    }
+
     return inst.cycles + page_crossed + branch_taken;
 }
 
@@ -908,6 +928,9 @@ void CPU::PowerUp()
     set_s(0xFD);
     set_p(0x00 | I);
 
+    cycles_ = 7;
+    total_cycles_ = 0;
+
     apu_.PowerUp();
 }
 
@@ -919,7 +942,8 @@ void CPU::Reset()
     set_flag(I, 1);
 
     // takes cycles
-    cycles_ = 8;
+    cycles_ = 7;
+    total_cycles_ = 0;
 
     apu_.Reset();
 }
@@ -928,6 +952,9 @@ void CPU::Clock()
 {
     // The first cycle
     if (cycles_ == 0) {
+        if (log_mode_)
+            PrintCpuStatus(*this, ppu_);
+
         uint8_t code, cycs;
         Instruction inst;
 
@@ -988,6 +1015,8 @@ void CPU::Clock()
             irq_invoking_ = true;
         }
     }
+
+    total_cycles_++;
 }
 
 void CPU::ClockAPU()
@@ -1091,6 +1120,16 @@ uint16_t CPU::GetAbsoluteIndirect(uint16_t abs) const
 uint16_t CPU::GetZeroPageIndirect(uint8_t zp) const
 {
     return zp_indirect(zp);
+}
+
+void CPU::SetLogMode()
+{
+    log_mode_ = true;
+}
+
+uint64_t CPU::GetTotalCycles() const
+{
+    return total_cycles_;
 }
 
 } // namespace

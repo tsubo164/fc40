@@ -66,8 +66,11 @@ public:
     uint8_t PeekStatus() const;
     // sprites
     void WriteDmaSprite(uint8_t addr, uint8_t data);
+
     // debug
     ObjectAttribute ReadOam(int index) const;
+    int GetCycle() const;
+    int GetScanline() const;
 
 private:
     Cartridge *cart_ = nullptr;

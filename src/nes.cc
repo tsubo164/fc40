@@ -74,8 +74,6 @@ void NES::UpdateFrame()
         PlaySamples();
 
     do {
-        ppu.Clock();
-
         if (clock_ % 3 == 0) {
             if (cpu.IsSuspended())
                 clock_dma();
@@ -91,6 +89,8 @@ void NES::UpdateFrame()
                 return;
             }
         }
+
+        ppu.Clock();
 
         clock_++;
 

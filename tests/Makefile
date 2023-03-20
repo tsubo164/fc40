@@ -5,8 +5,8 @@ RM      = rm -f
 test: cpu_test
 
 cpu_test: ../nes
-	../nes --log-mode ./nestest.nes > test.log
-	head -8980 nestest.log | sed -e 's/\*/ /' -e 's/ISB/ISC/' | cut -b -73 | diff - test.log
+	../nes --log-mode ./nestest.nes | head -8980 > test.log
+	head -8980 nestest.log | sed -e 's/ISB/ISC/' | diff - test.log
 	@echo "\033[0;32mOK\033[0;39m"
 	../nes ./nestest.nes
 

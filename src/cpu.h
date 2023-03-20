@@ -43,6 +43,9 @@ public:
     uint16_t GetAbsoluteIndirect(uint16_t abs) const;
     uint16_t GetZeroPageIndirect(uint8_t zp) const;
 
+    void SetLogMode();
+    uint64_t GetTotalCycles() const;
+
 private:
     Cartridge *cart_ = nullptr;
     PPU &ppu_;
@@ -70,6 +73,9 @@ private:
 
     // dma
     uint8_t dma_page_ = 0;
+
+    bool log_mode_ = false;
+    uint64_t total_cycles_ = 0;
 
     // read and write
     void write_byte(uint16_t addr, uint8_t data);

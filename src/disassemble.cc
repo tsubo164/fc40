@@ -90,6 +90,21 @@ std::string GetCodeString(const Code &code)
         break;
     }
 
+    // Unofficial instruction marker
+    switch (code.instruction.operation) {
+    case LAX: case SAX: case DCP: case ISC: case SLO: case RLA: case SRE: case RRA:
+        buf[15] = '*';
+        break;
+
+    case SBC:
+        buf[15] = code.opcode == 0xEB ? '*' : ' ';
+        break;
+
+    case NOP:
+        buf[15] = code.opcode != 0xEA ? '*' : ' ';
+        break;
+    }
+
     std::string result = buf;
 
     switch (code.instruction.addr_mode) {

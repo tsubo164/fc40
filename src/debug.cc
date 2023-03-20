@@ -4,12 +4,22 @@
 #include "disassemble.h"
 #include "framebuffer.h"
 #include "cartridge.h"
+#include "sound.h"
+#include "nes.h"
 #include "cpu.h"
+#include "ppu.h"
 
 namespace nes {
 
-static void print_cpu_status(const CPU &cpu)
+static int current_log_line = 0;
+static int last_log_line = 0;
+
+void PrintCpuStatus(const CPU &cpu, const PPU &ppu)
 {
+    current_log_line++;
+    if (current_log_line > last_log_line)
+        return;
+
     const CpuStatus stat = cpu.GetStatus();
     const Code line = DisassembleLine(cpu, stat.pc);
     const std::string code_str = GetCodeString(line);
@@ -21,20 +31,22 @@ static void print_cpu_status(const CPU &cpu)
     printf("A:%02X X:%02X Y:%02X P:%02X SP:%02X",
             stat.a, stat.x, stat.y, stat.p, stat.s);
 
+    printf(" PPU:%3d,%3d", ppu.GetScanline(), ppu.GetCycle());
+
+    printf(" CYC:%llu", cpu.GetTotalCycles());
     printf("\n");
 }
 
-void LogCpuStatus(CPU &cpu, int max_lines)
+void LogCpuStatus(NES &nes, int max_lines)
 {
-    uint16_t log_line = 0;
-    cpu.SetPC(0xC000);
+    last_log_line = max_lines;
 
-    while (log_line < max_lines) {
-        if (cpu.GetCycles() == 0) {
-            print_cpu_status(cpu);
-            log_line++;
-        }
-        cpu.Clock();
+    InitSound();
+    nes.cpu.SetLogMode();
+    nes.cpu.SetPC(0xC000);
+
+    while (current_log_line <= last_log_line) {
+        nes.UpdateFrame();
     }
 }
 
