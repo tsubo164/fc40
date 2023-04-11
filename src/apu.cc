@@ -175,10 +175,14 @@ void APU::WriteFrameCounter(uint8_t data)
     if (inhibit_interrupt_)
         frame_interrupt_ = false;
 
-    // TODO
-    // After 3 or 4 CPU clock cycles*, the timer is reset.
-    // If the mode flag is set, then both "quarter frame" and "half frame" signals
-    // are also generated.
+    // After 3 or 4 CPU clock cycles*, the timer is reset. If the mode flag is set,
+    // then both "quarter frame" and "half frame" signals are also generated.
+    if (mode_) {
+        clock_envelopes();
+        clock_linear_counter();
+        clock_length_counters();
+        clock_sweeps();
+    }
 }
 
 void APU::WriteSquare1Volume(uint8_t data)
@@ -255,7 +259,7 @@ uint8_t APU::ReadStatus()
 {
     // $4015 read | IF-D NT21 | DMC interrupt (I), frame interrupt (F),
     //            |           | DMC active (D), length counter > 0 (N/T/2/1)
-    uint8_t data = PeekStatus();
+    const uint8_t data = PeekStatus();
 
     // Reading this register clears the frame interrupt flag
     // (but not the DMC interrupt flag).
@@ -509,7 +513,7 @@ void APU::clock_length_counters()
     if (pulse1_.length > 0 && !pulse1_.length_halt)
         pulse1_.length--;
 
-    if (pulse2_.length > 0 && !pulse1_.length_halt)
+    if (pulse2_.length > 0 && !pulse2_.length_halt)
         pulse2_.length--;
 
     if (triangle_.length > 0 && !triangle_.length_halt)
