@@ -683,6 +683,7 @@ int CPU::execute(Instruction inst)
     // Break Command: push(PC + 2), [FFFE] -> PCL, [FFFF] ->PCH (I)
     case BRK:
         // an extra byte of spacing for a break mark
+        // 5  $0100,S  W  push P on stack (with B flag set), decrement S
         push_word(pc_ + 1);
         push(p_ | B);
 
@@ -693,7 +694,6 @@ int CPU::execute(Instruction inst)
     // Return from Interrupt: pop(P) pop(PC) (N, V, D, I, Z, C)
     case RTI:
         set_p(pop());
-        set_flag(B, 0);
         set_pc(pop_word());
         break;
 
@@ -904,8 +904,7 @@ void CPU::execute_delayed()
 
     // Pull Processor Status from Stack: (N, V, D, I, Z, C)
     case PLP:
-        set_p(pop());
-        set_flag(B, 0);
+        set_p(pop() & ~B);
         break;
 
     default:
@@ -1027,29 +1026,25 @@ void CPU::ClockAPU()
         irq_signal_ = true;
 }
 
-void CPU::handle_irq()
+void CPU::do_interrupt(uint16_t vector)
 {
+    // 5  $0100,S  W  push P on stack (with B flag *clear*), decrement S
     push_word(pc_);
-
-    set_flag(B, 0);
-    //set_flag(I, 1);
-    push(p_);
+    push(p_ & ~B);
     set_flag(I, 1);
 
-    set_pc(read_word(0xFFFE));
+    set_pc(read_word(vector));
     cycles_ = 7;
+}
+
+void CPU::handle_irq()
+{
+    do_interrupt(0xFFFE);
 }
 
 void CPU::handle_nmi()
 {
-    push_word(pc_);
-
-    set_flag(B, 0);
-    set_flag(I, 1);
-    push(p_);
-
-    set_pc(read_word(0xFFFA));
-    cycles_ = 8;
+    do_interrupt(0xFFFA);
 }
 
 bool CPU::is_set_irq() const

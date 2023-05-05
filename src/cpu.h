@@ -111,6 +111,7 @@ private:
     int execute(Instruction inst);
     void execute_delayed();
     // interrupts
+    void do_interrupt(uint16_t vector);
     void handle_irq();
     void handle_nmi();
     bool is_set_irq() const;
