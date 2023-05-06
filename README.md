@@ -1,6 +1,7 @@
 # Famulator: A Famicom/NES Emulator
 
 <img src ="./image/smb_grid.png" width=656>
+<img src ="./image/dragon_quest_2_play.png" width=656>
 
 ## Overview
 - A NES Emulator
@@ -15,9 +16,10 @@
 - K, L -> B and A buttons
 - B, N -> select and start buttons
 - R -> reset button
-- Show tile pattern
-- Show tile grid
-- Show sprite grid
+- P -> Show tile pattern
+- G -> Show tile and sprite grid
+- Space -> Pause emulator
+- Tab -> Step when paused
 - Four audio channels supoprted
 - No multi player supoprt yet
 
@@ -36,7 +38,8 @@
 ## License
 - MIT License
 
-<img src ="./image/super_mario_bros.png" width=164> <img src ="./image/donkey_kong.png" width=164>
+<img src ="./image/super_mario_bros.png" width=164> <img src ="./image/dragon_quest_2.png" width=164>
+<img src ="./image/donkey_kong.png" width=164>
 <img src ="./image/ice_climber.png" width=164>
 <img src ="./image/golf.png" width=164>
 <img src ="./image/xevious.png" width=164>
