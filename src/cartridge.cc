@@ -19,6 +19,7 @@ bool Cartridge::Open(const char *filename)
 
     char header[16] = {'\0'};
 
+    // 0-3 Constant $4E $45 $53 $1A (ASCII "NES" followed by MS-DOS end-of-file)
     ifs.read(header, sizeof(char) * 16);
     if (header[0] != 'N' ||
         header[1] != 'E' ||
@@ -26,10 +27,24 @@ bool Cartridge::Open(const char *filename)
         header[3] != 0x1a)
         return false;
 
+    // 4 Size of PRG ROM in 16 KB units
+    // 5 Size of CHR ROM in 8 KB units (value 0 means the board uses CHR RAM)
     prog_size_ = header[4] * 16 * 1024;
     char_size_ = header[5] * 8 * 1024;
-    mirroring_ = header[6] & 0x01;
-    mapper_id_ = header[6] >> 4;
+
+    // 6
+    // 76543210
+    // ||||||||
+    // |||||||+- Mirroring: 0: horizontal (vertical arrangement) (CIRAM A10 = PPU A11)
+    // |||||||              1: vertical (horizontal arrangement) (CIRAM A10 = PPU A10)
+    // ||||||+-- 1: Cartridge contains battery-backed PRG RAM ($6000-7FFF) or other persistent memory
+    // |||||+--- 1: 512-byte trainer at $7000-$71FF (stored before PRG data)
+    // ||||+---- 1: Ignore mirroring control or above mirroring bit; instead provide four-screen VRAM
+    // ++++----- Lower nybble of mapper number
+    mirroring_   = (header[6] >> 0) & 0x01;
+    has_battery_ = (header[6] >> 1) & 0x01;
+    mapper_id_   = (header[6] >> 4);
+
     read_data(ifs, prog_rom_, prog_size_);
     read_data(ifs, char_rom_, char_size_);
 
@@ -65,6 +80,36 @@ uint8_t Cartridge::PeekProg(uint32_t physical_addr) const
         return prog_rom_[physical_addr];
     else
         return 0;
+}
+
+int Cartridge::GetMapperID() const
+{
+    return mapper_id_;
+}
+
+size_t Cartridge::GetProgSize() const
+{
+    return prog_size_;
+}
+
+size_t Cartridge::GetCharSize() const
+{
+    return char_size_;
+}
+
+bool Cartridge::IsMapperSupported() const
+{
+    return mapper_ != nullptr;
+}
+
+bool Cartridge::IsVerticalMirroring() const
+{
+    return mirroring_ == 1;
+}
+
+bool Cartridge::HasBattery() const
+{
+    return has_battery_;
 }
 
 } // namespace

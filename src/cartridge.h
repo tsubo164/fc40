@@ -20,18 +20,20 @@ public:
     uint8_t ReadChar(uint16_t addr) const;
     void WriteChar(uint16_t addr, uint8_t data);
 
-    int GetMapperID() const { return mapper_id_; };
-    size_t GetProgSize() const { return prog_size_; };
-    size_t GetCharSize() const { return char_size_; };
-
-    bool IsMapperSupported() const { return mapper_ != nullptr; };
-    bool IsVerticalMirroring() const { return mirroring_ == 1; }
-
     uint8_t PeekProg(uint32_t physical_addr) const;
+
+    int GetMapperID() const;
+    size_t GetProgSize() const;
+    size_t GetCharSize() const;
+
+    bool IsMapperSupported() const;
+    bool IsVerticalMirroring() const;
+    bool HasBattery() const;
 
 private:
     uint8_t mirroring_ = 0;
     int mapper_id_ = -1;
+    bool has_battery_ = false;
     std::shared_ptr<Mapper> mapper_ = nullptr;
 
     std::vector<uint8_t> prog_rom_;

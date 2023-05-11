@@ -43,9 +43,10 @@ int main(int argc, char **argv)
         LogCpuStatus(nes, 8991);
     }
     else {
-        printf("iNES Mapper : %4d\n", cart.GetMapperID());
-        printf("PRG Size    : %4ld KB\n", cart.GetProgSize() / 1024);
-        printf("CHR Size    : %4ld KB\n", cart.GetCharSize() / 1024);
+        printf("iNES Mapper     : %4d\n", cart.GetMapperID());
+        printf("PRG Size        : %4ld KB\n", cart.GetProgSize() / 1024);
+        printf("CHR Size        : %4ld KB\n", cart.GetCharSize() / 1024);
+        printf("Battery Present : %4s\n", cart.HasBattery() ? "Yes" : "No");
 
         nes.PlayGame();
     }
