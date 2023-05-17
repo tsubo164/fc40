@@ -9,14 +9,20 @@ namespace nes {
 Mapper::Mapper(const uint8_t *prog_rom, size_t prog_size,
         const uint8_t *char_rom, size_t char_size)
 {
-    prog_rom_  = prog_rom;
-    prog_size_ = prog_size;
-    char_rom_  = char_rom;
-    char_size_ = char_size;
 }
 
 Mapper::~Mapper()
 {
+}
+
+void Mapper::LoadProgData(const std::vector<uint8_t> &data)
+{
+    prog_rom_ = data;
+}
+
+void Mapper::LoadCharData(const std::vector<uint8_t> &data)
+{
+    char_rom_ = data;
 }
 
 uint8_t Mapper::ReadProg(uint16_t addr) const
@@ -39,9 +45,27 @@ void Mapper::WriteChar(uint16_t addr, uint8_t data)
     do_write_char(addr, data);
 }
 
+uint8_t Mapper::PeekProg(uint32_t physical_addr) const
+{
+    if (physical_addr < GetProgRomSize())
+        return prog_rom_[physical_addr];
+    else
+        return 0;
+}
+
+size_t Mapper::GetProgRomSize() const
+{
+    return prog_rom_.size();
+}
+
+size_t Mapper::GetCharRomSize() const
+{
+    return char_rom_.size();
+}
+
 uint8_t Mapper::read_prog_rom(uint32_t addr) const
 {
-    if (addr < prog_size())
+    if (addr < GetProgRomSize())
         return prog_rom_[addr];
     else
         return 0;
@@ -49,20 +73,10 @@ uint8_t Mapper::read_prog_rom(uint32_t addr) const
 
 uint8_t Mapper::read_char_rom(uint32_t addr) const
 {
-    if (addr < char_size())
+    if (addr < GetCharRomSize())
         return char_rom_[addr];
     else
         return 0;
-}
-
-size_t Mapper::prog_size() const
-{
-    return prog_size_;
-}
-
-size_t Mapper::char_size() const
-{
-    return char_size_;
 }
 
 std::shared_ptr<Mapper> new_mapper(int id,

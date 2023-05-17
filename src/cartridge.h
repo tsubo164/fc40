@@ -35,11 +35,6 @@ private:
     int mapper_id_ = -1;
     bool has_battery_ = false;
     std::shared_ptr<Mapper> mapper_ = nullptr;
-
-    std::vector<uint8_t> prog_rom_;
-    std::vector<uint8_t> char_rom_;
-    size_t prog_size_ = 0;
-    size_t char_size_ = 0;
 };
 
 } // namespace

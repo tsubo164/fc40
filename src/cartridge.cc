@@ -5,10 +5,11 @@
 
 namespace nes {
 
-static void read_data(std::ifstream &ifs, std::vector<uint8_t> &v, size_t count)
+static std::vector<uint8_t> read_data(std::ifstream &ifs, size_t count)
 {
-    v.resize(count, 0);
-    ifs.read(reinterpret_cast<char*>(&v[0]), sizeof(v[0]) * count);
+    std::vector<uint8_t> data(count, 0);
+    ifs.read(reinterpret_cast<char*>(&data[0]), sizeof(data[0]) * count);
+    return data;
 }
 
 bool Cartridge::Open(const char *filename)
@@ -29,8 +30,8 @@ bool Cartridge::Open(const char *filename)
 
     // 4 Size of PRG ROM in 16 KB units
     // 5 Size of CHR ROM in 8 KB units (value 0 means the board uses CHR RAM)
-    prog_size_ = header[4] * 16 * 1024;
-    char_size_ = header[5] * 8 * 1024;
+    const size_t prog_size = header[4] * 16 * 1024;
+    const size_t char_size = header[5] * 8 * 1024;
 
     // 6
     // 76543210
@@ -45,11 +46,15 @@ bool Cartridge::Open(const char *filename)
     has_battery_ = (header[6] >> 1) & 0x01;
     mapper_id_   = (header[6] >> 4);
 
-    read_data(ifs, prog_rom_, prog_size_);
-    read_data(ifs, char_rom_, char_size_);
+    const std::vector<uint8_t> prog_data = read_data(ifs, prog_size);
+    const std::vector<uint8_t> char_data = read_data(ifs, char_size);
 
     mapper_ = new_mapper(mapper_id_,
-            &prog_rom_[0], prog_size_, &char_rom_[0], char_size_);
+            &prog_data[0], prog_size, &char_data[0], char_size);
+
+    // Set up ROMs and RAMs
+    mapper_->LoadProgData(prog_data);
+    mapper_->LoadCharData(char_data);
 
     return true;
 }
@@ -76,10 +81,7 @@ void Cartridge::WriteChar(uint16_t addr, uint8_t data)
 
 uint8_t Cartridge::PeekProg(uint32_t physical_addr) const
 {
-    if (physical_addr < GetProgSize())
-        return prog_rom_[physical_addr];
-    else
-        return 0;
+    return mapper_->PeekProg(physical_addr);
 }
 
 int Cartridge::GetMapperID() const
@@ -89,12 +91,12 @@ int Cartridge::GetMapperID() const
 
 size_t Cartridge::GetProgSize() const
 {
-    return prog_size_;
+    return mapper_->GetProgRomSize();
 }
 
 size_t Cartridge::GetCharSize() const
 {
-    return char_size_;
+    return mapper_->GetCharRomSize();
 }
 
 bool Cartridge::IsMapperSupported() const
