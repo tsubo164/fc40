@@ -6,11 +6,6 @@
 
 namespace nes {
 
-Mapper::Mapper(const uint8_t *prog_rom, size_t prog_size,
-        const uint8_t *char_rom, size_t char_size)
-{
-}
-
 Mapper::Mapper(const std::vector<uint8_t> &prog_data,
         const std::vector<uint8_t> &char_data) :
     prog_rom_(prog_data), char_rom_(char_data)
@@ -86,30 +81,26 @@ uint8_t Mapper::read_char_rom(uint32_t addr) const
 }
 
 std::shared_ptr<Mapper> new_mapper(int id,
-        const uint8_t *prog_rom, size_t prog_size,
-        const uint8_t *char_rom, size_t char_size)
+        const std::vector<uint8_t> &prog_data,
+        const std::vector<uint8_t> &char_data)
 {
     Mapper *m = nullptr;
-    std::vector<uint8_t> prog_rom_(prog_size);
-    std::vector<uint8_t> char_rom_(char_size);
-    std::copy(prog_rom, prog_rom + prog_size, prog_rom_.begin());
-    std::copy(char_rom, char_rom + char_size, char_rom_.begin());
 
     switch (id) {
     case 0:
-        m = new Mapper_000(prog_rom_, char_rom_);
+        m = new Mapper_000(prog_data, char_data);
         break;
 
     case 1:
-        m = new Mapper_001(prog_rom, prog_size, char_rom, char_size);
+        m = new Mapper_001(prog_data, char_data);
         break;
 
     case 2:
-        m = new Mapper_002(prog_rom_, char_rom_);
+        m = new Mapper_002(prog_data, char_data);
         break;
 
     case 3:
-        m = new Mapper_003(prog_rom_, char_rom_);
+        m = new Mapper_003(prog_data, char_data);
         break;
 
     default:

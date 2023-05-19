@@ -10,8 +10,6 @@ namespace nes {
 
 class Mapper {
 public:
-    Mapper(const uint8_t *prog_rom, size_t prog_size,
-           const uint8_t *char_rom, size_t char_size);
     Mapper(const std::vector<uint8_t> &prog_rom,
             const std::vector<uint8_t> &char_rom);
     virtual ~Mapper();
@@ -44,8 +42,8 @@ private:
 };
 
 extern std::shared_ptr<Mapper> new_mapper(int id,
-        const uint8_t *prog_rom, size_t prog_size,
-        const uint8_t *char_rom, size_t char_size);
+        const std::vector<uint8_t> &prog_data,
+        const std::vector<uint8_t> &char_data);
 
 } // namespace
 

@@ -15,12 +15,11 @@ enum ProgBankMode {
     PROG_BANK_FIX_LAST
 };
 
-Mapper_001::Mapper_001(const uint8_t *prog_rom, size_t prog_size,
-        const uint8_t *char_rom, size_t char_size) :
-    Mapper(prog_rom, prog_size, char_rom, char_size)
+Mapper_001::Mapper_001(const std::vector<uint8_t> &prog_rom,
+        const std::vector<uint8_t> &char_rom) : Mapper(prog_rom, char_rom)
 {
-    prog_nbanks_ = prog_size / 0x4000; // 16KB
-    char_nbanks_ = char_size / 0x2000; // 8KB
+    prog_nbanks_ = GetProgRomSize() / 0x4000; // 16KB
+    char_nbanks_ = GetCharRomSize() / 0x2000; // 8KB
 
     prog_bank_0_ = 0;
     prog_bank_1_ = 1;

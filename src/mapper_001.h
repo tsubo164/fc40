@@ -5,12 +5,10 @@
 
 namespace nes {
 
-extern void open_mapper_001(Mapper *m, size_t prog_size, size_t char_size);
-
 class Mapper_001 : public Mapper {
 public:
-    Mapper_001(const uint8_t *prog_rom, size_t prog_size,
-           const uint8_t *char_rom, size_t char_size);
+    Mapper_001(const std::vector<uint8_t> &prog_rom,
+            const std::vector<uint8_t> &char_rom);
     virtual ~Mapper_001();
 
 private:
