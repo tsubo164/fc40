@@ -2,13 +2,19 @@
 
 namespace nes {
 
-Mapper_003::Mapper_003(const uint8_t *prog_rom, size_t prog_size,
-        const uint8_t *char_rom, size_t char_size) :
-    Mapper(prog_rom, prog_size, char_rom, char_size)
+Mapper_003::Mapper_003(const std::vector<uint8_t> &prog_rom,
+        const std::vector<uint8_t> &char_rom) : Mapper(prog_rom, char_rom)
 {
-    prog_nbanks_ = prog_size / 0x4000; // 16KB
-    char_nbanks_ = char_size / 0x2000; // 8KB
-
+    // PRG ROM size: 16 KiB or 32 KiB
+    // PRG ROM bank size: Not bankswitched
+    // PRG RAM: None
+    // CHR capacity: Up to 2048 KiB ROM
+    // CHR bank size: 8 KiB
+    //prog_nbanks_ = GetProgRomSize() / 0x4000; // 16KB
+    if (GetProgRomSize() == 32 * 1024)
+        prog_mirroring_mask_ = 0x7FFF;
+    else
+        prog_mirroring_mask_ = 0x3FFF;
     char_bank_ = 0;
 }
 
@@ -19,16 +25,21 @@ Mapper_003::~Mapper_003()
 uint8_t Mapper_003::do_read_prog(uint16_t addr) const
 {
     if (addr >= 0x8000 && addr <= 0xFFFF) {
-        if (prog_nbanks_ == 1) // 16K ROM 
-            return read_prog_rom(addr & 0x3FFF);
-        if (prog_nbanks_ == 2) // 32K ROM
-            return read_prog_rom(addr & 0x7FFF);
+        const uint16_t a = addr & prog_mirroring_mask_;
+        return read_prog_rom(a);
     }
     return 0;
 }
 
 void Mapper_003::do_write_prog(uint16_t addr, uint8_t data)
 {
+    // 7  bit  0
+    // ---- ----
+    // cccc ccCC
+    // |||| ||||
+    // ++++-++++- Select 8 KB CHR ROM bank for PPU $0000-$1FFF
+    // CNROM only implements the lowest 2 bits, capping it at 32 KiB CHR.
+    // Other boards may implement 4 or more bits for larger CHR.
     if (addr >= 0x8000 && addr <= 0xFFFF)
         char_bank_ = data & 0x03;
 }

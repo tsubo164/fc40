@@ -12,7 +12,7 @@ public:
     virtual ~Mapper_000();
 
 private:
-    uint16_t mirroring_mask_ = 0x7FFF;
+    uint16_t prog_mirroring_mask_ = 0x7FFF;
 
     virtual uint8_t do_read_prog(uint16_t addr) const final;
     virtual void do_write_prog(uint16_t addr, uint8_t data) final;

@@ -10,9 +10,9 @@ Mapper_000::Mapper_000(const std::vector<uint8_t> &prog_rom,
     // PRG RAM: 2 or 4 KiB, not bankswitched, only in Family Basic
     // (but most emulators provide 8)
     if (GetProgRomSize() == 32 * 1024)
-        mirroring_mask_ = 0x7FFF;
+        prog_mirroring_mask_ = 0x7FFF;
     else
-        mirroring_mask_ = 0x3FFF;
+        prog_mirroring_mask_ = 0x3FFF;
 }
 
 Mapper_000::~Mapper_000()
@@ -27,7 +27,7 @@ uint8_t Mapper_000::do_read_prog(uint16_t addr) const
     // CPU $8000-$BFFF: First 16 KB of ROM.
     // CPU $C000-$FFFF: Last 16 KB of ROM (NROM-256) or mirror of $8000-$BFFF (NROM-128).
     if (addr >= 0x8000 && addr <= 0xFFFF) {
-        const uint16_t a = addr & mirroring_mask_;
+        const uint16_t a = addr & prog_mirroring_mask_;
         return read_prog_rom(a);
     }
     else {

@@ -5,17 +5,14 @@
 
 namespace nes {
 
-extern void open_mapper_003(Mapper *m, size_t prog_size, size_t char_size);
-
 class Mapper_003 : public Mapper {
 public:
-    Mapper_003(const uint8_t *prog_rom, size_t prog_size,
-           const uint8_t *char_rom, size_t char_size);
+    Mapper_003(const std::vector<uint8_t> &prog_rom,
+            const std::vector<uint8_t> &char_rom);
     virtual ~Mapper_003();
 
 private:
-    int prog_nbanks_ = 1;
-    int char_nbanks_ = 1;
+    uint16_t prog_mirroring_mask_ = 0x7FFF;
     int char_bank_ = 0;
 
     virtual uint8_t do_read_prog(uint16_t addr) const final;
