@@ -10,6 +10,8 @@ Mapper_002::Mapper_002(const std::vector<uint8_t> &prog_rom,
     const int prog_bank_count = GetProgRomSize() / 0x4000; // 16KB
     prog_bank_ = 0;
     prog_fixed_ = prog_bank_count - 1;
+
+    use_char_ram(0x2000); // 8KB
 }
 
 Mapper_002::~Mapper_002()
@@ -47,7 +49,7 @@ void Mapper_002::do_write_prog(uint16_t addr, uint8_t data)
 uint8_t Mapper_002::do_read_char(uint16_t addr) const
 {
     if (addr >= 0x0000 && addr <= 0x1FFF)
-        return char_ram_[addr];
+        return read_char_ram(addr);
     else
         return 0xFF;
 }
@@ -55,7 +57,7 @@ uint8_t Mapper_002::do_read_char(uint16_t addr) const
 void Mapper_002::do_write_char(uint16_t addr, uint8_t data)
 {
     if (addr >= 0x0000 && addr <= 0x1FFF)
-        char_ram_[addr] = data;
+        write_char_ram(addr, data);
 }
 
 } // namespace

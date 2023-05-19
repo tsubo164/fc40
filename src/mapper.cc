@@ -16,16 +16,6 @@ Mapper::~Mapper()
 {
 }
 
-void Mapper::LoadProgData(const std::vector<uint8_t> &data)
-{
-    prog_rom_ = data;
-}
-
-void Mapper::LoadCharData(const std::vector<uint8_t> &data)
-{
-    char_rom_ = data;
-}
-
 uint8_t Mapper::ReadProg(uint16_t addr) const
 {
     return do_read_prog(addr);
@@ -64,6 +54,16 @@ size_t Mapper::GetCharRomSize() const
     return char_rom_.size();
 }
 
+size_t Mapper::GetProgRamSize() const
+{
+    return prog_ram_.size();
+}
+
+size_t Mapper::GetCharRamSize() const
+{
+    return char_ram_.size();
+}
+
 uint8_t Mapper::read_prog_rom(uint32_t addr) const
 {
     if (addr < GetProgRomSize())
@@ -78,6 +78,44 @@ uint8_t Mapper::read_char_rom(uint32_t addr) const
         return char_rom_[addr];
     else
         return 0;
+}
+
+uint8_t Mapper::read_prog_ram(uint32_t addr) const
+{
+    if (addr < GetProgRamSize())
+        return prog_ram_[addr];
+    else
+        return 0;
+}
+
+uint8_t Mapper::read_char_ram(uint32_t addr) const
+{
+    if (addr < GetCharRamSize())
+        return char_ram_[addr];
+    else
+        return 0;
+}
+
+void Mapper::write_prog_ram(uint32_t addr, uint8_t data)
+{
+    if (addr < GetProgRamSize())
+        prog_ram_[addr] = data;
+}
+
+void Mapper::write_char_ram(uint32_t addr, uint8_t data)
+{
+    if (addr < GetCharRamSize())
+        char_ram_[addr] = data;
+}
+
+void Mapper::use_prog_ram(uint32_t size)
+{
+    prog_ram_.resize(size, 0x00);
+}
+
+void Mapper::use_char_ram(uint32_t size)
+{
+    char_ram_.resize(size, 0x00);
 }
 
 std::shared_ptr<Mapper> new_mapper(int id,

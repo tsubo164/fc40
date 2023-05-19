@@ -14,9 +14,6 @@ public:
             const std::vector<uint8_t> &char_rom);
     virtual ~Mapper();
 
-    void LoadProgData(const std::vector<uint8_t> &data);
-    void LoadCharData(const std::vector<uint8_t> &data);
-
     uint8_t ReadProg(uint16_t addr) const;
     void WriteProg(uint16_t addr, uint8_t data);
     uint8_t ReadChar(uint16_t addr) const;
@@ -26,14 +23,26 @@ public:
 
     size_t GetProgRomSize() const;
     size_t GetCharRomSize() const;
+    size_t GetProgRamSize() const;
+    size_t GetCharRamSize() const;
 
 protected:
     uint8_t read_prog_rom(uint32_t addr) const;
     uint8_t read_char_rom(uint32_t addr) const;
+    uint8_t read_prog_ram(uint32_t addr) const;
+    uint8_t read_char_ram(uint32_t addr) const;
+
+    void write_prog_ram(uint32_t addr, uint8_t data);
+    void write_char_ram(uint32_t addr, uint8_t data);
+
+    void use_prog_ram(uint32_t size);
+    void use_char_ram(uint32_t size);
 
 private:
     std::vector<uint8_t> prog_rom_;
     std::vector<uint8_t> char_rom_;
+    std::vector<uint8_t> prog_ram_;
+    std::vector<uint8_t> char_ram_;
 
     virtual uint8_t do_read_prog(uint16_t addr) const = 0;
     virtual void do_write_prog(uint16_t addr, uint8_t data) = 0;

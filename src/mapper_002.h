@@ -14,7 +14,6 @@ public:
 private:
     int prog_bank_ = 0;
     int prog_fixed_ = 0;
-    uint8_t char_ram_[0x2000] = {0x00};
 
     virtual uint8_t do_read_prog(uint16_t addr) const final;
     virtual void do_write_prog(uint16_t addr, uint8_t data) final;
