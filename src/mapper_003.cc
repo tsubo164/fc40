@@ -10,7 +10,6 @@ Mapper_003::Mapper_003(const std::vector<uint8_t> &prog_rom,
     // PRG RAM: None
     // CHR capacity: Up to 2048 KiB ROM
     // CHR bank size: 8 KiB
-    //prog_nbanks_ = GetProgRomSize() / 0x4000; // 16KB
     if (GetProgRomSize() == 32 * 1024)
         prog_mirroring_mask_ = 0x7FFF;
     else
@@ -28,11 +27,12 @@ uint8_t Mapper_003::do_read_prog(uint16_t addr) const
         const uint16_t a = addr & prog_mirroring_mask_;
         return read_prog_rom(a);
     }
-    return 0;
+    return 0x00;
 }
 
 void Mapper_003::do_write_prog(uint16_t addr, uint8_t data)
 {
+    // Bank select ($8000-$FFFF)
     // 7  bit  0
     // ---- ----
     // cccc ccCC

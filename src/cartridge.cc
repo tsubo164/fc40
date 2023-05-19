@@ -49,7 +49,7 @@ bool Cartridge::Open(const char *filename)
     const std::vector<uint8_t> prog_data = read_data(ifs, prog_size);
     const std::vector<uint8_t> char_data = read_data(ifs, char_size);
 
-    if (mapper_id_ == 0 || mapper_id_ == 3) {
+    if (mapper_id_ == 0 || mapper_id_ == 2 || mapper_id_ == 3) {
     mapper_ = new_mapper(mapper_id_,
             &prog_data[0], prog_size, &char_data[0], char_size);
     }

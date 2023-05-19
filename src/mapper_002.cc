@@ -2,15 +2,14 @@
 
 namespace nes {
 
-Mapper_002::Mapper_002(const uint8_t *prog_rom, size_t prog_size,
-        const uint8_t *char_rom, size_t char_size) :
-    Mapper(prog_rom, prog_size, char_rom, char_size)
+Mapper_002::Mapper_002(const std::vector<uint8_t> &prog_rom,
+        const std::vector<uint8_t> &char_rom) : Mapper(prog_rom, char_rom)
 {
-    prog_nbanks_ = prog_size / 0x4000; // 16KB
-    char_nbanks_ = char_size / 0x2000; // 8KB
-
+    // CPU $8000-$BFFF: 16 KB switchable PRG ROM bank
+    // CPU $C000-$FFFF: 16 KB PRG ROM bank, fixed to the last bank
+    const int prog_bank_count = GetProgRomSize() / 0x4000; // 16KB
     prog_bank_ = 0;
-    prog_fixed_ = prog_nbanks_ - 1;
+    prog_fixed_ = prog_bank_count - 1;
 }
 
 Mapper_002::~Mapper_002()
@@ -28,12 +27,19 @@ uint8_t Mapper_002::do_read_prog(uint16_t addr) const
         return read_prog_rom(a);
     }
     else {
-        return 0;
+        return 0x00;
     }
 }
 
 void Mapper_002::do_write_prog(uint16_t addr, uint8_t data)
 {
+    // Bank select ($8000-$FFFF)
+    // 7  bit  0
+    // ---- ----
+    // xxxx pPPP
+    //      ||||
+    //      ++++- Select 16 KB PRG ROM bank for CPU $8000-$BFFF
+    //           (UNROM uses bits 2-0; UOROM uses bits 3-0)
     if (addr >= 0x8000 && addr <= 0xFFFF)
         prog_bank_ = data & 0x0F;
 }

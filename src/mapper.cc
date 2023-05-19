@@ -105,7 +105,7 @@ std::shared_ptr<Mapper> new_mapper(int id,
         break;
 
     case 2:
-        m = new Mapper_002(prog_rom, prog_size, char_rom, char_size);
+        m = new Mapper_002(prog_rom_, char_rom_);
         break;
 
     case 3:
