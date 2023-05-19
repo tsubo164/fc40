@@ -12,6 +12,8 @@ class Mapper {
 public:
     Mapper(const uint8_t *prog_rom, size_t prog_size,
            const uint8_t *char_rom, size_t char_size);
+    Mapper(const std::vector<uint8_t> &prog_rom,
+            const std::vector<uint8_t> &char_rom);
     virtual ~Mapper();
 
     void LoadProgData(const std::vector<uint8_t> &data);
