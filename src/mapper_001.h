@@ -16,10 +16,12 @@ private:
     int char_nbanks_ = 1;
 
     uint8_t shift_register_ = 0x00;
+    uint8_t control_register_ = 0x00;
 
     uint8_t mirror_ = 0;
     uint8_t prog_bank_mode_ = 0;
     uint8_t char_bank_mode_ = 0;
+    bool use_char_ram_ = false;
 
     int prog_bank_0_ = 0;
     int prog_bank_1_ = 0;

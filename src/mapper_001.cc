@@ -29,6 +29,11 @@ Mapper_001::Mapper_001(const std::vector<uint8_t> &prog_rom,
     shift_register_ = 0x10;
     prog_bank_mode_ = PROG_BANK_FIX_LAST;
     char_bank_mode_ = 0;
+
+    if (GetCharRomSize() == 0) {
+        use_char_ram(0x2000);
+        use_char_ram_ = true;
+    }
 }
 
 Mapper_001::~Mapper_001()
@@ -71,6 +76,8 @@ void Mapper_001::do_write_prog(uint16_t addr, uint8_t data)
         if (data & 0x80) {
             shift_register_ = 0x10;
             prog_bank_mode_ = PROG_BANK_FIX_LAST;
+
+            control_register_ |= 0x0C;
         } else {
             const bool fifth_write = shift_register_ & 0x01;
 
@@ -97,11 +104,17 @@ uint8_t Mapper_001::do_read_char(uint16_t addr) const
 {
     if (addr >= 0x0000 && addr <= 0x0FFF) {
         const uint32_t a = char_bank_0_ * 0x1000 + (addr & 0x0FFF);
-        return read_char_rom(a);
+        if (use_char_ram_)
+            return read_char_ram(a);
+        else
+            return read_char_rom(a);
     }
     else if (addr >= 0x1000 && addr <= 0x1FFF) {
         const uint32_t a = char_bank_1_ * 0x1000 + (addr & 0x0FFF);
-        return read_char_rom(a);
+        if (use_char_ram_)
+            return read_char_ram(a);
+        else
+            return read_char_rom(a);
     }
     else {
         return 0xFF;
@@ -110,6 +123,17 @@ uint8_t Mapper_001::do_read_char(uint16_t addr) const
 
 void Mapper_001::do_write_char(uint16_t addr, uint8_t data)
 {
+    if (!use_char_ram_)
+        return;
+
+    if (addr >= 0x0000 && addr <= 0x0FFF) {
+        const uint32_t a = char_bank_0_ * 0x1000 + (addr & 0x0FFF);
+        write_char_ram(a, data);
+    }
+    else if (addr >= 0x1000 && addr <= 0x1FFF) {
+        const uint32_t a = char_bank_1_ * 0x1000 + (addr & 0x0FFF);
+        write_char_ram(a, data);
+    }
 }
 
 void Mapper_001::set_control()
@@ -127,6 +151,8 @@ void Mapper_001::set_control()
     // |       3: fix last bank at $C000 and switch 16 KB bank at $8000)
     // +----- CHR ROM bank mode
     //        (0: switch 8 KB at a time; 1: switch two separate 4 KB banks)
+    control_register_ = shift_register_;
+
     mirror_ = shift_register_ & 0x03;
     prog_bank_mode_ = (shift_register_ >> 2) & 0x03;
     char_bank_mode_ = (shift_register_ >> 4) & 0x01;
