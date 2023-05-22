@@ -26,7 +26,8 @@ Mapper_001::Mapper_001(const std::vector<uint8_t> &prog_rom,
     char_bank_0_ = 0;
     char_bank_1_ = 1;
 
-    shift_register_ = 0x10;
+    shift_counter_ = 0;
+    shift_register_ = 0;
     prog_bank_mode_ = PROG_BANK_FIX_LAST;
     char_bank_mode_ = 0;
 
@@ -74,17 +75,16 @@ void Mapper_001::do_write_prog(uint16_t addr, uint8_t data)
         //            and write Control with (Control OR $0C),
         //            locking PRG ROM at $C000-$FFFF to the last bank.
         if (data & 0x80) {
-            shift_register_ = 0x10;
+            shift_register_ = 0;
             prog_bank_mode_ = PROG_BANK_FIX_LAST;
 
             control_register_ |= 0x0C;
         } else {
-            const bool fifth_write = shift_register_ & 0x01;
-
             shift_register_ >>= 1;
             shift_register_ |= (data & 0x01) << 4;
+            shift_counter_++;
 
-            if (fifth_write) {
+            if (shift_counter_ == 5) {
                 if (addr >= 0x8000 && addr <= 0x9FFF)
                     set_control();
                 else if (addr >= 0xA000 && addr <= 0xBFFF)
@@ -94,7 +94,8 @@ void Mapper_001::do_write_prog(uint16_t addr, uint8_t data)
                 else if (addr >= 0xE000 && addr <= 0xFFFF)
                     set_prog_bank();
 
-                shift_register_ = 0x10;
+                shift_register_ = 0;
+                shift_counter_ = 0;
             }
         }
     }
