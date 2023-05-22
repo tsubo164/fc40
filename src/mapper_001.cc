@@ -86,13 +86,13 @@ void Mapper_001::do_write_prog(uint16_t addr, uint8_t data)
 
             if (shift_counter_ == 5) {
                 if (addr >= 0x8000 && addr <= 0x9FFF)
-                    set_control();
+                    write_control(shift_register_);
                 else if (addr >= 0xA000 && addr <= 0xBFFF)
-                    set_char_bank_0();
+                    write_char_bank_0(shift_register_);
                 else if (addr >= 0xC000 && addr <= 0xDFFF)
-                    set_char_bank_1();
+                    write_char_bank_1(shift_register_);
                 else if (addr >= 0xE000 && addr <= 0xFFFF)
-                    set_prog_bank();
+                    write_prog_bank(shift_register_);
 
                 shift_register_ = 0;
                 shift_counter_ = 0;
@@ -137,7 +137,7 @@ void Mapper_001::do_write_char(uint16_t addr, uint8_t data)
     }
 }
 
-void Mapper_001::set_control()
+void Mapper_001::write_control(uint8_t data)
 {
     // Control (internal, $8000-$9FFF)
     // 4bit0
@@ -152,14 +152,14 @@ void Mapper_001::set_control()
     // |       3: fix last bank at $C000 and switch 16 KB bank at $8000)
     // +----- CHR ROM bank mode
     //        (0: switch 8 KB at a time; 1: switch two separate 4 KB banks)
-    control_register_ = shift_register_;
+    control_register_ = data;
 
-    mirror_ = shift_register_ & 0x03;
-    prog_bank_mode_ = (shift_register_ >> 2) & 0x03;
-    char_bank_mode_ = (shift_register_ >> 4) & 0x01;
+    mirror_ = data & 0x03;
+    prog_bank_mode_ = (data >> 2) & 0x03;
+    char_bank_mode_ = (data >> 4) & 0x01;
 }
 
-void Mapper_001::set_char_bank_0()
+void Mapper_001::write_char_bank_0(uint8_t data)
 {
     // CHR bank 0 (internal, $A000-$BFFF)
     // 4bit0
@@ -170,11 +170,11 @@ void Mapper_001::set_char_bank_0()
     //        (low bit ignored in 8 KB mode)
     switch (char_bank_mode_) {
     case CHAR_BANK_4KB:
-        char_bank_0_ = (shift_register_ & 0x1F);
+        char_bank_0_ = (data & 0x1F);
         break;
 
     case CHAR_BANK_8KB:
-        char_bank_0_ = (shift_register_ & 0x1E); // 0, 2, 4, ...
+        char_bank_0_ = (data & 0x1E); // 0, 2, 4, ...
         char_bank_1_ = char_bank_0_ + 1;         // 1, 3, 5, ...
         break;
 
@@ -183,7 +183,7 @@ void Mapper_001::set_char_bank_0()
     }
 }
 
-void Mapper_001::set_char_bank_1()
+void Mapper_001::write_char_bank_1(uint8_t data)
 {
     // CHR bank 1 (internal, $C000-$DFFF)
     // 4bit0
@@ -193,7 +193,7 @@ void Mapper_001::set_char_bank_1()
     // +++++- Select 4 KB CHR bank at PPU $1000 (ignored in 8 KB mode)
     switch (char_bank_mode_) {
     case CHAR_BANK_4KB:
-        char_bank_1_ = (shift_register_ & 0x1F);
+        char_bank_1_ = (data & 0x1F);
         break;
 
     case CHAR_BANK_8KB:
@@ -204,7 +204,7 @@ void Mapper_001::set_char_bank_1()
     }
 }
 
-void Mapper_001::set_prog_bank()
+void Mapper_001::write_prog_bank(uint8_t data)
 {
     // 4bit0
     // -----
@@ -218,17 +218,17 @@ void Mapper_001::set_prog_bank()
     switch (prog_bank_mode_) {
     case PROG_BANK_32KB_0:
     case PROG_BANK_32KB_1:
-        prog_bank_0_ = (shift_register_ & 0x0E); // 0, 2, 4, ...
+        prog_bank_0_ = (data & 0x0E); // 0, 2, 4, ...
         prog_bank_1_ = prog_bank_0_ + 1;         // 1, 3, 5, ...
         break;
 
     case PROG_BANK_FIX_FIRST:
         prog_bank_0_ = 0;
-        prog_bank_1_ = (shift_register_ & 0x0F);
+        prog_bank_1_ = (data & 0x0F);
         break;
 
     case PROG_BANK_FIX_LAST:
-        prog_bank_0_ = (shift_register_ & 0x0F);
+        prog_bank_0_ = (data & 0x0F);
         prog_bank_1_ = prog_nbanks_ - 1;
         break;
 

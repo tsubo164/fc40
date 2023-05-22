@@ -30,10 +30,10 @@ private:
     int char_bank_1_ = 0;
     uint8_t prog_ram_[0x2000] = {0x00};
 
-    void set_control();
-    void set_prog_bank();
-    void set_char_bank_0();
-    void set_char_bank_1();
+    void write_control(uint8_t data);
+    void write_char_bank_0(uint8_t data);
+    void write_char_bank_1(uint8_t data);
+    void write_prog_bank(uint8_t data);
 
     virtual uint8_t do_read_prog(uint16_t addr) const final;
     virtual void do_write_prog(uint16_t addr, uint8_t data) final;
