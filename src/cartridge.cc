@@ -61,6 +61,10 @@ bool Cartridge::Open(const char *filename)
     const std::vector<uint8_t> char_data = read_data(ifs, char_size);
 
     mapper_ = new_mapper(mapper_id_, prog_data, char_data);
+    if (mirroring_ == 0)
+        mapper_->SetMirroring(Mirroring::HORIZONTAL);
+    else if (mirroring_ == 1)
+        mapper_->SetMirroring(Mirroring::VERTICAL);
 
     return true;
 }
@@ -112,7 +116,7 @@ bool Cartridge::IsMapperSupported() const
 
 bool Cartridge::IsVerticalMirroring() const
 {
-    return mirroring_ == 1;
+    return mapper_->GetMirroring() == Mirroring::VERTICAL;
 }
 
 bool Cartridge::HasBattery() const

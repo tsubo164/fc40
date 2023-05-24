@@ -64,6 +64,16 @@ size_t Mapper::GetCharRamSize() const
     return char_ram_.size();
 }
 
+Mirroring Mapper::GetMirroring() const
+{
+    return mirroring_;
+}
+
+void Mapper::SetMirroring(Mirroring mirroring)
+{
+    mirroring_ = mirroring;
+}
+
 uint8_t Mapper::read_prog_rom(uint32_t addr) const
 {
     if (addr < GetProgRomSize())

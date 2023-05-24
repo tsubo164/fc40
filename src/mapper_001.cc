@@ -31,6 +31,9 @@ Mapper_001::Mapper_001(const std::vector<uint8_t> &prog_rom,
     prog_bank_mode_ = PROG_BANK_FIX_LAST;
     char_bank_mode_ = 0;
 
+    write_prog_bank(0x00);
+    write_char_bank_0(0x00);
+
     if (GetCharRomSize() == 0) {
         use_char_ram(0x2000);
         use_char_ram_ = true;
@@ -154,9 +157,14 @@ void Mapper_001::write_control(uint8_t data)
     //        (0: switch 8 KB at a time; 1: switch two separate 4 KB banks)
     control_register_ = data;
 
-    mirror_ = data & 0x03;
+    mirroring_ = data & 0x03;
     prog_bank_mode_ = (data >> 2) & 0x03;
     char_bank_mode_ = (data >> 4) & 0x01;
+
+    if (mirroring_ == 3)
+        SetMirroring(Mirroring::HORIZONTAL);
+    else if (mirroring_ == 2)
+        SetMirroring(Mirroring::VERTICAL);
 }
 
 void Mapper_001::write_char_bank_0(uint8_t data)

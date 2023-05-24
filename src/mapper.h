@@ -8,6 +8,13 @@
 
 namespace nes {
 
+enum class Mirroring {
+    HORIZONTAL,
+    VERTICAL,
+    SINGLE_SCREEN,
+    FOUR_SCREEN,
+};
+
 class Mapper {
 public:
     Mapper(const std::vector<uint8_t> &prog_rom,
@@ -26,6 +33,9 @@ public:
     size_t GetProgRamSize() const;
     size_t GetCharRamSize() const;
 
+    Mirroring GetMirroring() const;
+    void SetMirroring(Mirroring mirroring);
+
 protected:
     uint8_t read_prog_rom(uint32_t addr) const;
     uint8_t read_char_rom(uint32_t addr) const;
@@ -43,6 +53,8 @@ private:
     std::vector<uint8_t> char_rom_;
     std::vector<uint8_t> prog_ram_;
     std::vector<uint8_t> char_ram_;
+
+    Mirroring mirroring_ = Mirroring::HORIZONTAL;
 
     virtual uint8_t do_read_prog(uint16_t addr) const = 0;
     virtual void do_write_prog(uint16_t addr, uint8_t data) = 0;
