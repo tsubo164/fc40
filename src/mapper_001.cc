@@ -26,8 +26,7 @@ Mapper_001::Mapper_001(const std::vector<uint8_t> &prog_rom,
     char_bank_0_ = 0;
     char_bank_1_ = 1;
 
-    shift_counter_ = 0;
-    shift_register_ = 0;
+    shift_register_ = 0x10;
     prog_bank_mode_ = PROG_BANK_FIX_LAST;
     char_bank_mode_ = 0;
 
@@ -64,6 +63,27 @@ uint8_t Mapper_001::do_read_prog(uint16_t addr) const
 
 void Mapper_001::do_write_prog(uint16_t addr, uint8_t data)
 {
+    // Shift register
+    // To switch a bank, a program will execute code similar to the following:
+    //
+    // ;
+    // ; Sets the switchable PRG ROM bank to the value of A.
+    // ;
+    //               ;  A          MMC1_SR  MMC1_PB
+    // setPRGBank:   ;  000edcba    10000             Start with an empty shift register (SR).
+    //   sta $E000   ;  000edcba -> a1000             The 1 is used to detect when the SR has
+    //   lsr a       ; >0000edcb    a1000             become full.
+    //   sta $E000   ;  0000edcb -> ba100
+    //   lsr a       ; >00000edc    ba100
+    //   sta $E000   ;  00000edc -> cba10
+    //   lsr a       ; >000000ed    cba10
+    //   sta $E000   ;  000000ed -> dcba1             Once a 1 is shifted into the last
+    //   lsr a       ; >0000000e    dcba1             position, the SR is full.
+    //   sta $E000   ;  0000000e    dcba1 -> edcba    A write with the SR full copies D0 and
+    //
+    //               ;              10000             the SR to a bank register ($E000-$FFFF
+    //   rts                                          means PRG bank number) and then clears
+    //                                                the SR.
     if (addr >= 0x6000 && addr <= 0x7FFF) {
         prog_ram_[addr & 0x1FFF] = data;
     }
@@ -78,16 +98,16 @@ void Mapper_001::do_write_prog(uint16_t addr, uint8_t data)
         //            and write Control with (Control OR $0C),
         //            locking PRG ROM at $C000-$FFFF to the last bank.
         if (data & 0x80) {
-            shift_register_ = 0;
+            shift_register_ = 0x10;
             prog_bank_mode_ = PROG_BANK_FIX_LAST;
-
             control_register_ |= 0x0C;
         } else {
+            const bool fifth_write = shift_register_ & 0x01;
+
             shift_register_ >>= 1;
             shift_register_ |= (data & 0x01) << 4;
-            shift_counter_++;
 
-            if (shift_counter_ == 5) {
+            if (fifth_write) {
                 if (addr >= 0x8000 && addr <= 0x9FFF)
                     write_control(shift_register_);
                 else if (addr >= 0xA000 && addr <= 0xBFFF)
@@ -97,8 +117,7 @@ void Mapper_001::do_write_prog(uint16_t addr, uint8_t data)
                 else if (addr >= 0xE000 && addr <= 0xFFFF)
                     write_prog_bank(shift_register_);
 
-                shift_register_ = 0;
-                shift_counter_ = 0;
+                shift_register_ = 0x10;
             }
         }
     }

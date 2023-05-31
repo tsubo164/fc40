@@ -15,7 +15,7 @@ private:
     int prog_nbanks_ = 1;
     int char_nbanks_ = 1;
 
-    uint8_t shift_counter_ = 0;
+    //uint8_t shift_counter_ = 0;
     uint8_t shift_register_ = 0;
     uint8_t control_register_ = 0;
 
