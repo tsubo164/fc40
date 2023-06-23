@@ -64,6 +64,7 @@ public:
 
     // peek registers
     uint8_t PeekStatus() const;
+    uint8_t PeekData() const;
     // sprites
     void WriteDmaSprite(uint8_t addr, uint8_t data);
 

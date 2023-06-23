@@ -1034,6 +1034,21 @@ uint8_t PPU::PeekStatus() const
     return data;
 }
 
+uint8_t PPU::PeekData() const
+{
+    const uint16_t addr = vram_addr_;
+    uint8_t data = 0x00;
+
+    if (addr >= 0x3F00 && addr <= 0x3FFF) {
+        data = read_byte(addr);
+    }
+    else {
+        data = read_buffer_;
+    }
+
+    return data;
+}
+
 void PPU::WriteDmaSprite(uint8_t addr, uint8_t data)
 {
     oam_[addr] = data;

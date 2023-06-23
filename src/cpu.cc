@@ -166,6 +166,9 @@ uint8_t CPU::peek_byte(uint16_t addr) const
     if (addr == 0x2002) {
         return ppu_.PeekStatus();
     }
+    else if (addr == 0x2007) {
+        return ppu_.PeekData();
+    }
     else if (addr == 0x4015) {
         return apu_.PeekStatus();
     }
