@@ -15,7 +15,6 @@ private:
     int prog_nbanks_ = 1;
     int char_nbanks_ = 1;
 
-    //uint8_t shift_counter_ = 0;
     uint8_t shift_register_ = 0;
     uint8_t control_register_ = 0;
 
@@ -28,7 +27,6 @@ private:
     int prog_bank_1_ = 0;
     int char_bank_0_ = 0;
     int char_bank_1_ = 0;
-    uint8_t prog_ram_[0x2000] = {0x00};
 
     void write_control(uint8_t data);
     void write_char_bank_0(uint8_t data);

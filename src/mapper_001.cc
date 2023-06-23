@@ -37,6 +37,8 @@ Mapper_001::Mapper_001(const std::vector<uint8_t> &prog_rom,
         use_char_ram(0x2000);
         use_char_ram_ = true;
     }
+
+    use_prog_ram(0x2000);
 }
 
 Mapper_001::~Mapper_001()
@@ -46,7 +48,7 @@ Mapper_001::~Mapper_001()
 uint8_t Mapper_001::do_read_prog(uint16_t addr) const
 {
     if (addr >= 0x6000 && addr <= 0x7FFF) {
-        return prog_ram_[addr & 0x1FFF];
+        return read_prog_ram(addr & 0x1FFF);
     }
     else if (addr >= 0x8000 && addr <= 0xBFFF) {
         const uint32_t a = prog_bank_0_ * 0x4000 + (addr & 0x3FFF);
@@ -85,7 +87,7 @@ void Mapper_001::do_write_prog(uint16_t addr, uint8_t data)
     //   rts                                          means PRG bank number) and then clears
     //                                                the SR.
     if (addr >= 0x6000 && addr <= 0x7FFF) {
-        prog_ram_[addr & 0x1FFF] = data;
+        write_prog_ram(addr & 0x1FFF, data);
     }
     else if (addr >= 0x8000 && addr <= 0xFFFF) {
         // Load register ($8000-$FFFF)
