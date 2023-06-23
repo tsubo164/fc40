@@ -3,6 +3,7 @@
 
 #include <cstdlib>
 #include <cstdint>
+#include <string>
 #include <vector>
 #include "mapper.h"
 
@@ -10,8 +11,8 @@ namespace nes {
 
 class Cartridge {
 public:
-    Cartridge() {}
-    ~Cartridge() {}
+    Cartridge();
+    ~Cartridge();
 
     bool Open(const char *filename);
 
@@ -35,6 +36,12 @@ private:
     int mapper_id_ = -1;
     bool has_battery_ = false;
     std::shared_ptr<Mapper> mapper_ = nullptr;
+
+    std::string ines_filename_ = "";
+    std::string sram_filename_ = "";
+
+    int save_battery_ram() const;
+    int load_battery_ram();
 };
 
 } // namespace

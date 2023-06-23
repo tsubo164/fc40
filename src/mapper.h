@@ -33,6 +33,9 @@ public:
     size_t GetProgRamSize() const;
     size_t GetCharRamSize() const;
 
+    std::vector<uint8_t> GetProgRam() const;
+    void SetProgRam(const std::vector<uint8_t> &sram);
+
     Mirroring GetMirroring() const;
     void SetMirroring(Mirroring mirroring);
 

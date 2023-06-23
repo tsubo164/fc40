@@ -64,6 +64,16 @@ size_t Mapper::GetCharRamSize() const
     return char_ram_.size();
 }
 
+std::vector<uint8_t> Mapper::GetProgRam() const
+{
+    return prog_ram_;
+}
+
+void Mapper::SetProgRam(const std::vector<uint8_t> &sram)
+{
+    prog_ram_ = sram;
+}
+
 Mirroring Mapper::GetMirroring() const
 {
     return mirroring_;

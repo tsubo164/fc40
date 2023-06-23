@@ -12,12 +12,25 @@ static std::vector<uint8_t> read_data(std::ifstream &ifs, size_t count)
     return data;
 }
 
+Cartridge::Cartridge()
+{
+}
+
+Cartridge::~Cartridge()
+{
+    const int err = save_battery_ram();
+    if (err) {
+        // Report an error.
+    }
+}
+
 bool Cartridge::Open(const char *filename)
 {
     std::ifstream ifs(filename, std::ios::binary);
     if (!ifs)
         return false;
 
+    ines_filename_ = filename;
     char header[16] = {'\0'};
 
     // Bytes 0-3 Constant $4E $45 $53 $1A (ASCII "NES" followed by MS-DOS end-of-file)
@@ -65,6 +78,11 @@ bool Cartridge::Open(const char *filename)
         mapper_->SetMirroring(Mirroring::HORIZONTAL);
     else if (mirroring_ == 1)
         mapper_->SetMirroring(Mirroring::VERTICAL);
+
+    if (HasBattery()) {
+        sram_filename_ = ines_filename_ + ".sram";
+        load_battery_ram();
+    }
 
     return true;
 }
@@ -122,6 +140,68 @@ bool Cartridge::IsVerticalMirroring() const
 bool Cartridge::HasBattery() const
 {
     return has_battery_;
+}
+
+static int save_sram_file(const std::string &filename, const std::vector<uint8_t> &sram)
+{
+	std::ofstream ofs(filename, std::ios::binary);
+	if (!ofs)
+		return -1;
+
+	char header[16] = "INESSRAM";
+	header[15] = sram.size() / 1024;
+
+	ofs.write(header, sizeof(header));
+	ofs.write(reinterpret_cast<const char*>(&sram[0]), sram.size());
+
+	return 0;
+}
+
+static int load_sram_file( const std::string &filename, std::vector<uint8_t> &sram)
+{
+    std::ifstream ifs(filename, std::ios::binary);
+    if (!ifs)
+        return -1;
+
+    char header[16] = {'\0'};
+    ifs.read(header, sizeof(header));
+    if (std::string(header) != "INESSRAM")
+        return -1;
+
+    const std::size_t sram_size = header[15] * 1024;
+    if (sram_size == 0)
+        return -1;
+
+    sram.resize(sram_size);
+    ifs.read(reinterpret_cast<char*>(&sram[0]), sram.size());
+
+    return 0;
+}
+
+int Cartridge::save_battery_ram() const
+{
+    const std::vector<uint8_t> sram = mapper_->GetProgRam();
+
+    if (sram.size() == 0) {
+        return -1;
+    }
+
+    const int result = save_sram_file(sram_filename_, sram);
+    return result;
+}
+
+int Cartridge::load_battery_ram()
+{
+    std::vector<uint8_t> sram;
+
+    const int result = load_sram_file(sram_filename_, sram);
+    if (result) {
+        // Broken file or just doesn't eixt.
+        return -1;
+    }
+
+    mapper_->SetProgRam(sram);
+    return 0;
 }
 
 } // namespace
