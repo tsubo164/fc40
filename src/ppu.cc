@@ -896,6 +896,7 @@ void PPU::Reset()
 {
     ctrl_ = 0x00;
     mask_ = 0x00;
+    // TODO Need to make reset work for dq3
     stat_ &= 0x80;
 
     write_toggle_ = false;
@@ -984,10 +985,18 @@ void PPU::WriteData(uint8_t data)
 
 uint8_t PPU::ReadStatus()
 {
-    const uint8_t data = stat_;
+    uint8_t data = stat_;
 
     set_stat(STAT_VERTICAL_BLANK, 0);
     write_toggle_ = false;
+
+    // When reading $2002 and setting vblank flag at (1, 241) are happening at the
+    // same time, the read value and actual flag will be different.
+    // This is because the reading happens at the first cpu cycle of the instruction,
+    // and the polling the vblank flag happens at the last cpu cycle. The setting flag
+    // happens between them. Pretending that the reading happens after setting flag.
+    if (cycle_ > 335 && scanline_ == 240)
+        data |= STAT_VERTICAL_BLANK;
 
     return data;
 }
@@ -1000,12 +1009,15 @@ uint8_t PPU::ReadOamData() const
 uint8_t PPU::ReadData()
 {
     const uint16_t addr = vram_addr_;
-    uint8_t data = read_buffer_;
+    uint8_t data = 0x00;
 
-    read_buffer_ = read_byte(addr);
-
-    if (addr >= 0x3F00 && addr <= 0x3FFF)
+    if (addr >= 0x3F00 && addr <= 0x3FFF) {
+        data = read_byte(addr);
+    }
+    else {
         data = read_buffer_;
+        read_buffer_ = read_byte(addr);
+    }
 
     vram_addr_ += address_increment();
 
@@ -1014,7 +1026,12 @@ uint8_t PPU::ReadData()
 
 uint8_t PPU::PeekStatus() const
 {
-    return stat_;
+    uint8_t data = stat_;
+
+    if (cycle_ > 335 && scanline_ == 240)
+        data |= STAT_VERTICAL_BLANK;
+
+    return data;
 }
 
 void PPU::WriteDmaSprite(uint8_t addr, uint8_t data)
