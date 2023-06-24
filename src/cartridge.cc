@@ -142,63 +142,35 @@ bool Cartridge::HasBattery() const
     return has_battery_;
 }
 
-static int save_sram_file(const std::string &filename, const std::vector<uint8_t> &sram)
+int Cartridge::save_battery_ram() const
 {
-	std::ofstream ofs(filename, std::ios::binary);
+	std::ofstream ofs(sram_filename_, std::ios::binary);
 	if (!ofs)
 		return -1;
 
-	char header[16] = "INESSRAM";
-	header[15] = sram.size() / 1024;
-
-	ofs.write(header, sizeof(header));
-	ofs.write(reinterpret_cast<const char*>(&sram[0]), sram.size());
-
-	return 0;
-}
-
-static int load_sram_file( const std::string &filename, std::vector<uint8_t> &sram)
-{
-    std::ifstream ifs(filename, std::ios::binary);
-    if (!ifs)
-        return -1;
-
-    char header[16] = {'\0'};
-    ifs.read(header, sizeof(header));
-    if (std::string(header) != "INESSRAM")
-        return -1;
-
-    const std::size_t sram_size = header[15] * 1024;
-    if (sram_size == 0)
-        return -1;
-
-    sram.resize(sram_size);
-    ifs.read(reinterpret_cast<char*>(&sram[0]), sram.size());
-
-    return 0;
-}
-
-int Cartridge::save_battery_ram() const
-{
     const std::vector<uint8_t> sram = mapper_->GetProgRam();
-
-    if (sram.size() == 0) {
+    if (sram.size() != 0x2000)
         return -1;
-    }
 
-    const int result = save_sram_file(sram_filename_, sram);
-    return result;
+	ofs.write(reinterpret_cast<const char*>(&sram[0]), sram.size());
+	return 0;
 }
 
 int Cartridge::load_battery_ram()
 {
-    std::vector<uint8_t> sram;
-
-    const int result = load_sram_file(sram_filename_, sram);
-    if (result) {
-        // Broken file or just doesn't eixt.
+    std::ifstream ifs(sram_filename_, std::ios::binary);
+    if (!ifs)
         return -1;
-    }
+
+    ifs.seekg(0, ifs.end);
+    const std::size_t sram_size = ifs.tellg();
+    ifs.seekg(0, ifs.beg);
+
+    if (sram_size != 0x2000)
+        return -1;
+
+    std::vector<uint8_t> sram(sram_size);
+    ifs.read(reinterpret_cast<char*>(&sram[0]), sram.size());
 
     mapper_->SetProgRam(sram);
     return 0;
