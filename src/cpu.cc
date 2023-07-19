@@ -1029,6 +1029,57 @@ void CPU::ClockAPU()
         irq_signal_ = true;
 }
 
+int CPU::Run()
+{
+    if (log_mode_)
+        PrintCpuStatus(*this, ppu_);
+
+    int cpu_cycles = 0;
+
+    cpu_cycles = execute_instruction();
+    irq_signal_ = apu_.Run(cpu_cycles);
+    cpu_cycles += handle_interrupt();
+
+    total_cycles_ += cpu_cycles;
+
+    return cpu_cycles;
+}
+
+int CPU::execute_instruction()
+{
+    uint8_t code, cycs;
+    Instruction inst;
+
+    code = fetch();
+    inst = decode(code);
+    cycs = execute(inst);
+
+    cycles_ = cycs;
+    op_register_ = inst.operation;
+    // TODO
+    execute_delayed();
+
+    return cycs;
+}
+
+int CPU::handle_interrupt()
+{
+    int cycles = 0;
+
+    if (ppu_.IsSetNMI()) {
+        do_interrupt(0xFFFA);
+        ppu_.ClearNMI();
+        cycles = 7;
+    }
+    else if (irq_signal_ && !get_flag(I)) {
+        do_interrupt(0xFFFE);
+        irq_signal_ = false;
+        cycles = 7;
+    }
+
+    return cycles;
+}
+
 void CPU::do_interrupt(uint16_t vector)
 {
     // 5  $0100,S  W  push P on stack (with B flag *clear*), decrement S
@@ -1048,11 +1099,6 @@ void CPU::handle_irq()
 void CPU::handle_nmi()
 {
     do_interrupt(0xFFFA);
-}
-
-bool CPU::is_set_irq() const
-{
-    return apu_.IsSetIRQ();
 }
 
 void CPU::InputController(uint8_t controller_id, uint8_t input)

@@ -621,6 +621,14 @@ void APU::clock_sequencer()
         clock_sequencer_step5();
 }
 
+bool APU::Run(int cpu_cycles)
+{
+    for (int i = 0; i < cpu_cycles; i++)
+        Clock();
+
+    return IsSetIRQ();
+}
+
 constexpr int CPU_CLOCK_FREQ = 1789773;
 constexpr double APU_TIME_STEP = 1. / CPU_CLOCK_FREQ;
 constexpr double AUDIO_SAMPLE_STEP = 1. / 44100;
@@ -662,15 +670,48 @@ void APU::Clock()
 
 void APU::PowerUp()
 {
-    Reset();
+    // $4017 = $00 (frame irq enabled)
+    // $4015 = $00 (all channels disabled)
+    // $4000-$400F = $00
+    // $4010-$4013 = $00 [4]
+    // All 15 bits of noise channel LFSR = $0000[5]. The first time the LFSR
+    // is clocked from the all-0s state, it will shift in a 1.
+    // APU Frame Counter:
+    //   2A03E, G, various clones: APU Frame Counter reset.
+    //   2A03letterless: APU frame counter powers up at a value equivalent to 15
+    audio_time_ = 0.f;
+    clock_ = 0;
+    cycle_ = 0;
+
+    mode_ = 0;
+    inhibit_interrupt_ = false;
+    frame_interrupt_ = false;
+
+    pulse1_ = {1}, pulse2_ = {2};
+    triangle_ = {};
+    noise_ = {};
+
+    // On power-up, the shift register is loaded with the value 1.
+    noise_.shift = 1;
 }
 
 void APU::Reset()
 {
-    *this = APU();
+    // APU mode in $4017 was unchanged
+    inhibit_interrupt_ = false;
+    frame_interrupt_ = false;
+    // APU was silenced ($4015 = 0)
+    WriteStatus(0x00);
+    // APU triangle phase is reset to 0 (i.e. outputs a value of 15,
+    //   the first step of its waveform)
+    // APU DPCM output ANDed with 1 (upper 6 bits cleared)
+    // APU Frame Counter:
+    //   2A03E, G, various clones: APU Frame Counter reset.
+    //   2A03letterless: APU frame counter retains old value [6]
 
-    // On power-up, the shift register is loaded with the value 1.
-    noise_.shift = 1;
+    audio_time_ = 0.;
+    clock_ = 0;
+    cycle_ = 0;
 }
 
 bool APU::IsSetIRQ() const

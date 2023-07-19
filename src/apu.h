@@ -78,6 +78,7 @@ public:
     ~APU() {}
 
     // status
+    bool Run(int cpu_cycles);
     void Clock();
     void PowerUp();
     void Reset();

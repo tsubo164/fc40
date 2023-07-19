@@ -67,6 +67,9 @@ void NES::PlayGame()
 
 void NES::UpdateFrame()
 {
+    UpdateFrame2();
+    return;
+
     if (state_ == Stopped)
         return;
 
@@ -95,6 +98,30 @@ void NES::UpdateFrame()
         clock_++;
 
     } while (!ppu.IsFrameReady());
+
+    if (frame_ % AUDIO_DELAY_FRAME == 0)
+        SendSamples();
+
+    frame_++;
+}
+
+void NES::UpdateFrame2()
+{
+    if (frame_ % AUDIO_DELAY_FRAME == 0)
+        PlaySamples();
+
+    for (;;) {
+        const int cpu_cycles = cpu.Run();
+        const bool frame_ready = ppu.Run(cpu_cycles);
+
+        while (cpu.IsSuspended()) {
+            clock_dma();
+            clock_++;
+        }
+
+        if (frame_ready)
+            break;
+    }
 
     if (frame_ % AUDIO_DELAY_FRAME == 0)
         SendSamples();

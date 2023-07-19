@@ -896,8 +896,6 @@ void PPU::Reset()
 {
     ctrl_ = 0x00;
     mask_ = 0x00;
-    // TODO Need to make reset work for dq3
-    stat_ &= 0x80;
 
     write_toggle_ = false;
 
@@ -908,6 +906,20 @@ void PPU::Reset()
 
     for (auto &i : oam_)
         i = 0xFF;
+}
+
+bool PPU::Run(int cpu_cycles)
+{
+    const int PPU_CYCLES = 3 * cpu_cycles;
+    const int scanline_before = scanline_;
+
+    for (int i = 0; i < PPU_CYCLES; i++)
+        Clock();
+
+    const int scanline_after = scanline_;
+    const bool frame_ready = scanline_before > scanline_after;
+
+    return frame_ready;
 }
 
 void PPU::WriteControl(uint8_t data)
@@ -985,18 +997,10 @@ void PPU::WriteData(uint8_t data)
 
 uint8_t PPU::ReadStatus()
 {
-    uint8_t data = stat_;
+    const uint8_t data = PeekStatus();
 
     set_stat(STAT_VERTICAL_BLANK, 0);
     write_toggle_ = false;
-
-    // When reading $2002 and setting vblank flag at (1, 241) are happening at the
-    // same time, the read value and actual flag will be different.
-    // This is because the reading happens at the first cpu cycle of the instruction,
-    // and the polling the vblank flag happens at the last cpu cycle. The setting flag
-    // happens between them. Pretending that the reading happens after setting flag.
-    if (cycle_ > 335 && scanline_ == 240)
-        data |= STAT_VERTICAL_BLANK;
 
     return data;
 }
@@ -1026,12 +1030,7 @@ uint8_t PPU::ReadData()
 
 uint8_t PPU::PeekStatus() const
 {
-    uint8_t data = stat_;
-
-    if (cycle_ > 335 && scanline_ == 240)
-        data |= STAT_VERTICAL_BLANK;
-
-    return data;
+    return stat_;
 }
 
 uint8_t PPU::PeekData() const

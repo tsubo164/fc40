@@ -44,6 +44,7 @@ public:
     bool IsFrameReady() const;
 
     // clock
+    bool Run(int cpu_cycles);
     void Clock();
     void PowerUp();
     void Reset();

@@ -30,6 +30,7 @@ public:
     void PlayGame();
 
     void UpdateFrame();
+    void UpdateFrame2();
     void InputController(uint8_t id, uint8_t input);
 
     const Cartridge *GetCartridge() const { return cart_; }

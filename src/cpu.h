@@ -27,6 +27,7 @@ public:
     void Reset();
     void Clock();
     void ClockAPU();
+    int Run();
 
     // DMA
     void InputController(uint8_t controller_id, uint8_t input);
@@ -110,11 +111,12 @@ private:
     // instruction
     int execute(Instruction inst);
     void execute_delayed();
+    int execute_instruction();
     // interrupts
     void do_interrupt(uint16_t vector);
     void handle_irq();
     void handle_nmi();
-    bool is_set_irq() const;
+    int handle_interrupt();
 };
 
 } // namespace
