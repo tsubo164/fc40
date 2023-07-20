@@ -162,7 +162,7 @@ void NES::clock_dma()
         if (clock_ % 2 == 1) {
             dma_wait_ = 0;
             dma_addr_ = 0x00;
-            dma_page_ = cpu.GetDmaPage();
+            dma_page_ = ppu.PeekOamDma();
         }
         // idle for this cpu cycle
         return;

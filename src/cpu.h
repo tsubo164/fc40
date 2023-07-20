@@ -34,7 +34,6 @@ public:
     void InputController(uint8_t controller_id, uint8_t input);
     bool IsSuspended() const;
     void Resume();
-    uint8_t GetDmaPage() const;
     uint8_t PeekData(uint16_t addr) const;
 
     // debug
@@ -73,9 +72,6 @@ private:
 
     uint8_t controller_input_[2] = {0};
     uint8_t controller_state_[2] = {0};
-
-    // dma
-    uint8_t dma_page_ = 0;
 
     bool log_mode_ = false;
     uint64_t total_cycles_ = 0;

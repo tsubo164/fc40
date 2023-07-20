@@ -871,6 +871,7 @@ void PPU::PowerUp()
     mask_ = 0x00;
     stat_ = 0xA0;
     oam_addr_ = 0x00;
+    oam_dma_ = 0x00;
 
     write_toggle_ = false;
 
@@ -995,6 +996,11 @@ void PPU::WriteData(uint8_t data)
     vram_addr_ += address_increment();
 }
 
+void PPU::WriteOamDma(uint8_t data)
+{
+    oam_dma_ = data;
+}
+
 uint8_t PPU::ReadStatus()
 {
     const uint8_t data = PeekStatus();
@@ -1046,6 +1052,11 @@ uint8_t PPU::PeekData() const
     }
 
     return data;
+}
+
+uint8_t PPU::PeekOamDma() const
+{
+    return oam_dma_;
 }
 
 void PPU::WriteDmaSprite(uint8_t addr, uint8_t data)

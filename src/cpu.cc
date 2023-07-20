@@ -103,8 +103,8 @@ void CPU::write_byte(uint16_t addr, uint8_t data)
     }
     else if (addr == 0x4014) {
         // DMA
+        ppu_.WriteOamDma(data);
         suspended_ = true;
-        dma_page_ = data;
     }
     else if (addr == 0x4015) {
         apu_.WriteStatus(data);
@@ -1120,12 +1120,6 @@ bool CPU::IsSuspended() const
 void CPU::Resume()
 {
     suspended_ = false;
-    dma_page_ = 0x00;
-}
-
-uint8_t CPU::GetDmaPage() const
-{
-    return dma_page_;
 }
 
 uint8_t CPU::PeekData(uint16_t addr) const

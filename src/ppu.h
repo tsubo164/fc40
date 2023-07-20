@@ -57,6 +57,7 @@ public:
     void WriteScroll(uint8_t data);
     void WriteAddress(uint8_t addr);
     void WriteData(uint8_t data);
+    void WriteOamDma(uint8_t data);
 
     // read registers
     uint8_t ReadStatus();
@@ -66,6 +67,7 @@ public:
     // peek registers
     uint8_t PeekStatus() const;
     uint8_t PeekData() const;
+    uint8_t PeekOamDma() const;
     // sprites
     void WriteDmaSprite(uint8_t addr, uint8_t data);
 
@@ -81,6 +83,7 @@ private:
     uint8_t ctrl_ = 0;
     uint8_t mask_ = 0;
     uint8_t stat_ = 0;
+    uint8_t oam_dma_ = 0;
 
     // vram and scroll
     bool write_toggle_ = 0;

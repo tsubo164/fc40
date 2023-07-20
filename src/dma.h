@@ -26,7 +26,6 @@ private:
 
     bool wait_ = true;
     uint8_t addr_ = 0;
-    uint8_t page_ = 0;
     uint8_t data_ = 0;
 };
 

@@ -34,12 +34,12 @@ void DMA::Clock()
         if (cycles_ % 2 == 1) {
             wait_ = false;
             addr_ = 0x00;
-            page_ = cpu_.GetDmaPage();
         }
     }
     else if (cycles_ % 2 == 0) {
         // Read
-        data_ = cpu_.PeekData((page_ << 8) | addr_);
+        const uint8_t page = ppu_.PeekOamDma();
+        data_ = cpu_.PeekData((page << 8) | addr_);
     }
     else if (cycles_ % 2 == 1) {
         // Write
@@ -48,7 +48,6 @@ void DMA::Clock()
 
         if (addr_ == 0x00) {
             wait_ = true;
-            page_ = 0x00;
             addr_ = 0x00;
             cpu_.Resume();
         }
@@ -66,7 +65,6 @@ void DMA::Reset()
 {
     wait_ = true;
     addr_ = 0;
-    page_ = 0;
     data_ = 0;
 }
 
