@@ -917,7 +917,7 @@ void CPU::PowerUp()
     set_p(0x00 | I);
 
     // takes cycles
-    total_cycles_ = 0;
+    total_cycles_ = 7;
 }
 
 void CPU::Reset()
@@ -928,12 +928,12 @@ void CPU::Reset()
     set_flag(I, 1);
 
     // takes cycles
-    total_cycles_ = 0;
+    total_cycles_ += 7;
 }
 
 int CPU::Run()
 {
-    if (log_mode_)
+    if (test_mode_)
         PrintCpuStatus(*this, ppu_);
 
     int cycles = 0;
@@ -1038,9 +1038,9 @@ uint16_t CPU::GetZeroPageIndirect(uint8_t zp) const
     return zp_indirect(zp);
 }
 
-void CPU::SetLogMode()
+void CPU::SetTestMode()
 {
-    log_mode_ = true;
+    test_mode_ = true;
 }
 
 uint64_t CPU::GetTotalCycles() const

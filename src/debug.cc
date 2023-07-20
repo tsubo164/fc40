@@ -42,8 +42,11 @@ void LogCpuStatus(NES &nes, int max_lines)
     last_log_line = max_lines;
 
     InitSound();
-    nes.cpu.SetLogMode();
+    nes.cpu.SetTestMode();
     nes.cpu.SetPC(0xC000);
+
+    const int cpu_cycles = nes.cpu.GetTotalCycles();
+    nes.ppu.Run(cpu_cycles);
 
     while (current_log_line <= last_log_line) {
         nes.UpdateFrame();
