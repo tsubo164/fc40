@@ -32,6 +32,7 @@ public:
     void InsertCartridge(Cartridge *cart);
     void PushResetButton();
     void PlayGame();
+    void StartLog();
 
     void UpdateFrame();
     void InputController(uint8_t id, uint8_t input);
@@ -44,16 +45,9 @@ public:
     void Step();
 
 private:
-    uint64_t clock_ = 0;
-    uint64_t frame_ = 0;
-
     Cartridge *cart_ = nullptr;
-
-    // dma
-    int dma_wait_ = 0;
-    uint8_t dma_addr_ = 0;
-    uint8_t dma_page_ = 0;
-    uint8_t dma_data_ = 0;
+    uint64_t frame_ = 0;
+    bool do_log_ = false;
 
     // state
     enum EmulatorState {
@@ -62,7 +56,7 @@ private:
         Stepping,
     } state_ = Running;
 
-    void clock_dma();
+    bool need_log() const;
     void print_disassemble() const;
 };
 

@@ -42,7 +42,7 @@ void LogCpuStatus(NES &nes, int max_lines)
     last_log_line = max_lines;
 
     InitSound();
-    nes.cpu.SetTestMode();
+    nes.StartLog();
     nes.cpu.SetPC(0xC000);
 
     const int cpu_cycles = nes.cpu.GetTotalCycles();

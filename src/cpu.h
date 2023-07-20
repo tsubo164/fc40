@@ -39,8 +39,6 @@ public:
     uint16_t GetPC() const;
     uint16_t GetAbsoluteIndirect(uint16_t abs) const;
     uint16_t GetZeroPageIndirect(uint8_t zp) const;
-
-    void SetTestMode();
     uint64_t GetTotalCycles() const;
 
 private:
@@ -50,7 +48,6 @@ private:
 
     uint64_t total_cycles_ = 0;
     bool suspended_ = false;
-    bool test_mode_ = false;
 
     // registers
     uint8_t a_ = 0;

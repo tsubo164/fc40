@@ -933,9 +933,6 @@ void CPU::Reset()
 
 int CPU::Run()
 {
-    if (test_mode_)
-        PrintCpuStatus(*this, ppu_);
-
     int cycles = 0;
 
     cycles = execute_instruction();
@@ -1036,11 +1033,6 @@ uint16_t CPU::GetAbsoluteIndirect(uint16_t abs) const
 uint16_t CPU::GetZeroPageIndirect(uint8_t zp) const
 {
     return zp_indirect(zp);
-}
-
-void CPU::SetTestMode()
-{
-    test_mode_ = true;
 }
 
 uint64_t CPU::GetTotalCycles() const

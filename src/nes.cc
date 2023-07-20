@@ -15,12 +15,6 @@ void NES::PowerUp()
     const int RESX = 256;
     const int RESY = 240;
 
-    // DMA
-    dma_wait_ = 1;
-    dma_addr_ = 0x00;
-    dma_page_ = 0x00;
-    dma_data_ = 0x00;
-
     // framebuffer
     fbuf.Resize(RESX, RESY);
 
@@ -69,12 +63,25 @@ void NES::PlayGame()
     state_ = Stopped;
 }
 
+void NES::StartLog()
+{
+    do_log_ = true;
+}
+
+bool NES::need_log() const
+{
+    return do_log_ && !cpu.IsSuspended();
+}
+
 void NES::UpdateFrame()
 {
     if (frame_ % AUDIO_DELAY_FRAME == 0)
         PlaySamples();
 
     for (;;) {
+        if (need_log())
+            PrintCpuStatus(cpu, ppu);
+
         const int cpu_cycles = cpu.IsSuspended() ? dma.Run() : cpu.Run();
         const bool frame_ready = ppu.Run(cpu_cycles);
         apu.Run(cpu_cycles);
@@ -114,36 +121,6 @@ bool NES::IsRunning() const
 void NES::Step()
 {
     state_ = Stepping;
-}
-
-void NES::clock_dma()
-{
-    if (dma_wait_) {
-        if (clock_ % 2 == 1) {
-            dma_wait_ = 0;
-            dma_addr_ = 0x00;
-            dma_page_ = ppu.PeekOamDma();
-        }
-        // idle for this cpu cycle
-        return;
-    }
-
-    if (clock_ % 2 == 0) {
-        // read
-        dma_data_ = cpu.PeekData((dma_page_ << 8) | dma_addr_);
-    }
-    else {
-        // write
-        ppu.WriteDmaSprite(dma_addr_, dma_data_);
-        dma_addr_++;
-
-        if (dma_addr_ == 0x00) {
-            dma_wait_ = 1;
-            dma_page_ = 0x00;
-            dma_addr_ = 0x00;
-            cpu.Resume();
-        }
-    }
 }
 
 static void send_initial_samples()
