@@ -17,6 +17,14 @@ enum StatusFlag {
     N = 1 << 7  // negative
 };
 
+CPU::CPU(PPU &ppu) : ppu_(ppu), dma_(*this, ppu_)
+{
+}
+
+CPU::~CPU()
+{
+}
+
 void CPU::write_byte(uint16_t addr, uint8_t data)
 {
     if (addr >= 0x0000 && addr <= 0x1FFF) {
@@ -1033,6 +1041,9 @@ int CPU::Run()
 {
     if (log_mode_)
         PrintCpuStatus(*this, ppu_);
+
+    if (IsSuspended())
+        return dma_.Run();
 
     int cpu_cycles = 0;
 

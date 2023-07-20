@@ -4,6 +4,7 @@
 #include <cstdint>
 #include "instruction.h"
 #include "apu.h"
+#include "dma.h"
 
 namespace nes {
 
@@ -17,8 +18,8 @@ struct CpuStatus {
 
 class CPU {
 public:
-    CPU(PPU &ppu) : ppu_(ppu) {}
-    ~CPU() {}
+    CPU(PPU &ppu);
+    ~CPU();
 
     void SetCartride(Cartridge *cart);
 
@@ -51,6 +52,7 @@ private:
     Cartridge *cart_ = nullptr;
     PPU &ppu_;
     APU apu_;
+    DMA dma_;
     int cycles_ = 0;
     bool suspended_ = false;
 

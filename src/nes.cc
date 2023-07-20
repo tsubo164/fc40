@@ -114,11 +114,6 @@ void NES::UpdateFrame2()
         const int cpu_cycles = cpu.Run();
         const bool frame_ready = ppu.Run(cpu_cycles);
 
-        while (cpu.IsSuspended()) {
-            clock_dma();
-            clock_++;
-        }
-
         if (frame_ready)
             break;
     }

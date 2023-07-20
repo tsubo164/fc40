@@ -7,7 +7,7 @@ CFLAGS  := $(DEF) $(OPT) $(INCLUDE) -Wall --pedantic-errors --std=c++14 -c
 LDFLAGS := -lglfw -framework Cocoa -framework OpenGL -framework IOKit $(LIBRARY)
 RM      := rm -f
 
-SRCS    := apu cartridge cpu debug disassemble display framebuffer instruction \
+SRCS    := apu cartridge cpu debug disassemble display dma framebuffer instruction \
            main mapper mapper_000 mapper_001 mapper_002 mapper_003 nes ppu sound
 
 .PHONY: clean test
