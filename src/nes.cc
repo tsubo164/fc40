@@ -115,7 +115,7 @@ void NES::UpdateFrame2()
         PlaySamples();
 
     for (;;) {
-        const int cpu_cycles = cpu.Run();
+        const int cpu_cycles = cpu.IsSuspended() ? dma.Run() : cpu.Run();
         const bool frame_ready = ppu.Run(cpu_cycles);
         apu.Run(cpu_cycles);
 

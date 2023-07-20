@@ -18,7 +18,7 @@ enum StatusFlag {
     N = 1 << 7  // negative
 };
 
-CPU::CPU(PPU &ppu, APU &apu) : ppu_(ppu), apu_(apu), dma_(*this, ppu_)
+CPU::CPU(PPU &ppu, APU &apu) : ppu_(ppu), apu_(apu)
 {
 }
 
@@ -1038,9 +1038,6 @@ int CPU::Run()
 {
     if (log_mode_)
         PrintCpuStatus(*this, ppu_);
-
-    if (IsSuspended())
-        return dma_.Run();
 
     int cpu_cycles = 0;
 

@@ -3,7 +3,6 @@
 
 #include <cstdint>
 #include "instruction.h"
-#include "dma.h"
 
 namespace nes {
 
@@ -51,7 +50,6 @@ private:
     Cartridge *cart_ = nullptr;
     PPU &ppu_;
     APU &apu_;
-    DMA dma_;
     int cycles_ = 0;
     bool suspended_ = false;
 
