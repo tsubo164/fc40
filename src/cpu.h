@@ -3,13 +3,13 @@
 
 #include <cstdint>
 #include "instruction.h"
-#include "apu.h"
 #include "dma.h"
 
 namespace nes {
 
 class Cartridge;
 class PPU;
+class APU;
 
 struct CpuStatus {
     uint16_t pc = 0;
@@ -18,7 +18,7 @@ struct CpuStatus {
 
 class CPU {
 public:
-    CPU(PPU &ppu);
+    CPU(PPU &ppu, APU &apu);
     ~CPU();
 
     void SetCartride(Cartridge *cart);
@@ -51,7 +51,7 @@ public:
 private:
     Cartridge *cart_ = nullptr;
     PPU &ppu_;
-    APU apu_;
+    APU &apu_;
     DMA dma_;
     int cycles_ = 0;
     bool suspended_ = false;

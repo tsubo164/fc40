@@ -31,6 +31,8 @@ void NES::PowerUp()
     // CPU and PPU
     cpu.PowerUp();
     ppu.PowerUp();
+    apu.PowerUp();
+    dma.PowerUp();
 }
 
 void NES::ShutDown()
@@ -48,6 +50,8 @@ void NES::PushResetButton()
 {
     cpu.Reset();
     ppu.Reset();
+    apu.Reset();
+    dma.Reset();
 }
 
 void NES::PlayGame()
@@ -113,6 +117,7 @@ void NES::UpdateFrame2()
     for (;;) {
         const int cpu_cycles = cpu.Run();
         const bool frame_ready = ppu.Run(cpu_cycles);
+        apu.Run(cpu_cycles);
 
         if (frame_ready)
             break;

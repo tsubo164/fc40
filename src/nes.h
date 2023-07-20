@@ -3,6 +3,7 @@
 
 #include "cpu.h"
 #include "ppu.h"
+#include "apu.h"
 #include "dma.h"
 #include "disassemble.h"
 #include "framebuffer.h"
@@ -21,7 +22,8 @@ public:
     FrameBuffer fbuf;
     FrameBuffer patt;
     PPU ppu = {fbuf};
-    CPU cpu = {ppu};
+    APU apu = {};
+    CPU cpu = {ppu, apu};
     DMA dma = {cpu, ppu};
 
     void PowerUp();

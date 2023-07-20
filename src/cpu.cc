@@ -1,6 +1,7 @@
 #include <cstring>
 #include "cpu.h"
 #include "ppu.h"
+#include "apu.h"
 #include "cartridge.h"
 #include "debug.h"
 
@@ -17,7 +18,7 @@ enum StatusFlag {
     N = 1 << 7  // negative
 };
 
-CPU::CPU(PPU &ppu) : ppu_(ppu), dma_(*this, ppu_)
+CPU::CPU(PPU &ppu, APU &apu) : ppu_(ppu), apu_(apu), dma_(*this, ppu_)
 {
 }
 
@@ -940,8 +941,6 @@ void CPU::PowerUp()
 
     cycles_ = 7;
     total_cycles_ = 0;
-
-    apu_.PowerUp();
 }
 
 void CPU::Reset()
@@ -954,8 +953,6 @@ void CPU::Reset()
     // takes cycles
     cycles_ = 7;
     total_cycles_ = 0;
-
-    apu_.Reset();
 }
 
 void CPU::Clock()
@@ -1048,7 +1045,6 @@ int CPU::Run()
     int cpu_cycles = 0;
 
     cpu_cycles = execute_instruction();
-    irq_signal_ = apu_.Run(cpu_cycles);
     cpu_cycles += handle_interrupt();
 
     total_cycles_ += cpu_cycles;
@@ -1082,9 +1078,8 @@ int CPU::handle_interrupt()
         ppu_.ClearNMI();
         cycles = 7;
     }
-    else if (irq_signal_ && !get_flag(I)) {
+    else if (apu_.IsSetIRQ() && !get_flag(I)) {
         do_interrupt(0xFFFE);
-        irq_signal_ = false;
         cycles = 7;
     }
 
