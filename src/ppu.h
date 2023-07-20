@@ -67,6 +67,7 @@ public:
     // peek registers
     uint8_t PeekStatus() const;
     uint8_t PeekData() const;
+    uint8_t PeekOamAddr() const;
     uint8_t PeekOamDma() const;
     // sprites
     void WriteDmaSprite(uint8_t addr, uint8_t data);
@@ -78,6 +79,11 @@ public:
 
 private:
     Cartridge *cart_ = nullptr;
+    FrameBuffer &fbuf_;
+    int cycle_ = 0;
+    int scanline_ = 0;
+    uint64_t frame_ = 0;
+    bool nmi_generated_ = false;
 
     // registers
     uint8_t ctrl_ = 0;
@@ -107,13 +113,6 @@ private:
     ObjectAttribute rendering_oam_[8];
     PatternRow rendering_sprite_[8];
     int sprite_count_ = 0;
-
-    int cycle_ = 0;
-    int scanline_ = 0;
-    uint64_t frame_ = 0;
-    FrameBuffer &fbuf_;
-
-    bool nmi_generated_ = false;
 
     // control
     void set_stat(uint8_t flag, uint8_t val);

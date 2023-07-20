@@ -945,6 +945,10 @@ void PPU::WriteOamAddress(uint8_t addr)
 void PPU::WriteOamData(uint8_t data)
 {
     oam_[oam_addr_] = data;
+    // Write OAM data here. Writes will increment OAMADDR after the write;
+    // reads do not. Reads during vertical or forced blanking return the value
+    // from OAM at that address.
+    oam_addr_++;
 }
 
 void PPU::WriteScroll(uint8_t data)
@@ -1052,6 +1056,11 @@ uint8_t PPU::PeekData() const
     }
 
     return data;
+}
+
+uint8_t PPU::PeekOamAddr() const
+{
+    return oam_addr_;
 }
 
 uint8_t PPU::PeekOamDma() const

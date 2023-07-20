@@ -25,8 +25,10 @@ private:
     uint64_t cycles_ = 0;
 
     bool wait_ = true;
+    uint8_t page_ = 0;
     uint8_t addr_ = 0;
     uint8_t data_ = 0;
+    int write_count_ = 0;
 };
 
 } // namespace

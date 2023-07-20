@@ -33,22 +33,26 @@ void DMA::Clock()
         // Idle for this cpu cycle
         if (cycles_ % 2 == 1) {
             wait_ = false;
-            addr_ = 0x00;
+            // The DMA transfer will begin at the current OAM write address.
+            // It is common practice to initialize it to 0 with a write to
+            // OAMADDR before the DMA transfer.
+            page_ = ppu_.PeekOamDma();
+            addr_ = ppu_.PeekOamAddr();
+            write_count_ = 0;
         }
     }
     else if (cycles_ % 2 == 0) {
         // Read
-        const uint8_t page = ppu_.PeekOamDma();
-        data_ = cpu_.PeekData((page << 8) | addr_);
+        data_ = cpu_.PeekData((page_ << 8) | addr_);
     }
     else if (cycles_ % 2 == 1) {
         // Write
         ppu_.WriteDmaSprite(addr_, data_);
         addr_++;
+        write_count_++;
 
-        if (addr_ == 0x00) {
+        if (write_count_ == 256) {
             wait_ = true;
-            addr_ = 0x00;
             cpu_.Resume();
         }
     }
@@ -64,8 +68,10 @@ void DMA::PowerUp()
 void DMA::Reset()
 {
     wait_ = true;
+    page_ = 0;
     addr_ = 0;
     data_ = 0;
+    write_count_ = 0;
 }
 
 } // namespace
