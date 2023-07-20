@@ -71,46 +71,6 @@ void NES::PlayGame()
 
 void NES::UpdateFrame()
 {
-    UpdateFrame2();
-    return;
-
-    if (state_ == Stopped)
-        return;
-
-    if (frame_ % AUDIO_DELAY_FRAME == 0)
-        PlaySamples();
-
-    do {
-        if (clock_ % 3 == 0) {
-            if (cpu.IsSuspended())
-                clock_dma();
-            else
-                cpu.Clock();
-
-            cpu.ClockAPU();
-
-            if (state_ == Stepping && cpu.GetCycles() == 0) {
-                state_ = Stopped;
-                print_disassemble();
-                clock_++;
-                return;
-            }
-        }
-
-        ppu.Clock();
-
-        clock_++;
-
-    } while (!ppu.IsFrameReady());
-
-    if (frame_ % AUDIO_DELAY_FRAME == 0)
-        SendSamples();
-
-    frame_++;
-}
-
-void NES::UpdateFrame2()
-{
     if (frame_ % AUDIO_DELAY_FRAME == 0)
         PlaySamples();
 

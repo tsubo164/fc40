@@ -25,8 +25,6 @@ public:
     // clock
     void PowerUp();
     void Reset();
-    void Clock();
-    void ClockAPU();
     int Run();
 
     // DMA
@@ -39,7 +37,6 @@ public:
     CpuStatus GetStatus() const;
     void SetPC(uint16_t addr);
     uint16_t GetPC() const;
-    int GetCycles() const;
     uint16_t GetAbsoluteIndirect(uint16_t abs) const;
     uint16_t GetZeroPageIndirect(uint8_t zp) const;
 
@@ -47,15 +44,13 @@ public:
     uint64_t GetTotalCycles() const;
 
 private:
-    Cartridge *cart_ = nullptr;
     PPU &ppu_;
     APU &apu_;
-    int cycles_ = 0;
-    bool suspended_ = false;
+    Cartridge *cart_ = nullptr;
 
-    uint8_t op_register_ = 0;
-    bool irq_signal_ = false;
-    bool irq_invoking_ = false;
+    uint64_t total_cycles_ = 0;
+    bool suspended_ = false;
+    bool log_mode_ = false;
 
     // registers
     uint8_t a_ = 0;
@@ -65,14 +60,11 @@ private:
     uint8_t p_ = 0; // processor status
     uint16_t pc_ = 0;
 
-    // 4 2KB ram. 3 of them are mirroring
-    uint8_t wram_[2048] = {0};
-
     uint8_t controller_input_[2] = {0};
     uint8_t controller_state_[2] = {0};
 
-    bool log_mode_ = false;
-    uint64_t total_cycles_ = 0;
+    // 4 2KB rams. 3 of them are mirroring
+    uint8_t wram_[2048] = {0};
 
     // read and write
     void write_byte(uint16_t addr, uint8_t data);
@@ -106,12 +98,9 @@ private:
     void add_a_m(uint8_t data);
     // instruction
     int execute(Instruction inst);
-    void execute_delayed();
     int execute_instruction();
     // interrupts
-    void do_interrupt(uint16_t vector);
-    void handle_irq();
-    void handle_nmi();
+    int do_interrupt(uint16_t vector);
     int handle_interrupt();
 };
 

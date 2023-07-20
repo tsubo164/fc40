@@ -521,7 +521,7 @@ int CPU::execute(Instruction inst)
 
     // Pull Processor Status from Stack: (N, V, D, I, Z, C)
     case PLP:
-        // Will be executed after polling interrupts
+        set_p(pop() & ~B);
         break;
 
     // Arithmetic Shift Left: C <- /M7...M0/ <- 0 (N, Z, C)
@@ -767,7 +767,7 @@ int CPU::execute(Instruction inst)
 
     // Clear Interrupt Disable: 0 -> I (I)
     case CLI:
-        // Will be executed after polling interrupts
+        set_flag(I, 0);
         break;
 
     // Clear Overflow Flag: 0 -> V (V)
@@ -787,7 +787,7 @@ int CPU::execute(Instruction inst)
 
     // Set Interrupt Disable: 1 -> I (I)
     case SEI:
-        // Will be executed after polling interrupts
+        set_flag(I, 1);
         break;
 
     // No Operation: ()
@@ -901,29 +901,6 @@ int CPU::execute(Instruction inst)
     return inst.cycles + page_crossed + branch_taken;
 }
 
-void CPU::execute_delayed()
-{
-    switch (op_register_) {
-    // Clear Interrupt Disable: 0 -> I (I)
-    case CLI:
-        set_flag(I, 0);
-        break;
-
-    // Set Interrupt Disable: 1 -> I (I)
-    case SEI:
-        set_flag(I, 1);
-        break;
-
-    // Pull Processor Status from Stack: (N, V, D, I, Z, C)
-    case PLP:
-        set_p(pop() & ~B);
-        break;
-
-    default:
-        break;
-    }
-}
-
 void CPU::SetCartride(Cartridge *cart)
 {
     cart_ = cart;
@@ -939,7 +916,7 @@ void CPU::PowerUp()
     set_s(0xFD);
     set_p(0x00 | I);
 
-    cycles_ = 7;
+    // takes cycles
     total_cycles_ = 0;
 }
 
@@ -951,87 +928,7 @@ void CPU::Reset()
     set_flag(I, 1);
 
     // takes cycles
-    cycles_ = 7;
     total_cycles_ = 0;
-}
-
-void CPU::Clock()
-{
-    // The first cycle
-    if (cycles_ == 0) {
-        if (log_mode_)
-            PrintCpuStatus(*this, ppu_);
-
-        uint8_t code, cycs;
-        Instruction inst;
-
-        code = fetch();
-        inst = decode(code);
-        cycs = execute(inst);
-
-        cycles_ = cycs;
-        op_register_ = inst.operation;
-
-        // The RTI instruction affects IRQ inhibition immediately.
-        // If an IRQ is pending and an RTI is executed that clears the I flag,
-        // the CPU will invoke the IRQ handler immediately after RTI finishes executing.
-        // This is due to RTI restoring the I flag from the stack before polling
-        // for interrupts.
-    }
-
-    cycles_--;
-
-    // The last cycle
-    if (cycles_ == 0) {
-        if (irq_invoking_) {
-            // the last cycle of interrupt invoking
-            irq_invoking_ = false;
-            return;
-        }
-
-        bool is_nmi_pending = false;
-        bool is_irq_pending = false;
-
-        // The output from the edge detector and level detector are polled
-        // at certain points to detect pending interrupts. For most instructions,
-        // this polling happens during the final cycle of the instruction,
-        // before the opcode fetch for the next instruction.
-        if (ppu_.IsSetNMI()) {
-            is_nmi_pending = true;
-            ppu_.ClearNMI();
-        }
-        else if (irq_signal_ && !get_flag(I)) {
-            // If the polling operation detects that an interrupt has been asserted,
-            // the next "instruction" executed is the interrupt sequence.
-            is_irq_pending = true;
-            irq_signal_ = false;
-        }
-
-        // The CLI, SEI, and PLP instructions on the other hand change the I flag
-        // after polling for interrupts (like all two-cycle instructions they poll
-        // the interrupt lines at the end of the first cycle), meaning they can
-        // effectively delay an interrupt until after the next instruction.
-        execute_delayed();
-
-        if (is_nmi_pending) {
-            handle_nmi();
-            irq_invoking_ = true;
-        }
-        else if (is_irq_pending) {
-            handle_irq();
-            irq_invoking_ = true;
-        }
-    }
-
-    total_cycles_++;
-}
-
-void CPU::ClockAPU()
-{
-    apu_.Clock();
-
-    if (apu_.IsSetIRQ())
-        irq_signal_ = true;
 }
 
 int CPU::Run()
@@ -1039,14 +936,14 @@ int CPU::Run()
     if (log_mode_)
         PrintCpuStatus(*this, ppu_);
 
-    int cpu_cycles = 0;
+    int cycles = 0;
 
-    cpu_cycles = execute_instruction();
-    cpu_cycles += handle_interrupt();
+    cycles = execute_instruction();
+    cycles += handle_interrupt();
 
-    total_cycles_ += cpu_cycles;
+    total_cycles_ += cycles;
 
-    return cpu_cycles;
+    return cycles;
 }
 
 int CPU::execute_instruction()
@@ -1058,11 +955,6 @@ int CPU::execute_instruction()
     inst = decode(code);
     cycs = execute(inst);
 
-    cycles_ = cycs;
-    op_register_ = inst.operation;
-    // TODO
-    execute_delayed();
-
     return cycs;
 }
 
@@ -1071,37 +963,25 @@ int CPU::handle_interrupt()
     int cycles = 0;
 
     if (ppu_.IsSetNMI()) {
-        do_interrupt(0xFFFA);
         ppu_.ClearNMI();
-        cycles = 7;
+        cycles = do_interrupt(0xFFFA);
     }
     else if (apu_.IsSetIRQ() && !get_flag(I)) {
-        do_interrupt(0xFFFE);
-        cycles = 7;
+        cycles = do_interrupt(0xFFFE);
     }
 
     return cycles;
 }
 
-void CPU::do_interrupt(uint16_t vector)
+int CPU::do_interrupt(uint16_t vector)
 {
     // 5  $0100,S  W  push P on stack (with B flag *clear*), decrement S
     push_word(pc_);
     push(p_ & ~B);
     set_flag(I, 1);
-
     set_pc(read_word(vector));
-    cycles_ = 7;
-}
 
-void CPU::handle_irq()
-{
-    do_interrupt(0xFFFE);
-}
-
-void CPU::handle_nmi()
-{
-    do_interrupt(0xFFFA);
+    return 7;
 }
 
 void CPU::InputController(uint8_t controller_id, uint8_t input)
@@ -1146,11 +1026,6 @@ void CPU::SetPC(uint16_t addr)
 uint16_t CPU::GetPC() const
 {
     return pc_;
-}
-
-int CPU::GetCycles() const
-{
-    return cycles_;
 }
 
 uint16_t CPU::GetAbsoluteIndirect(uint16_t abs) const
