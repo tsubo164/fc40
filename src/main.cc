@@ -11,10 +11,10 @@ int main(int argc, char **argv)
     NES nes;
     Cartridge cart;
     const char *filename = nullptr;
-    int log_mode = 0;
+    bool test_mode = false;
 
-    if (argc == 3 && std::string(argv[1]) == "--log-mode") {
-        log_mode = 1;
+    if (argc == 3 && std::string(argv[1]) == "--test-mode") {
+        test_mode = true;
         filename = argv[2];
     }
     else if (argc ==2) {
@@ -39,7 +39,7 @@ int main(int argc, char **argv)
     nes.InsertCartridge(&cart);
     nes.PowerUp();
 
-    if (log_mode) {
+    if (test_mode) {
         LogCpuStatus(nes, 8991);
     }
     else {
