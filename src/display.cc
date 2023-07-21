@@ -107,8 +107,6 @@ int Display::Open()
         }
         else if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS && key.p == 0) {
             show_patt_ = !show_patt_;
-            if (show_patt_)
-                LoadPatternTable(nes_.patt, nes_.GetCartridge());
             key.p = true;
         }
         else if (glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE && key.p == 1) {
@@ -203,8 +201,10 @@ void Display::render() const
         render_sprite_box(nes_.ppu, W, H);
     }
 
-    if (show_patt_)
+    if (show_patt_) {
+        LoadPatternTable(nes_.patt, nes_.GetCartridge());
         render_pattern_table(nes_.patt);
+    }
 
     glFlush();
 }
