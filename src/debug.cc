@@ -11,15 +11,8 @@
 
 namespace nes {
 
-static int current_log_line = 0;
-static int last_log_line = 0;
-
 void PrintCpuStatus(const CPU &cpu, const PPU &ppu)
 {
-    current_log_line++;
-    if (current_log_line > last_log_line)
-        return;
-
     const CpuStatus stat = cpu.GetStatus();
     const Code line = DisassembleLine(cpu, stat.pc);
     const std::string code_str = GetCodeString(line);
@@ -39,8 +32,6 @@ void PrintCpuStatus(const CPU &cpu, const PPU &ppu)
 
 void LogCpuStatus(NES &nes, int max_lines)
 {
-    last_log_line = max_lines;
-
     InitSound();
     nes.StartLog();
     nes.cpu.SetPC(0xC000);
@@ -48,7 +39,7 @@ void LogCpuStatus(NES &nes, int max_lines)
     const int cpu_cycles = nes.cpu.GetTotalCycles();
     nes.ppu.Run(cpu_cycles);
 
-    while (current_log_line <= last_log_line) {
+    for (int i = 0; i < max_lines; i++) {
         nes.UpdateFrame();
     }
 }

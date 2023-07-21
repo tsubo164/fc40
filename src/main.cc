@@ -12,9 +12,14 @@ int main(int argc, char **argv)
     Cartridge cart;
     const char *filename = nullptr;
     bool test_mode = false;
+    bool print_log = false;
 
     if (argc == 3 && std::string(argv[1]) == "--test-mode") {
         test_mode = true;
+        filename = argv[2];
+    }
+    else if (argc == 3 && std::string(argv[1]) == "--log") {
+        print_log = true;
         filename = argv[2];
     }
     else if (argc ==2) {
@@ -47,6 +52,9 @@ int main(int argc, char **argv)
         printf("PRG Size        : %4ld KB\n", cart.GetProgSize() / 1024);
         printf("CHR Size        : %4ld KB\n", cart.GetCharSize() / 1024);
         printf("Battery Present : %4s\n", cart.HasBattery() ? "Yes" : "No");
+
+        if (print_log)
+            nes.StartLog();
 
         nes.PlayGame();
     }
