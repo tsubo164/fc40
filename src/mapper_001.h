@@ -36,10 +36,10 @@ private:
     void write_control(uint8_t data);
     void write_prg_bank(uint8_t data);
 
-    virtual uint8_t do_read_prog(uint16_t addr) const final;
-    virtual void do_write_prog(uint16_t addr, uint8_t data) final;
-    virtual uint8_t do_read_char(uint16_t addr) const final;
-    virtual void do_write_char(uint16_t addr, uint8_t data) final;
+    virtual uint8_t do_read_prg(uint16_t addr) const final;
+    virtual void do_write_prg(uint16_t addr, uint8_t data) final;
+    virtual uint8_t do_read_chr(uint16_t addr) const final;
+    virtual void do_write_chr(uint16_t addr, uint8_t data) final;
 };
 
 } // namespace

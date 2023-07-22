@@ -43,8 +43,8 @@ bool Cartridge::Open(const char *filename)
 
     // Byte 4 Size of PRG ROM in 16 KB units
     // Byte 5 Size of CHR ROM in 8 KB units (value 0 means the board uses CHR RAM)
-    const size_t prog_size = header[4] * 16 * 1024;
-    const size_t char_size = header[5] * 8 * 1024;
+    const size_t prg_size = header[4] * 16 * 1024;
+    const size_t chr_size = header[5] * 8 * 1024;
 
     // Flags 6
     // 76543210
@@ -70,10 +70,10 @@ bool Cartridge::Open(const char *filename)
     // ++++----- Upper nybble of mapper number
     mapper_id_ |= header[7] & 0xF0;
 
-    const std::vector<uint8_t> prog_data = read_data(ifs, prog_size);
-    const std::vector<uint8_t> char_data = read_data(ifs, char_size);
+    const std::vector<uint8_t> prg_data = read_data(ifs, prg_size);
+    const std::vector<uint8_t> chr_data = read_data(ifs, chr_size);
 
-    mapper_ = new_mapper(mapper_id_, prog_data, char_data);
+    mapper_ = new_mapper(mapper_id_, prg_data, chr_data);
     if (mirroring_ == 0)
         mapper_->SetMirroring(Mirroring::HORIZONTAL);
     else if (mirroring_ == 1)
@@ -89,27 +89,27 @@ bool Cartridge::Open(const char *filename)
 
 uint8_t Cartridge::ReadProg(uint16_t addr) const
 {
-    return mapper_->ReadProg(addr);
+    return mapper_->ReadPrg(addr);
 }
 
 void Cartridge::WriteProg(uint16_t addr, uint8_t data)
 {
-    mapper_->WriteProg(addr, data);
+    mapper_->WritePrg(addr, data);
 }
 
 uint8_t Cartridge::ReadChar(uint16_t addr) const
 {
-    return mapper_->ReadChar(addr);
+    return mapper_->ReadChr(addr);
 }
 
 void Cartridge::WriteChar(uint16_t addr, uint8_t data)
 {
-    mapper_->WriteChar(addr, data);
+    mapper_->WriteChr(addr, data);
 }
 
 uint8_t Cartridge::PeekProg(uint32_t physical_addr) const
 {
-    return mapper_->PeekProg(physical_addr);
+    return mapper_->PeekPrg(physical_addr);
 }
 
 int Cartridge::GetMapperID() const
@@ -119,12 +119,12 @@ int Cartridge::GetMapperID() const
 
 size_t Cartridge::GetProgSize() const
 {
-    return mapper_->GetProgRomSize();
+    return mapper_->GetPrgRomSize();
 }
 
 size_t Cartridge::GetCharSize() const
 {
-    return mapper_->GetCharRomSize();
+    return mapper_->GetChrRomSize();
 }
 
 bool Cartridge::IsMapperSupported() const
@@ -153,7 +153,7 @@ int Cartridge::save_battery_ram() const
 	if (!ofs)
 		return -1;
 
-    const std::vector<uint8_t> sram = mapper_->GetProgRam();
+    const std::vector<uint8_t> sram = mapper_->GetPrgRam();
     if (sram.size() != 0x2000)
         return -1;
 
@@ -177,7 +177,7 @@ int Cartridge::load_battery_ram()
     std::vector<uint8_t> sram(sram_size);
     ifs.read(reinterpret_cast<char*>(&sram[0]), sram.size());
 
-    mapper_->SetProgRam(sram);
+    mapper_->SetPrgRam(sram);
     return 0;
 }
 

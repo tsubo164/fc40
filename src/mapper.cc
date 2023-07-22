@@ -6,9 +6,10 @@
 
 namespace nes {
 
-Mapper::Mapper(const std::vector<uint8_t> &prog_data,
-        const std::vector<uint8_t> &char_data) :
-    prog_rom_(prog_data), char_rom_(char_data)
+Mapper::Mapper(
+        const std::vector<uint8_t> &prg_data,
+        const std::vector<uint8_t> &chr_data) :
+    prg_rom_(prg_data), chr_rom_(chr_data)
 {
 }
 
@@ -16,62 +17,62 @@ Mapper::~Mapper()
 {
 }
 
-uint8_t Mapper::ReadProg(uint16_t addr) const
+uint8_t Mapper::ReadPrg(uint16_t addr) const
 {
-    return do_read_prog(addr);
+    return do_read_prg(addr);
 }
 
-void Mapper::WriteProg(uint16_t addr, uint8_t data)
+uint8_t Mapper::ReadChr(uint16_t addr) const
 {
-    do_write_prog(addr, data);
+    return do_read_chr(addr);
 }
 
-uint8_t Mapper::ReadChar(uint16_t addr) const
+void Mapper::WritePrg(uint16_t addr, uint8_t data)
 {
-    return do_read_char(addr);
+    do_write_prg(addr, data);
 }
 
-void Mapper::WriteChar(uint16_t addr, uint8_t data)
+void Mapper::WriteChr(uint16_t addr, uint8_t data)
 {
-    do_write_char(addr, data);
+    do_write_chr(addr, data);
 }
 
-uint8_t Mapper::PeekProg(uint32_t physical_addr) const
+uint8_t Mapper::PeekPrg(uint32_t physical_addr) const
 {
-    if (physical_addr < GetProgRomSize())
-        return prog_rom_[physical_addr];
+    if (physical_addr < GetPrgRomSize())
+        return prg_rom_[physical_addr];
     else
         return 0;
 }
 
-size_t Mapper::GetProgRomSize() const
+size_t Mapper::GetPrgRomSize() const
 {
-    return prog_rom_.size();
+    return prg_rom_.size();
 }
 
-size_t Mapper::GetCharRomSize() const
+size_t Mapper::GetChrRomSize() const
 {
-    return char_rom_.size();
+    return chr_rom_.size();
 }
 
-size_t Mapper::GetProgRamSize() const
+size_t Mapper::GetPrgRamSize() const
 {
-    return prog_ram_.size();
+    return prg_ram_.size();
 }
 
-size_t Mapper::GetCharRamSize() const
+size_t Mapper::GetChrRamSize() const
 {
-    return char_ram_.size();
+    return chr_ram_.size();
 }
 
-std::vector<uint8_t> Mapper::GetProgRam() const
+std::vector<uint8_t> Mapper::GetPrgRam() const
 {
-    return prog_ram_;
+    return prg_ram_;
 }
 
-void Mapper::SetProgRam(const std::vector<uint8_t> &sram)
+void Mapper::SetPrgRam(const std::vector<uint8_t> &sram)
 {
-    prog_ram_ = sram;
+    prg_ram_ = sram;
 }
 
 Mirroring Mapper::GetMirroring() const
@@ -89,58 +90,58 @@ std::string Mapper::GetBoardName() const
     return board_name_;
 }
 
-uint8_t Mapper::read_prog_rom(uint32_t addr) const
+uint8_t Mapper::read_prg_rom(uint32_t index) const
 {
-    if (addr < GetProgRomSize())
-        return prog_rom_[addr];
+    if (index < GetPrgRomSize())
+        return prg_rom_[index];
     else
         return 0;
 }
 
-uint8_t Mapper::read_char_rom(uint32_t addr) const
+uint8_t Mapper::read_chr_rom(uint32_t index) const
 {
-    if (addr < GetCharRomSize())
-        return char_rom_[addr];
+    if (index < GetChrRomSize())
+        return chr_rom_[index];
     else
         return 0;
 }
 
-uint8_t Mapper::read_prog_ram(uint32_t addr) const
+uint8_t Mapper::read_prg_ram(uint32_t index) const
 {
-    if (addr < GetProgRamSize())
-        return prog_ram_[addr];
+    if (index < GetPrgRamSize())
+        return prg_ram_[index];
     else
         return 0;
 }
 
-uint8_t Mapper::read_char_ram(uint32_t addr) const
+uint8_t Mapper::read_chr_ram(uint32_t index) const
 {
-    if (addr < GetCharRamSize())
-        return char_ram_[addr];
+    if (index < GetChrRamSize())
+        return chr_ram_[index];
     else
         return 0;
 }
 
-void Mapper::write_prog_ram(uint32_t addr, uint8_t data)
+void Mapper::write_prg_ram(uint32_t index, uint8_t data)
 {
-    if (addr < GetProgRamSize())
-        prog_ram_[addr] = data;
+    if (index < GetPrgRamSize())
+        prg_ram_[index] = data;
 }
 
-void Mapper::write_char_ram(uint32_t addr, uint8_t data)
+void Mapper::write_chr_ram(uint32_t index, uint8_t data)
 {
-    if (addr < GetCharRamSize())
-        char_ram_[addr] = data;
+    if (index < GetChrRamSize())
+        chr_ram_[index] = data;
 }
 
-void Mapper::use_prog_ram(uint32_t size)
+void Mapper::use_prg_ram(uint32_t size)
 {
-    prog_ram_.resize(size, 0x00);
+    prg_ram_.resize(size, 0x00);
 }
 
-void Mapper::use_char_ram(uint32_t size)
+void Mapper::use_chr_ram(uint32_t size)
 {
-    char_ram_.resize(size, 0x00);
+    chr_ram_.resize(size, 0x00);
 }
 
 void Mapper::set_board_name(const std::string &name)
@@ -149,26 +150,26 @@ void Mapper::set_board_name(const std::string &name)
 }
 
 std::shared_ptr<Mapper> new_mapper(int id,
-        const std::vector<uint8_t> &prog_data,
-        const std::vector<uint8_t> &char_data)
+        const std::vector<uint8_t> &prg_data,
+        const std::vector<uint8_t> &chr_data)
 {
     Mapper *m = nullptr;
 
     switch (id) {
     case 0:
-        m = new Mapper_000(prog_data, char_data);
+        m = new Mapper_000(prg_data, chr_data);
         break;
 
     case 1:
-        m = new Mapper_001(prog_data, char_data);
+        m = new Mapper_001(prg_data, chr_data);
         break;
 
     case 2:
-        m = new Mapper_002(prog_data, char_data);
+        m = new Mapper_002(prg_data, chr_data);
         break;
 
     case 3:
-        m = new Mapper_003(prog_data, char_data);
+        m = new Mapper_003(prg_data, chr_data);
         break;
 
     default:

@@ -19,8 +19,8 @@ enum PrgBankMode {
 Mapper_001::Mapper_001(const std::vector<uint8_t> &prg_rom,
         const std::vector<uint8_t> &chr_rom) : Mapper(prg_rom, chr_rom)
 {
-    prg_nbanks_ = GetProgRomSize() / 0x4000; // 16KB
-    chr_nbanks_ = GetCharRomSize() / 0x2000; // 8KB
+    prg_nbanks_ = GetPrgRomSize() / 0x4000; // 16KB
+    chr_nbanks_ = GetChrRomSize() / 0x2000; // 8KB
 
     prg_bank_0_ = 0;
     prg_bank_1_ = 1;
@@ -32,12 +32,12 @@ Mapper_001::Mapper_001(const std::vector<uint8_t> &prg_rom,
     chr_mode_ = CHR_8KB;
     prg_ram_disabled_ = false;
 
-    if (GetCharRomSize() == 0) {
-        use_char_ram(0x2000);
+    if (GetChrRomSize() == 0) {
+        use_chr_ram(0x2000);
         use_chr_ram_ = true;
     }
 
-    use_prog_ram(0x2000);
+    use_prg_ram(0x2000);
 
     select_board();
     write_prg_bank(0x00);
@@ -48,25 +48,25 @@ Mapper_001::~Mapper_001()
 {
 }
 
-uint8_t Mapper_001::do_read_prog(uint16_t addr) const
+uint8_t Mapper_001::do_read_prg(uint16_t addr) const
 {
     if (addr >= 0x6000 && addr <= 0x7FFF) {
-        return read_prog_ram(addr & 0x1FFF);
+        return read_prg_ram(addr & 0x1FFF);
     }
     else if (addr >= 0x8000 && addr <= 0xBFFF) {
         const uint32_t a = prg_bank_0_ * 0x4000 + (addr & 0x3FFF);
-        return read_prog_rom(a);
+        return read_prg_rom(a);
     }
     else if (addr >= 0xC000 && addr <= 0xFFFF) {
         const uint32_t a = prg_bank_1_ * 0x4000 + (addr & 0x3FFF);
-        return read_prog_rom(a);
+        return read_prg_rom(a);
     }
     else {
         return 0;
     }
 }
 
-void Mapper_001::do_write_prog(uint16_t addr, uint8_t data)
+void Mapper_001::do_write_prg(uint16_t addr, uint8_t data)
 {
     // Shift register
     // To switch a bank, a program will execute code similar to the following:
@@ -92,7 +92,7 @@ void Mapper_001::do_write_prog(uint16_t addr, uint8_t data)
     if (addr >= 0x6000 && addr <= 0x7FFF) {
         if (prg_ram_disabled_)
             return;
-        write_prog_ram(addr & 0x1FFF, data);
+        write_prg_ram(addr & 0x1FFF, data);
     }
     else if (addr >= 0x8000 && addr <= 0xFFFF) {
         // Load register ($8000-$FFFF)
@@ -130,39 +130,39 @@ void Mapper_001::do_write_prog(uint16_t addr, uint8_t data)
     }
 }
 
-uint8_t Mapper_001::do_read_char(uint16_t addr) const
+uint8_t Mapper_001::do_read_chr(uint16_t addr) const
 {
     if (addr >= 0x0000 && addr <= 0x0FFF) {
         const uint32_t a = chr_bank_0_ * 0x1000 + (addr & 0x0FFF);
         if (use_chr_ram_)
-            return read_char_ram(a);
+            return read_chr_ram(a);
         else
-            return read_char_rom(a);
+            return read_chr_rom(a);
     }
     else if (addr >= 0x1000 && addr <= 0x1FFF) {
         const uint32_t a = chr_bank_1_ * 0x1000 + (addr & 0x0FFF);
         if (use_chr_ram_)
-            return read_char_ram(a);
+            return read_chr_ram(a);
         else
-            return read_char_rom(a);
+            return read_chr_rom(a);
     }
     else {
         return 0xFF;
     }
 }
 
-void Mapper_001::do_write_char(uint16_t addr, uint8_t data)
+void Mapper_001::do_write_chr(uint16_t addr, uint8_t data)
 {
     if (!use_chr_ram_)
         return;
 
     if (addr >= 0x0000 && addr <= 0x0FFF) {
         const uint32_t a = chr_bank_0_ * 0x1000 + (addr & 0x0FFF);
-        write_char_ram(a, data);
+        write_chr_ram(a, data);
     }
     else if (addr >= 0x1000 && addr <= 0x1FFF) {
         const uint32_t a = chr_bank_1_ * 0x1000 + (addr & 0x0FFF);
-        write_char_ram(a, data);
+        write_chr_ram(a, data);
     }
 }
 
@@ -270,9 +270,9 @@ static int find_board(uint32_t PRG_ROM, uint32_t PRG_RAM, uint32_t CHR, std::str
 
 void Mapper_001::select_board()
 {
-    const uint32_t PRG_ROM = GetProgRomSize() / 1024;
-    const uint32_t PRG_RAM = GetProgRamSize() / 1024;
-    const uint32_t CHR = (use_chr_ram_ ? GetCharRamSize() : GetCharRomSize()) / 1024;
+    const uint32_t PRG_ROM = GetPrgRomSize() / 1024;
+    const uint32_t PRG_RAM = GetPrgRamSize() / 1024;
+    const uint32_t CHR = (use_chr_ram_ ? GetChrRamSize() : GetChrRomSize()) / 1024;
     std::string name;
 
     const int board = find_board(PRG_ROM, PRG_RAM, CHR, name);
