@@ -30,6 +30,7 @@ Mapper_001::Mapper_001(const std::vector<uint8_t> &prg_rom,
     shift_register_ = 0x10;
     prg_mode_ = PRG_FIX_LAST;
     chr_mode_ = CHR_8KB;
+    prg_ram_disabled_ = false;
 
     if (GetCharRomSize() == 0) {
         use_char_ram(0x2000);
@@ -89,6 +90,8 @@ void Mapper_001::do_write_prog(uint16_t addr, uint8_t data)
     //   rts                                          means PRG bank number) and then clears
     //                                                the SR.
     if (addr >= 0x6000 && addr <= 0x7FFF) {
+        if (prg_ram_disabled_)
+            return;
         write_prog_ram(addr & 0x1FFF, data);
     }
     else if (addr >= 0x8000 && addr <= 0xFFFF) {
@@ -288,6 +291,7 @@ void Mapper_001::select_board()
             // +----- PRG RAM disable (0: enable, 1: open bus)
             if (chr_mode_ == CHR_4KB) {
                 chr_bank_0_ = (data & 0x01);
+                prg_ram_disabled_ = (data & 0x10);
             }
             else {
             }
@@ -303,6 +307,7 @@ void Mapper_001::select_board()
             // +----- PRG RAM disable (0: enable, 1: open bus) (ignored in 8 KB mode)
             if (chr_mode_ == CHR_4KB) {
                 chr_bank_1_ = (data & 0x01);
+                prg_ram_disabled_ = (data & 0x10);
             }
             else {
             }

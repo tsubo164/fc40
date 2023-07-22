@@ -22,6 +22,7 @@ private:
     uint8_t prg_mode_ = 0;
     uint8_t chr_mode_ = 0;
     bool use_chr_ram_ = false;
+    bool prg_ram_disabled_ = false;
 
     int prg_bank_0_ = 0;
     int prg_bank_1_ = 0;
