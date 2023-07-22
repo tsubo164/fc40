@@ -12,8 +12,8 @@ public:
     virtual ~Mapper_001();
 
 private:
-    int prg_nbanks_ = 1;
-    int chr_nbanks_ = 1;
+    uint16_t prg_nbanks_ = 1;
+    uint16_t chr_nbanks_ = 1;
 
     uint8_t shift_register_ = 0;
     uint8_t control_register_ = 0;
@@ -24,10 +24,10 @@ private:
     bool use_chr_ram_ = false;
     bool prg_ram_disabled_ = false;
 
-    int prg_bank_0_ = 0;
-    int prg_bank_1_ = 0;
-    int chr_bank_0_ = 0;
-    int chr_bank_1_ = 0;
+    uint16_t prg_bank_0_ = 0;
+    uint16_t prg_bank_1_ = 0;
+    uint16_t chr_bank_0_ = 0;
+    uint16_t chr_bank_1_ = 0;
 
     void select_board();
     std::function<void(uint8_t)> write_chr_bank_0 = [](uint8_t){};
