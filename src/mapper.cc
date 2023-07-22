@@ -42,7 +42,7 @@ uint8_t Mapper::PeekPrg(uint32_t physical_addr) const
     if (physical_addr < GetPrgRomSize())
         return prg_rom_[physical_addr];
     else
-        return 0;
+        return 0xFF;
 }
 
 size_t Mapper::GetPrgRomSize() const
@@ -95,7 +95,7 @@ uint8_t Mapper::read_prg_rom(uint32_t index) const
     if (index < GetPrgRomSize())
         return prg_rom_[index];
     else
-        return 0;
+        return 0xFF;
 }
 
 uint8_t Mapper::read_chr_rom(uint32_t index) const
@@ -103,7 +103,7 @@ uint8_t Mapper::read_chr_rom(uint32_t index) const
     if (index < GetChrRomSize())
         return chr_rom_[index];
     else
-        return 0;
+        return 0xFF;
 }
 
 uint8_t Mapper::read_prg_ram(uint32_t index) const
@@ -111,7 +111,7 @@ uint8_t Mapper::read_prg_ram(uint32_t index) const
     if (index < GetPrgRamSize())
         return prg_ram_[index];
     else
-        return 0;
+        return 0xFF;
 }
 
 uint8_t Mapper::read_chr_ram(uint32_t index) const
@@ -119,7 +119,7 @@ uint8_t Mapper::read_chr_ram(uint32_t index) const
     if (index < GetChrRamSize())
         return chr_ram_[index];
     else
-        return 0;
+        return 0xFF;
 }
 
 void Mapper::write_prg_ram(uint32_t index, uint8_t data)

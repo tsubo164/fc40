@@ -2,7 +2,6 @@
 #define MAPPER_H
 
 #include <cstdint>
-#include <cstdlib>
 #include <string>
 #include <vector>
 #include <memory>
