@@ -92,14 +92,14 @@ uint8_t Cartridge::ReadPrg(uint16_t addr) const
     return mapper_->ReadPrg(addr);
 }
 
-void Cartridge::WritePrg(uint16_t addr, uint8_t data)
-{
-    mapper_->WritePrg(addr, data);
-}
-
 uint8_t Cartridge::ReadChr(uint16_t addr) const
 {
     return mapper_->ReadChr(addr);
+}
+
+void Cartridge::WritePrg(uint16_t addr, uint8_t data)
+{
+    mapper_->WritePrg(addr, data);
 }
 
 void Cartridge::WriteChr(uint16_t addr, uint8_t data)
