@@ -87,27 +87,27 @@ bool Cartridge::Open(const char *filename)
     return true;
 }
 
-uint8_t Cartridge::ReadProg(uint16_t addr) const
+uint8_t Cartridge::ReadPrg(uint16_t addr) const
 {
     return mapper_->ReadPrg(addr);
 }
 
-void Cartridge::WriteProg(uint16_t addr, uint8_t data)
+void Cartridge::WritePrg(uint16_t addr, uint8_t data)
 {
     mapper_->WritePrg(addr, data);
 }
 
-uint8_t Cartridge::ReadChar(uint16_t addr) const
+uint8_t Cartridge::ReadChr(uint16_t addr) const
 {
     return mapper_->ReadChr(addr);
 }
 
-void Cartridge::WriteChar(uint16_t addr, uint8_t data)
+void Cartridge::WriteChr(uint16_t addr, uint8_t data)
 {
     mapper_->WriteChr(addr, data);
 }
 
-uint8_t Cartridge::PeekProg(uint32_t physical_addr) const
+uint8_t Cartridge::PeekPrg(uint32_t physical_addr) const
 {
     return mapper_->PeekPrg(physical_addr);
 }
@@ -117,12 +117,12 @@ int Cartridge::GetMapperID() const
     return mapper_id_;
 }
 
-size_t Cartridge::GetProgSize() const
+size_t Cartridge::GetPrgSize() const
 {
     return mapper_->GetPrgRomSize();
 }
 
-size_t Cartridge::GetCharSize() const
+size_t Cartridge::GetChrSize() const
 {
     return mapper_->GetChrRomSize();
 }

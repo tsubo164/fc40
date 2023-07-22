@@ -117,7 +117,7 @@ void CPU::write_byte(uint16_t addr, uint8_t data)
         apu_.WriteFrameCounter(data);
     }
     else {
-        cart_->WriteProg(addr, data);
+        cart_->WritePrg(addr, data);
     }
 }
 
@@ -164,7 +164,7 @@ uint8_t CPU::read_byte(uint16_t addr)
         return data;
     }
     else {
-        return cart_->ReadProg(addr);
+        return cart_->ReadPrg(addr);
     }
 
     return 0;

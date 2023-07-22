@@ -16,16 +16,16 @@ public:
 
     bool Open(const char *filename);
 
-    uint8_t ReadProg(uint16_t addr) const;
-    void WriteProg(uint16_t addr, uint8_t data);
-    uint8_t ReadChar(uint16_t addr) const;
-    void WriteChar(uint16_t addr, uint8_t data);
+    uint8_t ReadPrg(uint16_t addr) const;
+    void WritePrg(uint16_t addr, uint8_t data);
+    uint8_t ReadChr(uint16_t addr) const;
+    void WriteChr(uint16_t addr, uint8_t data);
 
-    uint8_t PeekProg(uint32_t physical_addr) const;
+    uint8_t PeekPrg(uint32_t physical_addr) const;
 
     int GetMapperID() const;
-    size_t GetProgSize() const;
-    size_t GetCharSize() const;
+    size_t GetPrgSize() const;
+    size_t GetChrSize() const;
 
     bool IsMapperSupported() const;
     bool IsVerticalMirroring() const;

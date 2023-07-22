@@ -53,8 +53,8 @@ int main(int argc, char **argv)
             board_name = " (" + board_name + ")";
 
         printf("iNES Mapper     : %4d%s\n", cart.GetMapperID(), board_name.c_str());
-        printf("PRG Size        : %4ld KB\n", cart.GetProgSize() / 1024);
-        printf("CHR Size        : %4ld KB\n", cart.GetCharSize() / 1024);
+        printf("PRG Size        : %4ld KB\n", cart.GetPrgSize() / 1024);
+        printf("CHR Size        : %4ld KB\n", cart.GetChrSize() / 1024);
         printf("Battery Present : %4s\n", cart.HasBattery() ? "Yes" : "No");
 
         if (print_log)
