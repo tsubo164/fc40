@@ -12,8 +12,8 @@ public:
     virtual ~Mapper_002();
 
 private:
-    int prg_bank_ = 0;
-    int prg_fixed_ = 0;
+    uint16_t prg_bank_ = 0;
+    uint16_t prg_fixed_ = 0;
 
     virtual uint8_t do_read_prg(uint16_t addr) const final;
     virtual void do_write_prg(uint16_t addr, uint8_t data) final;

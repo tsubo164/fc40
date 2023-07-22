@@ -13,7 +13,7 @@ public:
 
 private:
     uint16_t prg_mirroring_mask_ = 0x7FFF;
-    int chr_bank_ = 0;
+    uint16_t chr_bank_ = 0;
 
     virtual uint8_t do_read_prg(uint16_t addr) const final;
     virtual void do_write_prg(uint16_t addr, uint8_t data) final;
