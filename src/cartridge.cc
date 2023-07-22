@@ -142,6 +142,11 @@ bool Cartridge::HasBattery() const
     return has_battery_;
 }
 
+std::string Cartridge::GetBoardName() const
+{
+    return mapper_->GetBoardName();
+}
+
 int Cartridge::save_battery_ram() const
 {
 	std::ofstream ofs(sram_filename_, std::ios::binary);

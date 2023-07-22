@@ -30,6 +30,7 @@ public:
     bool IsMapperSupported() const;
     bool IsVerticalMirroring() const;
     bool HasBattery() const;
+    std::string GetBoardName() const;
 
 private:
     uint8_t mirroring_ = 0;

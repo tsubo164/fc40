@@ -84,6 +84,11 @@ void Mapper::SetMirroring(Mirroring mirroring)
     mirroring_ = mirroring;
 }
 
+std::string Mapper::GetBoardName() const
+{
+    return board_name_;
+}
+
 uint8_t Mapper::read_prog_rom(uint32_t addr) const
 {
     if (addr < GetProgRomSize())
@@ -136,6 +141,11 @@ void Mapper::use_prog_ram(uint32_t size)
 void Mapper::use_char_ram(uint32_t size)
 {
     char_ram_.resize(size, 0x00);
+}
+
+void Mapper::set_board_name(const std::string &name)
+{
+    board_name_ = name;
 }
 
 std::shared_ptr<Mapper> new_mapper(int id,

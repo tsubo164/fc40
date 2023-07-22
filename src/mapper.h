@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <string>
 #include <vector>
 #include <memory>
 
@@ -39,6 +40,8 @@ public:
     Mirroring GetMirroring() const;
     void SetMirroring(Mirroring mirroring);
 
+    std::string GetBoardName() const;
+
 protected:
     uint8_t read_prog_rom(uint32_t addr) const;
     uint8_t read_char_rom(uint32_t addr) const;
@@ -51,7 +54,10 @@ protected:
     void use_prog_ram(uint32_t size);
     void use_char_ram(uint32_t size);
 
+    void set_board_name(const std::string &name);
+
 private:
+    std::string board_name_ = "";
     std::vector<uint8_t> prog_rom_;
     std::vector<uint8_t> char_rom_;
     std::vector<uint8_t> prog_ram_;

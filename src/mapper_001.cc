@@ -1,44 +1,46 @@
-#include <cstdio>
 #include "mapper_001.h"
+#include <iostream>
+#include <array>
 
 namespace nes {
 
-enum CharBankMode {
-    CHAR_BANK_8KB = 0,
-    CHAR_BANK_4KB
+enum ChrBankMode {
+    CHR_8KB = 0,
+    CHR_4KB
 };
 
-enum ProgBankMode {
-    PROG_BANK_32KB_0 = 0,
-    PROG_BANK_32KB_1,
-    PROG_BANK_FIX_FIRST,
-    PROG_BANK_FIX_LAST
+enum PrgBankMode {
+    PRG_32KB_0 = 0,
+    PRG_32KB_1,
+    PRG_FIX_FIRST,
+    PRG_FIX_LAST
 };
 
-Mapper_001::Mapper_001(const std::vector<uint8_t> &prog_rom,
-        const std::vector<uint8_t> &char_rom) : Mapper(prog_rom, char_rom)
+Mapper_001::Mapper_001(const std::vector<uint8_t> &prg_rom,
+        const std::vector<uint8_t> &chr_rom) : Mapper(prg_rom, chr_rom)
 {
-    prog_nbanks_ = GetProgRomSize() / 0x4000; // 16KB
-    char_nbanks_ = GetCharRomSize() / 0x2000; // 8KB
+    prg_nbanks_ = GetProgRomSize() / 0x4000; // 16KB
+    chr_nbanks_ = GetCharRomSize() / 0x2000; // 8KB
 
-    prog_bank_0_ = 0;
-    prog_bank_1_ = 1;
-    char_bank_0_ = 0;
-    char_bank_1_ = 1;
+    prg_bank_0_ = 0;
+    prg_bank_1_ = 1;
+    chr_bank_0_ = 0;
+    chr_bank_1_ = 1;
 
     shift_register_ = 0x10;
-    prog_bank_mode_ = PROG_BANK_FIX_LAST;
-    char_bank_mode_ = 0;
-
-    write_prog_bank(0x00);
-    write_char_bank_0(0x00);
+    prg_mode_ = PRG_FIX_LAST;
+    chr_mode_ = CHR_8KB;
 
     if (GetCharRomSize() == 0) {
         use_char_ram(0x2000);
-        use_char_ram_ = true;
+        use_chr_ram_ = true;
     }
 
     use_prog_ram(0x2000);
+
+    select_board();
+    write_prg_bank(0x00);
+    write_chr_bank_0(0x00);
 }
 
 Mapper_001::~Mapper_001()
@@ -51,11 +53,11 @@ uint8_t Mapper_001::do_read_prog(uint16_t addr) const
         return read_prog_ram(addr & 0x1FFF);
     }
     else if (addr >= 0x8000 && addr <= 0xBFFF) {
-        const uint32_t a = prog_bank_0_ * 0x4000 + (addr & 0x3FFF);
+        const uint32_t a = prg_bank_0_ * 0x4000 + (addr & 0x3FFF);
         return read_prog_rom(a);
     }
     else if (addr >= 0xC000 && addr <= 0xFFFF) {
-        const uint32_t a = prog_bank_1_ * 0x4000 + (addr & 0x3FFF);
+        const uint32_t a = prg_bank_1_ * 0x4000 + (addr & 0x3FFF);
         return read_prog_rom(a);
     }
     else {
@@ -101,7 +103,7 @@ void Mapper_001::do_write_prog(uint16_t addr, uint8_t data)
         //            locking PRG ROM at $C000-$FFFF to the last bank.
         if (data & 0x80) {
             shift_register_ = 0x10;
-            prog_bank_mode_ = PROG_BANK_FIX_LAST;
+            prg_mode_ = PRG_FIX_LAST;
             control_register_ |= 0x0C;
         } else {
             const bool fifth_write = shift_register_ & 0x01;
@@ -113,11 +115,11 @@ void Mapper_001::do_write_prog(uint16_t addr, uint8_t data)
                 if (addr >= 0x8000 && addr <= 0x9FFF)
                     write_control(shift_register_);
                 else if (addr >= 0xA000 && addr <= 0xBFFF)
-                    write_char_bank_0(shift_register_);
+                    write_chr_bank_0(shift_register_);
                 else if (addr >= 0xC000 && addr <= 0xDFFF)
-                    write_char_bank_1(shift_register_);
+                    write_chr_bank_1(shift_register_);
                 else if (addr >= 0xE000 && addr <= 0xFFFF)
-                    write_prog_bank(shift_register_);
+                    write_prg_bank(shift_register_);
 
                 shift_register_ = 0x10;
             }
@@ -128,15 +130,15 @@ void Mapper_001::do_write_prog(uint16_t addr, uint8_t data)
 uint8_t Mapper_001::do_read_char(uint16_t addr) const
 {
     if (addr >= 0x0000 && addr <= 0x0FFF) {
-        const uint32_t a = char_bank_0_ * 0x1000 + (addr & 0x0FFF);
-        if (use_char_ram_)
+        const uint32_t a = chr_bank_0_ * 0x1000 + (addr & 0x0FFF);
+        if (use_chr_ram_)
             return read_char_ram(a);
         else
             return read_char_rom(a);
     }
     else if (addr >= 0x1000 && addr <= 0x1FFF) {
-        const uint32_t a = char_bank_1_ * 0x1000 + (addr & 0x0FFF);
-        if (use_char_ram_)
+        const uint32_t a = chr_bank_1_ * 0x1000 + (addr & 0x0FFF);
+        if (use_chr_ram_)
             return read_char_ram(a);
         else
             return read_char_rom(a);
@@ -148,15 +150,15 @@ uint8_t Mapper_001::do_read_char(uint16_t addr) const
 
 void Mapper_001::do_write_char(uint16_t addr, uint8_t data)
 {
-    if (!use_char_ram_)
+    if (!use_chr_ram_)
         return;
 
     if (addr >= 0x0000 && addr <= 0x0FFF) {
-        const uint32_t a = char_bank_0_ * 0x1000 + (addr & 0x0FFF);
+        const uint32_t a = chr_bank_0_ * 0x1000 + (addr & 0x0FFF);
         write_char_ram(a, data);
     }
     else if (addr >= 0x1000 && addr <= 0x1FFF) {
-        const uint32_t a = char_bank_1_ * 0x1000 + (addr & 0x0FFF);
+        const uint32_t a = chr_bank_1_ * 0x1000 + (addr & 0x0FFF);
         write_char_ram(a, data);
     }
 }
@@ -179,8 +181,8 @@ void Mapper_001::write_control(uint8_t data)
     control_register_ = data;
 
     mirroring_ = data & 0x03;
-    prog_bank_mode_ = (data >> 2) & 0x03;
-    char_bank_mode_ = (data >> 4) & 0x01;
+    prg_mode_ = (data >> 2) & 0x03;
+    chr_mode_ = (data >> 4) & 0x01;
 
     if (mirroring_ == 3)
         SetMirroring(Mirroring::HORIZONTAL);
@@ -188,52 +190,7 @@ void Mapper_001::write_control(uint8_t data)
         SetMirroring(Mirroring::VERTICAL);
 }
 
-void Mapper_001::write_char_bank_0(uint8_t data)
-{
-    // CHR bank 0 (internal, $A000-$BFFF)
-    // 4bit0
-    // -----
-    // CCCCC
-    // |||||
-    // +++++- Select 4 KB or 8 KB CHR bank at PPU $0000
-    //        (low bit ignored in 8 KB mode)
-    switch (char_bank_mode_) {
-    case CHAR_BANK_4KB:
-        char_bank_0_ = (data & 0x1F);
-        break;
-
-    case CHAR_BANK_8KB:
-        char_bank_0_ = (data & 0x1E); // 0, 2, 4, ...
-        char_bank_1_ = char_bank_0_ + 1;         // 1, 3, 5, ...
-        break;
-
-    default:
-        break;
-    }
-}
-
-void Mapper_001::write_char_bank_1(uint8_t data)
-{
-    // CHR bank 1 (internal, $C000-$DFFF)
-    // 4bit0
-    // -----
-    // CCCCC
-    // |||||
-    // +++++- Select 4 KB CHR bank at PPU $1000 (ignored in 8 KB mode)
-    switch (char_bank_mode_) {
-    case CHAR_BANK_4KB:
-        char_bank_1_ = (data & 0x1F);
-        break;
-
-    case CHAR_BANK_8KB:
-        break;
-
-    default:
-        break;
-    }
-}
-
-void Mapper_001::write_prog_bank(uint8_t data)
+void Mapper_001::write_prg_bank(uint8_t data)
 {
     // 4bit0
     // -----
@@ -244,24 +201,147 @@ void Mapper_001::write_prog_bank(uint8_t data)
     //        (0: enabled; 1: disabled; ignored on MMC1A)
     //        MMC1A: Bit 3 bypasses fixed bank logic in 16K mode
     //        (0: affected; 1: bypassed)
-    switch (prog_bank_mode_) {
-    case PROG_BANK_32KB_0:
-    case PROG_BANK_32KB_1:
-        prog_bank_0_ = (data & 0x0E); // 0, 2, 4, ...
-        prog_bank_1_ = prog_bank_0_ + 1;         // 1, 3, 5, ...
+    switch (prg_mode_) {
+    case PRG_32KB_0:
+    case PRG_32KB_1:
+        prg_bank_0_ = (data & 0x0E); // 0, 2, 4, ...
+        prg_bank_1_ = prg_bank_0_ + 1; // 1, 3, 5, ...
         break;
 
-    case PROG_BANK_FIX_FIRST:
-        prog_bank_0_ = 0;
-        prog_bank_1_ = (data & 0x0F);
+    case PRG_FIX_FIRST:
+        prg_bank_0_ = 0;
+        prg_bank_1_ = (data & 0x0F);
         break;
 
-    case PROG_BANK_FIX_LAST:
-        prog_bank_0_ = (data & 0x0F);
-        prog_bank_1_ = prog_nbanks_ - 1;
+    case PRG_FIX_LAST:
+        prg_bank_0_ = (data & 0x0F);
+        prg_bank_1_ = prg_nbanks_ - 1;
         break;
 
     default:
+        break;
+    }
+}
+
+enum MMC1_Board {
+    SxROM = 0,
+    SNROM,
+};
+
+static bool match_size(const std::array<uint16_t,4> &size_list, uint16_t key_size)
+{
+    const auto b = size_list.begin();
+    const auto e = size_list.end();
+
+    return std::find(b, e, key_size) != e;
+}
+
+static int find_board(uint32_t PRG_ROM, uint32_t PRG_RAM, uint32_t CHR, std::string &name)
+{
+    static const struct MMC1_Board_Entry {
+        const char *name = nullptr;
+        std::array<uint16_t,4> prg_rom;
+        std::array<uint16_t,4> prg_ram;
+        std::array<uint16_t,4> chr;
+        int board;
+    } board_entries[] = {
+        // Board   PRG ROM      PRG RAM   CHR
+        {"SNROM",  {128, 256},  {8},      {8} , SNROM },
+    };
+
+    for (auto entry: board_entries) {
+        const bool found =
+            match_size(entry.prg_rom, PRG_ROM) &&
+            match_size(entry.prg_ram, PRG_RAM) &&
+            match_size(entry.chr, CHR);
+
+        if (found) {
+            name = entry.name;
+            return entry.board;
+        }
+    }
+
+    name = "SxROM";
+    return SxROM;
+}
+
+void Mapper_001::select_board()
+{
+    const uint32_t PRG_ROM = GetProgRomSize() / 1024;
+    const uint32_t PRG_RAM = GetProgRamSize() / 1024;
+    const uint32_t CHR = (use_chr_ram_ ? GetCharRamSize() : GetCharRomSize()) / 1024;
+    std::string name;
+
+    const int board = find_board(PRG_ROM, PRG_RAM, CHR, name);
+    set_board_name(name);
+
+    switch (board) {
+    case SNROM:
+        write_chr_bank_0 = [=](uint8_t data)
+        {
+            // CHR bank 0 (internal, $A000-$BFFF)
+            // 4bit0
+            // -----
+            // ExxxC
+            // |   |
+            // |   +- Select 4 KB CHR RAM bank at PPU $0000 (ignored in 8 KB mode)
+            // +----- PRG RAM disable (0: enable, 1: open bus)
+            if (chr_mode_ == CHR_4KB) {
+                chr_bank_0_ = (data & 0x01);
+            }
+            else {
+            }
+        };
+        write_chr_bank_1 = [=](uint8_t data)
+        {
+            // CHR bank 1 (internal, $C000-$DFFF)
+            // 4bit0
+            // -----
+            // ExxxC
+            // |   |
+            // |   +- Select 4 KB CHR RAM bank at PPU $1000 (ignored in 8 KB mode)
+            // +----- PRG RAM disable (0: enable, 1: open bus) (ignored in 8 KB mode)
+            if (chr_mode_ == CHR_4KB) {
+                chr_bank_1_ = (data & 0x01);
+            }
+            else {
+            }
+        };
+        break;
+
+    case SxROM:
+    default:
+        write_chr_bank_0 = [=](uint8_t data)
+        {
+            // CHR bank 0 (internal, $A000-$BFFF)
+            // 4bit0
+            // -----
+            // CCCCC
+            // |||||
+            // +++++- Select 4 KB or 8 KB CHR bank at PPU $0000
+            //        (low bit ignored in 8 KB mode)
+            if (chr_mode_ == CHR_4KB) {
+                chr_bank_0_ = (data & 0x1F);
+            }
+            else {
+                chr_bank_0_ = (data & 0x1E); // 0, 2, 4, ...
+                chr_bank_1_ = chr_bank_0_ + 1; // 1, 3, 5, ...
+            }
+        };
+        write_chr_bank_1 = [=](uint8_t data)
+        {
+            // CHR bank 1 (internal, $C000-$DFFF)
+            // 4bit0
+            // -----
+            // CCCCC
+            // |||||
+            // +++++- Select 4 KB CHR bank at PPU $1000 (ignored in 8 KB mode)
+            if (chr_mode_ == CHR_4KB) {
+                chr_bank_1_ = (data & 0x1F);
+            }
+            else {
+            }
+        };
         break;
     }
 }
