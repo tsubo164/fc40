@@ -228,15 +228,25 @@ void Mapper_001::write_prg_bank(uint8_t data)
 
 enum MMC1_Board {
     SxROM = 0,
+    SLROM,
     SNROM,
 };
 
 static bool match_size(const std::array<uint16_t,4> &size_list, uint16_t key_size)
 {
-    const auto b = size_list.begin();
-    const auto e = size_list.end();
+    // If the first size is 0, then key size is looking for 0
+    if (size_list[0] == 0)
+        return key_size == 0;
 
-    return std::find(b, e, key_size) != e;
+    for (const auto size: size_list) {
+        if (size == 0)
+            break;
+
+        if (size == key_size)
+            return true;
+    }
+
+    return false;
 }
 
 static int find_board(uint32_t PRG_ROM, uint32_t PRG_RAM, uint32_t CHR, std::string &name)
@@ -249,7 +259,8 @@ static int find_board(uint32_t PRG_ROM, uint32_t PRG_RAM, uint32_t CHR, std::str
         int board;
     } board_entries[] = {
         // Board   PRG ROM      PRG RAM   CHR
-        {"SNROM",  {128, 256},  {8},      {8} , SNROM },
+        {"SLROM",  {128, 256},  {0},      {128} , SLROM },
+        {"SNROM",  {128, 256},  {8},      {8}   , SNROM },
     };
 
     for (auto entry: board_entries) {
