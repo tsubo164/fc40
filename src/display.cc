@@ -1,4 +1,4 @@
-#include <cstdio>
+#include <iostream>
 #include <GLFW/glfw3.h>
 #include "display.h"
 #include "framebuffer.h"
@@ -14,8 +14,9 @@ const int RESX = 256;
 const int RESY = 240;
 
 struct KeyState {
-    bool g = 0, p = 0, r = 0, space = 0, tab = 0;
-    bool _1 = 0, _2 = 0, _3 = 0, _4 = 0, _5 = 0, _6 = 0;
+    GLFWwindow *window = nullptr;
+    bool pressed[GLFW_KEY_LAST] = {0};
+    bool IsPressed(int key);
 };
 
 static void init_gl();
@@ -58,6 +59,7 @@ int Display::Open()
 
     init_gl();
     resize(window, WINX, WINY);
+    key.window = window;
 
     // Loop until the user closes the window
     while (!glfwWindowShouldClose(window)) {
@@ -102,110 +104,66 @@ int Display::Open()
             input |= 1 << 0; // right
         nes_.InputController(0, input);
 
-        // Keys
-        if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS && key.g == 0) {
+        // Keys display
+        if (key.IsPressed(GLFW_KEY_G)) {
             show_guide_ = !show_guide_;
-            key.g = true;
         }
-        else if (glfwGetKey(window, GLFW_KEY_G) == GLFW_RELEASE && key.g == 1) {
-            key.g = false;
-        }
-        else if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS && key.p == 0) {
+        else if (key.IsPressed(GLFW_KEY_P)) {
             show_patt_ = !show_patt_;
-            key.p = true;
         }
-        else if (glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE && key.p == 1) {
-            key.p = false;
-        }
-        else if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && key.r == 0) {
-            nes_.PushResetButton();
-            key.r = true;
-        }
-        else if (glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE && key.r == 1) {
-            key.r = false;
-        }
-        // Sound channels
-        else if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS && key._1 == 0) {
+        // Keys sound channels
+        else if (key.IsPressed(GLFW_KEY_1)) {
             uint8_t bits = nes_.GetChannelEnable();
             bits = toggle_bits(bits, 0x01);
             nes_.SetChannelEnable(bits);
             print_channel_status(bits);
-            key._1 = true;
         }
-        else if (glfwGetKey(window, GLFW_KEY_1) == GLFW_RELEASE && key._1 == 1) {
-            key._1 = false;
-        }
-        else if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS && key._2 == 0) {
+        else if (key.IsPressed(GLFW_KEY_2)) {
             uint8_t bits = nes_.GetChannelEnable();
             bits = toggle_bits(bits, 0x02);
             nes_.SetChannelEnable(bits);
             print_channel_status(bits);
-            key._2 = true;
         }
-        else if (glfwGetKey(window, GLFW_KEY_2) == GLFW_RELEASE && key._2 == 1) {
-            key._2 = false;
-        }
-        else if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS && key._3 == 0) {
+        else if (key.IsPressed(GLFW_KEY_3)) {
             uint8_t bits = nes_.GetChannelEnable();
             bits = toggle_bits(bits, 0x04);
             nes_.SetChannelEnable(bits);
             print_channel_status(bits);
-            key._3 = true;
         }
-        else if (glfwGetKey(window, GLFW_KEY_3) == GLFW_RELEASE && key._3 == 1) {
-            key._3 = false;
-        }
-        else if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS && key._4 == 0) {
+        else if (key.IsPressed(GLFW_KEY_4)) {
             uint8_t bits = nes_.GetChannelEnable();
             bits = toggle_bits(bits, 0x08);
             nes_.SetChannelEnable(bits);
             print_channel_status(bits);
-            key._4 = true;
         }
-        else if (glfwGetKey(window, GLFW_KEY_4) == GLFW_RELEASE && key._4 == 1) {
-            key._4 = false;
-        }
-        else if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS && key._5 == 0) {
+        else if (key.IsPressed(GLFW_KEY_5)) {
             uint8_t bits = nes_.GetChannelEnable();
-            bits = toggle_bits(bits, 0x1F);
+            bits = toggle_bits(bits, 0x10);
             nes_.SetChannelEnable(bits);
             print_channel_status(bits);
-            key._5 = true;
         }
-        else if (glfwGetKey(window, GLFW_KEY_5) == GLFW_RELEASE && key._5 == 1) {
-            key._5 = false;
-        }
-        else if (glfwGetKey(window, GLFW_KEY_6) == GLFW_PRESS && key._6 == 0) {
+        else if (key.IsPressed(GLFW_KEY_6)) {
             uint8_t bits = nes_.GetChannelEnable();
             bits = (bits == 0x1F) ? 0x00 : 0x1F;
             nes_.SetChannelEnable(bits);
             print_channel_status(bits);
-            key._6 = true;
         }
-        else if (glfwGetKey(window, GLFW_KEY_6) == GLFW_RELEASE && key._6 == 1) {
-            key._6 = false;
-        }
-        //
-        else if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && key.space == 0) {
+        // Keys debug
+        else if (key.IsPressed(GLFW_KEY_SPACE)) {
             if (nes_.IsRunning())
                 nes_.Stop();
             else
                 nes_.Run();
-
-            key.space = true;
         }
-        else if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_RELEASE && key.space == 1) {
-            key.space = false;
-        }
-        else if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS && key.tab == 0) {
+        else if (key.IsPressed(GLFW_KEY_TAB)) {
             if (!nes_.IsRunning())
                 nes_.Step();
-            key.tab = true;
         }
-        else if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_RELEASE && key.tab == 1) {
-            key.tab = false;
+        // Keys reset
+        else if (key.IsPressed(GLFW_KEY_R)) {
+            nes_.PushResetButton();
         }
-        else if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+        else if (key.IsPressed(GLFW_KEY_Q)) {
             break;
         }
 
@@ -435,6 +393,23 @@ static void render_sprite_box(const PPU &ppu, int width, int height)
     glPopAttrib();
 }
 
+// Keys
+bool KeyState::IsPressed(int key)
+{
+    const int state = glfwGetKey(window, key);
+
+    if (state == GLFW_PRESS && !pressed[key]) {
+        pressed[key] = true;
+        return true;
+    }
+    else if (state == GLFW_RELEASE && pressed[key]) {
+        pressed[key] = false;
+        return false;
+    }
+
+    return false;
+}
+
 // Audio channels
 static uint8_t toggle_bits(uint8_t chan_bits, uint8_t toggle_bit)
 {
@@ -448,13 +423,13 @@ static void print_channel_status(uint8_t chan_bits)
 {
     const char c[] = "-+";
     printf("====================\n");
-    printf("Channels | D N T 2 1\n");
+    printf("Channels | 1 2 T N D\n");
     printf("ON/OFF   | %c %c %c %c %c\n",
-            c[(chan_bits & 0x10) > 0],
-            c[(chan_bits & 0x08) > 0],
-            c[(chan_bits & 0x04) > 0],
+            c[(chan_bits & 0x01) > 0],
             c[(chan_bits & 0x02) > 0],
-            c[(chan_bits & 0x01) > 0]);
+            c[(chan_bits & 0x04) > 0],
+            c[(chan_bits & 0x08) > 0],
+            c[(chan_bits & 0x10) > 0]);
 }
 
 } // namespace
