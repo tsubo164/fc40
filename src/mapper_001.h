@@ -28,6 +28,7 @@ private:
     uint16_t prg_bank_1_ = 0;
     uint16_t chr_bank_0_ = 0;
     uint16_t chr_bank_1_ = 0;
+    uint16_t prg_ram_bank_ = 0;
 
     void select_board();
     std::function<void(uint8_t)> write_chr_bank_0 = [](uint8_t){};

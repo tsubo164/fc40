@@ -51,6 +51,9 @@ Mapper_001::~Mapper_001()
 uint8_t Mapper_001::do_read_prg(uint16_t addr) const
 {
     if (addr >= 0x6000 && addr <= 0x7FFF) {
+        // TODO confirm use of prg_ram_bank_
+        // const uint32_t a = prg_ram_bank_ * 0x2000 + (addr & 0x1FFF);
+        // return read_prg_ram(a);
         return read_prg_ram(addr & 0x1FFF);
     }
     else if (addr >= 0x8000 && addr <= 0xBFFF) {
@@ -92,6 +95,9 @@ void Mapper_001::do_write_prg(uint16_t addr, uint8_t data)
     if (addr >= 0x6000 && addr <= 0x7FFF) {
         if (prg_ram_disabled_)
             return;
+        // TODO confirm use of prg_ram_bank_
+        // const uint32_t a = prg_ram_bank_ * 0x2000 + (addr & 0x1FFF);
+        // write_prg_ram(a, data);
         write_prg_ram(addr & 0x1FFF, data);
     }
     else if (addr >= 0x8000 && addr <= 0xFFFF) {
@@ -230,19 +236,22 @@ enum MMC1_Board {
     SxROM = 0,
     SLROM,
     SNROM,
+    SUROM,
 };
 
 static bool match_size(const std::array<uint16_t,4> &size_list, uint16_t key_size)
 {
-    // If the first size is 0, then key size is looking for 0
-    if (size_list[0] == 0)
-        return key_size == 0;
+    int list_count = size_list.size();
 
-    for (const auto size: size_list) {
-        if (size == 0)
+    // check i from 3 to 1 if size if zero.
+    for (int i = list_count - 1; i > 0; i--) {
+        if (size_list[i] != 0)
             break;
+        list_count--;
+    }
 
-        if (size == key_size)
+    for (int i = 0; i < list_count; i++) {
+        if (size_list[i] == key_size)
             return true;
     }
 
@@ -261,6 +270,7 @@ static int find_board(uint32_t PRG_ROM, uint32_t PRG_RAM, uint32_t CHR, std::str
         // Board   PRG ROM      PRG RAM   CHR
         {"SLROM",  {128, 256},  {0},      {128} , SLROM },
         {"SNROM",  {128, 256},  {8},      {8}   , SNROM },
+        {"SUROM",  {512},       {8},      {8}   , SUROM },
     };
 
     for (auto entry: board_entries) {
@@ -325,6 +335,50 @@ void Mapper_001::select_board()
         };
         break;
 
+    case SUROM:
+        write_chr_bank_0 = [=](uint8_t data)
+        {
+            // CHR bank 0 (internal, $A000-$BFFF)
+            // 4bit0
+            // -----
+            // PSSxC
+            // ||| |
+            // ||| +- Select 4 KB CHR RAM bank at PPU $0000 (ignored in 8 KB mode)
+            // |++--- Select 8 KB PRG RAM bank
+            // +----- Select 256 KB PRG ROM bank
+            if (chr_mode_ == CHR_4KB) {
+                chr_bank_0_ = (data & 0x01);
+                prg_ram_bank_ = (data >> 2) & 0x03;
+                prg_bank_0_ = (prg_bank_0_ & 0x0F) | (data & 0x10);
+                prg_bank_1_ = (prg_bank_1_ & 0x0F) | (data & 0x10);
+            }
+            else {
+                prg_bank_0_ = (prg_bank_0_ & 0x0F) | (data & 0x10);
+                prg_bank_1_ = (prg_bank_1_ & 0x0F) | (data & 0x10);
+            }
+        };
+        write_chr_bank_1 = [=](uint8_t data)
+        {
+            // CHR bank 1 (internal, $C000-$DFFF)
+            // 4bit0
+            // -----
+            // PSSxC
+            // ||| |
+            // ||| +- Select 4 KB CHR RAM bank at PPU $1000 (ignored in 8 KB mode)
+            // |++--- Select 8 KB PRG RAM bank (ignored in 8 KB mode)
+            // +----- Select 256 KB PRG ROM bank (ignored in 8 KB mode)
+            if (chr_mode_ == CHR_4KB) {
+                chr_bank_1_ = (data & 0x01);
+                prg_ram_bank_ = (data >> 2) & 0x03;
+                prg_bank_0_ = (prg_bank_0_ & 0x0F) | (data & 0x10);
+                prg_bank_1_ = (prg_bank_1_ & 0x0F) | (data & 0x10);
+            }
+            else {
+            }
+        };
+        break;
+
+    case SLROM:
     case SxROM:
     default:
         write_chr_bank_0 = [=](uint8_t data)
