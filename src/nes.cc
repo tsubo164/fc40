@@ -79,8 +79,10 @@ void NES::UpdateFrame()
         PlaySamples();
 
     for (;;) {
-        if (need_log())
+        if (need_log()) {
             PrintCpuStatus(cpu, ppu);
+            log_line_count_++;
+        }
 
         const int cpu_cycles = cpu.IsSuspended() ? dma.Run() : cpu.Run();
         const bool frame_ready = ppu.Run(cpu_cycles);
@@ -121,6 +123,11 @@ bool NES::IsRunning() const
 void NES::Step()
 {
     state_ = Stepping;
+}
+
+uint64_t NES::GetLogLineCount() const
+{
+    return log_line_count_;
 }
 
 static void send_initial_samples()

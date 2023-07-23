@@ -44,10 +44,14 @@ public:
     bool IsRunning() const;
     void Step();
 
+    // debug
+    uint64_t GetLogLineCount() const;
+
 private:
     Cartridge *cart_ = nullptr;
     uint64_t frame_ = 0;
     bool do_log_ = false;
+    uint64_t log_line_count_ = 0;
 
     // state
     enum EmulatorState {
