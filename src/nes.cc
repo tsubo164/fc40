@@ -130,6 +130,16 @@ uint64_t NES::GetLogLineCount() const
     return log_line_count_;
 }
 
+void NES::SetChannelEnable(uint64_t chan_bits)
+{
+    apu.SetChannelEnable(chan_bits);
+}
+
+uint64_t NES::GetChannelEnable() const
+{
+    return apu.GetChannelEnable();
+}
+
 static void send_initial_samples()
 {
     const int N = AUDIO_DELAY_FRAME * 44100 / 60;

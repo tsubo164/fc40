@@ -25,9 +25,6 @@ struct Envelope {
 };
 
 struct PulseChannel {
-    PulseChannel(uint8_t chan_id) : id(chan_id) {}
-
-    int id = 0;
     bool enabled = false;
     uint8_t length = 0;
     bool length_halt = false;
@@ -112,6 +109,10 @@ public:
     uint8_t ReadStatus();
     uint8_t PeekStatus() const;
 
+    // debug
+    void SetChannelEnable(uint8_t chan_bits);
+    uint8_t GetChannelEnable() const;
+
 private:
     double audio_time_ = 0.;
     uint32_t clock_ = 0;
@@ -121,9 +122,10 @@ private:
     bool inhibit_interrupt_ = false;
     bool frame_interrupt_ = false;
 
-    PulseChannel pulse1_ = {1}, pulse2_ = {2};
+    PulseChannel pulse1_, pulse2_;
     TriangleChannel triangle_;
     NoiseChannel noise_;
+    uint8_t chan_enable_ = 0x1F;
 
     void clock_timers();
     void clock_length_counters();

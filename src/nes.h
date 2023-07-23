@@ -46,6 +46,8 @@ public:
 
     // debug
     uint64_t GetLogLineCount() const;
+    void SetChannelEnable(uint64_t chan_bits);
+    uint64_t GetChannelEnable() const;
 
 private:
     Cartridge *cart_ = nullptr;

@@ -442,9 +442,7 @@ static void calculate_target_period(PulseChannel &pulse)
 
     if (swp.negate) {
         swp.target_period = current_period - change;
-
-        if (pulse.id == 1)
-            swp.target_period--;
+        swp.target_period--;
     }
     else {
         swp.target_period = current_period + change;
@@ -647,12 +645,12 @@ void APU::Clock()
         // generate a sample
         audio_time_ -= AUDIO_SAMPLE_STEP;
 
-        const uint8_t p1 = sample_pulse(pulse1_);
-        const uint8_t p2 = sample_pulse(pulse2_);
+        const uint8_t p1 = (chan_enable_ & 0x01) ? sample_pulse(pulse1_) : 0;
+        const uint8_t p2 = (chan_enable_ & 0x02) ? sample_pulse(pulse2_) : 0;
         const float pulse_out = calculate_pulse_level(p1, p2);
 
-        const uint8_t t = sample_triangle(triangle_);
-        const uint8_t n = sample_noise(noise_);
+        const uint8_t t = (chan_enable_ & 0x04) ? sample_triangle(triangle_) : 0;
+        const uint8_t n = (chan_enable_ & 0x08) ? sample_noise(noise_) : 0;
         const float tnd_out = calculate_tnd_level(t, n, 0);
 
         static float lpf = 0;
@@ -687,7 +685,8 @@ void APU::PowerUp()
     inhibit_interrupt_ = false;
     frame_interrupt_ = false;
 
-    pulse1_ = {1}, pulse2_ = {2};
+    pulse1_ = {};
+    pulse2_ = {};
     triangle_ = {};
     noise_ = {};
 
@@ -717,6 +716,16 @@ void APU::Reset()
 bool APU::IsSetIRQ() const
 {
     return frame_interrupt_;
+}
+
+void APU::SetChannelEnable(uint8_t chan_bits)
+{
+    chan_enable_ = chan_bits;
+}
+
+uint8_t APU::GetChannelEnable() const
+{
+    return chan_enable_;
 }
 
 } // namespace

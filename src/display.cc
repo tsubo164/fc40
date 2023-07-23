@@ -15,6 +15,7 @@ const int RESY = 240;
 
 struct KeyState {
     bool g = 0, p = 0, r = 0, space = 0, tab = 0;
+    bool _1 = 0, _2 = 0, _3 = 0, _4 = 0, _5 = 0, _6 = 0;
 };
 
 static void init_gl();
@@ -23,6 +24,10 @@ static void resize(GLFWwindow *window, int width, int height);
 static void render_grid(int width, int height);
 static void render_pattern_table(const FrameBuffer &patt);
 static void render_sprite_box(const PPU &ppu, int width, int height);
+
+// Audio channels
+static uint8_t toggle_bits(uint8_t chan_bits, uint8_t toggle_bit);
+static void print_channel_status(uint8_t chan_bits);
 
 static const GLuint main_screen = 0;
 static GLuint pattern_table_id = 0;
@@ -119,6 +124,68 @@ int Display::Open()
         else if (glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE && key.r == 1) {
             key.r = false;
         }
+        // Sound channels
+        else if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS && key._1 == 0) {
+            uint8_t bits = nes_.GetChannelEnable();
+            bits = toggle_bits(bits, 0x01);
+            nes_.SetChannelEnable(bits);
+            print_channel_status(bits);
+            key._1 = true;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_1) == GLFW_RELEASE && key._1 == 1) {
+            key._1 = false;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS && key._2 == 0) {
+            uint8_t bits = nes_.GetChannelEnable();
+            bits = toggle_bits(bits, 0x02);
+            nes_.SetChannelEnable(bits);
+            print_channel_status(bits);
+            key._2 = true;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_2) == GLFW_RELEASE && key._2 == 1) {
+            key._2 = false;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS && key._3 == 0) {
+            uint8_t bits = nes_.GetChannelEnable();
+            bits = toggle_bits(bits, 0x04);
+            nes_.SetChannelEnable(bits);
+            print_channel_status(bits);
+            key._3 = true;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_3) == GLFW_RELEASE && key._3 == 1) {
+            key._3 = false;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS && key._4 == 0) {
+            uint8_t bits = nes_.GetChannelEnable();
+            bits = toggle_bits(bits, 0x08);
+            nes_.SetChannelEnable(bits);
+            print_channel_status(bits);
+            key._4 = true;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_4) == GLFW_RELEASE && key._4 == 1) {
+            key._4 = false;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS && key._5 == 0) {
+            uint8_t bits = nes_.GetChannelEnable();
+            bits = toggle_bits(bits, 0x1F);
+            nes_.SetChannelEnable(bits);
+            print_channel_status(bits);
+            key._5 = true;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_5) == GLFW_RELEASE && key._5 == 1) {
+            key._5 = false;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_6) == GLFW_PRESS && key._6 == 0) {
+            uint8_t bits = nes_.GetChannelEnable();
+            bits = (bits == 0x1F) ? 0x00 : 0x1F;
+            nes_.SetChannelEnable(bits);
+            print_channel_status(bits);
+            key._6 = true;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_6) == GLFW_RELEASE && key._6 == 1) {
+            key._6 = false;
+        }
+        //
         else if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && key.space == 0) {
             if (nes_.IsRunning())
                 nes_.Stop();
@@ -366,6 +433,28 @@ static void render_sprite_box(const PPU &ppu, int width, int height)
     }
 
     glPopAttrib();
+}
+
+// Audio channels
+static uint8_t toggle_bits(uint8_t chan_bits, uint8_t toggle_bit)
+{
+    if (chan_bits & toggle_bit)
+        return chan_bits & ~toggle_bit;
+    else
+        return chan_bits | toggle_bit;
+}
+
+static void print_channel_status(uint8_t chan_bits)
+{
+    const char c[] = "-+";
+    printf("====================\n");
+    printf("Channels | D N T 2 1\n");
+    printf("ON/OFF   | %c %c %c %c %c\n",
+            c[(chan_bits & 0x10) > 0],
+            c[(chan_bits & 0x08) > 0],
+            c[(chan_bits & 0x04) > 0],
+            c[(chan_bits & 0x02) > 0],
+            c[(chan_bits & 0x01) > 0]);
 }
 
 } // namespace
