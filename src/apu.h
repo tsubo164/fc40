@@ -69,6 +69,19 @@ struct NoiseChannel {
     Envelope envelope;
 };
 
+struct DmcChannel {
+    bool enabled = false;
+    uint8_t length = 0;
+    bool length_halt = false;
+
+    bool irq_enabled = false;
+    bool loop = false;
+    uint8_t rate = 0;
+    uint8_t direct_load = 0;
+    uint16_t sample_address = 0;
+    uint16_t sample_length = 0;
+};
+
 class APU {
 public:
     APU() {}
@@ -105,6 +118,11 @@ public:
     void WriteNoiseLo(uint8_t data);
     void WriteNoiseHi(uint8_t data);
 
+    void WriteDmcFrequency(uint8_t data);
+    void WriteDmcLoadCounter(uint8_t data);
+    void WriteDmcSampleAddress(uint8_t data);
+    void WriteDmcSampleLength(uint8_t data);
+
     // read registers
     uint8_t ReadStatus();
     uint8_t PeekStatus() const;
@@ -121,10 +139,12 @@ private:
     uint8_t mode_ = 0;
     bool inhibit_interrupt_ = false;
     bool frame_interrupt_ = false;
+    bool dmc_interrupt_ = false;
 
     PulseChannel pulse1_, pulse2_;
     TriangleChannel triangle_;
     NoiseChannel noise_;
+    DmcChannel dmc_;
     uint8_t chan_enable_ = 0x1F;
 
     void clock_timers();
