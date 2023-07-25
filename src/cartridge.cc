@@ -74,6 +74,10 @@ bool Cartridge::Open(const char *filename)
     const std::vector<uint8_t> chr_data = read_data(ifs, chr_size);
 
     mapper_ = new_mapper(mapper_id_, prg_data, chr_data);
+    if (!IsMapperSupported())
+        // file is opened, mapper is not supported.
+        return true;
+
     if (mirroring_ == 0)
         mapper_->SetMirroring(Mirroring::HORIZONTAL);
     else if (mirroring_ == 1)
