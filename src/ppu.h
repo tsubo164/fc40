@@ -115,7 +115,7 @@ private:
     int sprite_count_ = 0;
 
     // control
-    void set_stat(uint8_t flag, uint8_t val);
+    void set_stat(uint8_t flag, bool val);
     bool get_ctrl(uint8_t flag) const;
     bool is_rendering_bg() const;
     bool is_rendering_sprite() const;
@@ -135,9 +135,6 @@ private:
     void load_next_tile();
     void fetch_tile_data();
 
-    void set_sprite_overflow();
-    void clear_sprite_overflow();
-
     // sprite
     void clear_secondary_oam();
     ObjectAttribute get_sprite(int index) const;
@@ -147,11 +144,11 @@ private:
     void shift_sprite_data();
 
     // rendering
-    int is_sprite_zero(ObjectAttribute obj) const;
     Pixel get_pixel_bg() const;
     Pixel get_pixel_fg() const;
     bool is_clipping_left() const;
-    bool is_sprite_zero_hit(Pixel bg, Pixel fg, int x) const;
+    bool is_sprite_zero(ObjectAttribute obj) const;
+    bool has_hit_sprite_zero(Pixel bg, Pixel fg, int x) const;
     Color lookup_pixel_color(Pixel pix) const;
     void render_pixel(int x, int y);
 };

@@ -35,7 +35,7 @@ enum ppu_mask {
     MASK_EMPHASIZE_B      = 1 << 7
 };
 
-void PPU::set_stat(uint8_t flag, uint8_t val)
+void PPU::set_stat(uint8_t flag, bool val)
 {
     if (val)
         stat_ |= flag;
@@ -85,6 +85,8 @@ void PPU::enter_vblank()
 void PPU::leave_vblank()
 {
     set_stat(STAT_VERTICAL_BLANK, 0);
+    set_stat(STAT_SPRITE_ZERO_HIT, 0);
+    set_stat(STAT_SPRITE_OVERFLOW, 0);
 }
 
 // --------------------------------------------------------------------------
@@ -441,16 +443,6 @@ void PPU::fetch_tile_data()
     }
 }
 
-void PPU::set_sprite_overflow()
-{
-    set_stat(STAT_SPRITE_OVERFLOW, 1);
-}
-
-void PPU::clear_sprite_overflow()
-{
-    set_stat(STAT_SPRITE_OVERFLOW, 0);
-}
-
 // --------------------------------------------------------------------------
 // sprite
 
@@ -511,7 +503,7 @@ void PPU::evaluate_sprite()
         if (sprite_count_ < 8)
             secondary_oam_[sprite_count_] = obj;
         else
-            set_sprite_overflow();
+            set_stat(STAT_SPRITE_OVERFLOW, 1);
 
         sprite_count_++;
     }
@@ -633,7 +625,7 @@ static Pixel get_pixel(PatternRow patt, uint8_t fine_x)
     return pix;
 }
 
-int PPU::is_sprite_zero(ObjectAttribute obj) const
+bool PPU::is_sprite_zero(ObjectAttribute obj) const
 {
     const int sprite_zero_id = oam_[1];
 
@@ -683,7 +675,7 @@ bool PPU::is_clipping_left() const
            !(mask_ & MASK_SHOW_SPRITE_LEFT);
 }
 
-bool PPU::is_sprite_zero_hit(Pixel bg, Pixel fg, int x) const
+bool PPU::has_hit_sprite_zero(Pixel bg, Pixel fg, int x) const
 {
     if (!fg.sprite_zero)
         return 0;
@@ -738,7 +730,7 @@ void PPU::render_pixel(int x, int y)
 
     fbuf_.SetColor(x, y, col);
 
-    if (is_sprite_zero_hit(bg, fg, x))
+    if (has_hit_sprite_zero(bg, fg, x))
         set_stat(STAT_SPRITE_ZERO_HIT, 1);
 }
 
@@ -816,13 +808,9 @@ void PPU::Clock()
         if (cycle_ == 1)
             enter_vblank();
 
-    if (scanline_ == 261) {
-        if (cycle_ == 1) {
+    if (scanline_ == 261)
+        if (cycle_ == 1)
             leave_vblank();
-            clear_sprite_overflow();
-            set_stat(STAT_SPRITE_ZERO_HIT, 0);
-        }
-    }
 
     // render pixel
     if (scanline_ >= 0 && scanline_ <= 239) {
