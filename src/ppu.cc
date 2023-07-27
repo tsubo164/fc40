@@ -869,14 +869,9 @@ void PPU::PowerUp()
 
     frame_ = 0;
 
-    for (auto &i : oam_)
-        i = 0xFF;
-
-    for (auto &i : palette_ram_)
-        i = 0xFF;
-
-    for (auto &i : name_table_)
-        i = 0xFF;
+    oam_.fill(0xFF);
+    palette_ram_.fill(0xFF);
+    name_table_.fill(0xFF);
 
     init_palette();
 }
@@ -893,8 +888,7 @@ void PPU::Reset()
 
     frame_ = 0;
 
-    for (auto &i : oam_)
-        i = 0xFF;
+    oam_.fill(0xFF);
 }
 
 bool PPU::Run(int cpu_cycles)

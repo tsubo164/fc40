@@ -2,6 +2,7 @@
 #define PPU_H
 
 #include <cstdint>
+#include <array>
 #include "framebuffer.h"
 
 namespace nes {
@@ -99,15 +100,15 @@ private:
 
     // vram
     uint8_t read_buffer_ = 0;
-    uint8_t palette_ram_[32] = {0};
-    uint8_t name_table_[2048] = {0};
+    std::array<uint8_t,32> palette_ram_ = {0};
+    std::array<uint8_t,2048> name_table_ = {0};
 
     // bg tile cache
     PatternRow tile_queue_[3];
 
     // fg sprite
     uint8_t oam_addr_ = 0;
-    uint8_t oam_[256] = {0};
+    std::array<uint8_t,256> oam_ = {0};
     ObjectAttribute secondary_oam_[8];
     // 8 latches and 8 counters
     ObjectAttribute rendering_oam_[8];
