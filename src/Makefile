@@ -8,7 +8,8 @@ LDFLAGS := -lglfw -framework Cocoa -framework OpenGL -framework IOKit $(LIBRARY)
 RM      := rm -f
 
 SRCS    := apu cartridge cpu debug disassemble display dma framebuffer instruction \
-           main mapper mapper_000 mapper_001 mapper_002 mapper_003 nes ppu sound
+           main mapper mapper_000 mapper_001 mapper_002 mapper_003 mapper_004 \
+           nes ppu sound
 
 .PHONY: clean test
 
@@ -26,7 +27,6 @@ $(NES): $(OBJS)
 
 clean:
 	$(RM) $(NES) *.o *.d
-	#$(MAKE) -C tests $@
 
 test: $(NES)
 	$(MAKE) -C tests $@
