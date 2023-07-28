@@ -153,16 +153,16 @@ std::string Cartridge::GetBoardName() const
 
 int Cartridge::save_battery_ram() const
 {
-	std::ofstream ofs(sram_filename_, std::ios::binary);
-	if (!ofs)
-		return -1;
+    std::ofstream ofs(sram_filename_, std::ios::binary);
+    if (!ofs)
+        return -1;
 
     const std::vector<uint8_t> sram = mapper_->GetPrgRam();
     if (sram.size() != 0x2000)
         return -1;
 
-	ofs.write(reinterpret_cast<const char*>(&sram[0]), sram.size());
-	return 0;
+    ofs.write(reinterpret_cast<const char*>(&sram[0]), sram.size());
+    return 0;
 }
 
 int Cartridge::load_battery_ram()
