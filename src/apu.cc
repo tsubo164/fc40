@@ -135,6 +135,55 @@ static void write_noise_hi(NoiseChannel &noise, uint8_t data)
     noise.envelope.start = true;
 }
 
+static void write_dmc_frequency(DmcChannel &dmc, uint8_t data)
+{
+    // $4010    | IL--.RRRR | Flags and Rate (write)
+    // bit 7    | I---.---- | IRQ enabled flag. If clear, the interrupt flag is cleared.
+    // bit 6    | -L--.---- | Loop flag
+    // bits 3-0 | ----.RRRR | Rate index
+    //
+    // Rate   $0   $1   $2   $3   $4   $5   $6   $7   $8   $9   $A   $B   $C   $D   $E   $F
+    //       ------------------------------------------------------------------------------
+    // NTSC  428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106,  84,  72,  54
+    // PAL   398, 354, 316, 298, 276, 236, 210, 198, 176, 148, 132, 118,  98,  78,  66,  50
+    //
+    // The rate determines for how many CPU cycles happen between changes in
+    // the output level during automatic delta-encoded sample playback. For example,
+    // on NTSC (1.789773 MHz), a rate of 428 gives a frequency of
+    // 1789773/428 Hz = 4181.71 Hz. These periods are all even numbers because there
+    // are 2 CPU cycles in an APU cycle. A rate of 428 means the output level changes
+    // every 214 APU cycles.
+    static const uint16_t rate_table[] = {
+        428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106, 84, 72, 54
+    };
+    dmc.irq_enabled = data & 0x80;
+    dmc.loop = data & 0x40;
+    dmc.rate = rate_table[data & 0x0F];
+}
+
+static void write_dmc_load_counter(DmcChannel &dmc, uint8_t data)
+{
+    // $4011    | -DDD.DDDD | Direct load (write)
+    // bits 6-0 | -DDD.DDDD | The DMC output level is set to D, an unsigned value.
+    //                      | If the timer is outputting a clock at the same time,
+    //                      | the output level is occasionally not changed properly.[1]
+    dmc.direct_load = data & 0x7F;
+}
+
+static void write_dmc_sample_address(DmcChannel &dmc, uint8_t data)
+{
+    // $4012    | AAAA.AAAA | Sample address (write)
+    // bits 7-0 | AAAA.AAAA | Sample address = %11AAAAAA.AA000000 = $C000 + (A * 64)
+    dmc.sample_address = (data << 6) | 0xC000;
+}
+
+static void write_dmc_sample_length(DmcChannel &dmc, uint8_t data)
+{
+    // $4013    | LLLL.LLLL | Sample length (write)
+    // bits 7-0 | LLLL.LLLL | Sample length = %LLLL.LLLL0001 = (L * 16) + 1 bytes
+    dmc.sample_length = (data << 4) | 0x0001;
+}
+
 void APU::WriteStatus(uint8_t data)
 {
     // $4015 write | ---D NT21 | Enable DMC (D), noise (N), triangle (T),
@@ -158,6 +207,18 @@ void APU::WriteStatus(uint8_t data)
     noise_.enabled = (data >> 3) & 0x01;
     if (!noise_.enabled)
         noise_.length = 0;
+    // - Writing a zero to any of the channel enable bits (NT21) will silence
+    //   that channel and halt its length counter.
+    // - If the DMC bit is clear, the DMC bytes remaining will be set to 0 and
+    //   the DMC will silence when it empties.
+    // - If the DMC bit is set, the DMC sample will be restarted only if its bytes
+    //   remaining is 0. If there are bits remaining in the 1-byte sample buffer,
+    //   these will finish playing before the next sample is fetched.
+    // - Writing to this register clears the DMC interrupt flag.
+    // - Power-up and reset have the effect of writing $00, silencing all channels.
+    dmc_.enabled = data & 0x10;
+    if (!dmc_.enabled)
+        dmc_.length = 0;
 }
 
 void APU::WriteFrameCounter(uint8_t data)
@@ -255,6 +316,26 @@ void APU::WriteNoiseHi(uint8_t data)
     write_noise_hi(noise_, data);
 }
 
+void APU::WriteDmcFrequency(uint8_t data)
+{
+    write_dmc_frequency(dmc_, data);
+}
+
+void APU::WriteDmcLoadCounter(uint8_t data)
+{
+    write_dmc_load_counter(dmc_, data);
+}
+
+void APU::WriteDmcSampleAddress(uint8_t data)
+{
+    write_dmc_sample_address(dmc_, data);
+}
+
+void APU::WriteDmcSampleLength(uint8_t data)
+{
+    write_dmc_sample_length(dmc_, data);
+}
+
 uint8_t APU::ReadStatus()
 {
     // $4015 read | IF-D NT21 | DMC interrupt (I), frame interrupt (F),
@@ -272,8 +353,10 @@ uint8_t APU::PeekStatus() const
 {
     uint8_t data = 0x00;
 
-    //data |= (inhibit_interrupt_)   << 7;
+    data |= (dmc_interrupt_)       << 7;
     data |= (frame_interrupt_)     << 6;
+    // no use of bit 5
+    data |= (dmc_.enabled > 0)     << 4;
     data |= (noise_.length > 0)    << 3;
     data |= (triangle_.length > 0) << 2;
     data |= (pulse2_.length > 0)   << 1;
@@ -684,11 +767,13 @@ void APU::PowerUp()
     mode_ = 0;
     inhibit_interrupt_ = false;
     frame_interrupt_ = false;
+    dmc_interrupt_ = false;
 
     pulse1_ = {};
     pulse2_ = {};
     triangle_ = {};
     noise_ = {};
+    dmc_ = {};
 
     // On power-up, the shift register is loaded with the value 1.
     noise_.shift = 1;
@@ -699,6 +784,7 @@ void APU::Reset()
     // APU mode in $4017 was unchanged
     inhibit_interrupt_ = false;
     frame_interrupt_ = false;
+    dmc_interrupt_ = false;
     // APU was silenced ($4015 = 0)
     WriteStatus(0x00);
     // APU triangle phase is reset to 0 (i.e. outputs a value of 15,
