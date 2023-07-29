@@ -11,9 +11,6 @@ Mapper_004::Mapper_004(const std::vector<uint8_t> &prg_rom,
     prg_bank_[1] = 1;
     prg_bank_[2] = prg_bank_count - 2;
     prg_bank_[3] = prg_bank_count - 1;
-    printf("prg_bank_count %d\n", prg_bank_count);
-    printf("prg_bank_count %d\n", prg_bank_[3]);
-    printf("prg_bank_count %04X\n", prg_bank_[3] * 0x2000);
 
     chr_bank_[0] = 0;
     chr_bank_[1] = 1;
@@ -191,24 +188,24 @@ void Mapper_004::set_bank_data(uint16_t addr, uint8_t data)
     else {
         switch (bank_select_) {
         case 0:
-            chr_bank_[0] = data;
-            break;
-        case 1:
-            chr_bank_[1] = data;
-            break;
-        case 2:
-            chr_bank_[2] = data;
-            break;
-        case 3:
-            chr_bank_[3] = data;
-            break;
-        case 4:
             chr_bank_[4] = (data & 0xFE);
             chr_bank_[5] = (data & 0xFE) + 1;
             break;
-        case 5:
+        case 1:
             chr_bank_[6] = (data & 0xFE);
             chr_bank_[7] = (data & 0xFE) + 1;
+            break;
+        case 2:
+            chr_bank_[0] = data;
+            break;
+        case 3:
+            chr_bank_[1] = data;
+            break;
+        case 4:
+            chr_bank_[2] = data;
+            break;
+        case 5:
+            chr_bank_[3] = data;
             break;
         }
     }
@@ -255,6 +252,11 @@ void Mapper_004::set_mirroring(uint8_t data)
     //         |
     //         +- Nametable mirroring (0: vertical; 1: horizontal)
     mirroring_ = data & 0x01;
+
+    if (mirroring_ == 0)
+        SetMirroring(Mirroring::VERTICAL);
+    else if (mirroring_ == 1)
+        SetMirroring(Mirroring::HORIZONTAL);
 }
 
 void Mapper_004::set_prg_ram_protect(uint8_t data)
