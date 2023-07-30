@@ -5,21 +5,16 @@ namespace nes {
 Mapper_004::Mapper_004(const std::vector<uint8_t> &prg_rom,
         const std::vector<uint8_t> &chr_rom) : Mapper(prg_rom, chr_rom)
 {
-    const int prg_bank_count = GetPrgRomSize() / 0x2000; // 8KB
+    prg_bank_count_ = GetPrgRomSize() / 0x2000; // 8KB
+    chr_bank_count_ = GetChrRomSize() / 0x0400; // 1KB
 
     prg_bank_[0] = 0;
     prg_bank_[1] = 1;
-    prg_bank_[2] = prg_bank_count - 2;
-    prg_bank_[3] = prg_bank_count - 1;
+    prg_bank_[2] = prg_bank_count_ - 2;
+    prg_bank_[3] = prg_bank_count_ - 1;
 
-    chr_bank_[0] = 0;
-    chr_bank_[1] = 1;
-    chr_bank_[2] = 2;
-    chr_bank_[3] = 3;
-    chr_bank_[4] = 4;
-    chr_bank_[5] = 5;
-    chr_bank_[6] = 6;
-    chr_bank_[7] = 7;
+    for (int i = 0; i < 8; i++)
+        chr_bank_[i] = i;
 
     // TODO confirm
     use_prg_ram(0x2000);
@@ -161,83 +156,82 @@ void Mapper_004::set_bank_data(uint16_t addr, uint8_t data)
     // |||| ||||
     // ++++-++++- New bank value, based on last value written to
     //            Bank select register (mentioned above)
+    const uint8_t prg_bank_id = data % prg_bank_count_;
+    const uint8_t chr_bank_id = data % chr_bank_count_;
+
     if (chr_bank_mode_ == 0) {
         switch (bank_select_) {
         case 0:
-            chr_bank_[0] = (data & 0xFE);
-            chr_bank_[1] = (data & 0xFE) + 1;
+            chr_bank_[0] = (chr_bank_id & 0xFE);
+            chr_bank_[1] = (chr_bank_id & 0xFE) + 1;
             break;
         case 1:
-            chr_bank_[2] = (data & 0xFE);
-            chr_bank_[3] = (data & 0xFE) + 1;
+            chr_bank_[2] = (chr_bank_id & 0xFE);
+            chr_bank_[3] = (chr_bank_id & 0xFE) + 1;
             break;
         case 2:
-            chr_bank_[4] = data;
+            chr_bank_[4] = chr_bank_id;
             break;
         case 3:
-            chr_bank_[5] = data;
+            chr_bank_[5] = chr_bank_id;
             break;
         case 4:
-            chr_bank_[6] = data;
+            chr_bank_[6] = chr_bank_id;
             break;
         case 5:
-            chr_bank_[7] = data;
+            chr_bank_[7] = chr_bank_id;
             break;
         }
     }
     else {
         switch (bank_select_) {
         case 0:
-            chr_bank_[4] = (data & 0xFE);
-            chr_bank_[5] = (data & 0xFE) + 1;
+            chr_bank_[4] = (chr_bank_id & 0xFE);
+            chr_bank_[5] = (chr_bank_id & 0xFE) + 1;
             break;
         case 1:
-            chr_bank_[6] = (data & 0xFE);
-            chr_bank_[7] = (data & 0xFE) + 1;
+            chr_bank_[6] = (chr_bank_id & 0xFE);
+            chr_bank_[7] = (chr_bank_id & 0xFE) + 1;
             break;
         case 2:
-            chr_bank_[0] = data;
+            chr_bank_[0] = chr_bank_id;
             break;
         case 3:
-            chr_bank_[1] = data;
+            chr_bank_[1] = chr_bank_id;
             break;
         case 4:
-            chr_bank_[2] = data;
+            chr_bank_[2] = chr_bank_id;
             break;
         case 5:
-            chr_bank_[3] = data;
+            chr_bank_[3] = chr_bank_id;
             break;
         }
     }
     if (prg_bank_mode_ == 0) {
-        const int prg_bank_count = GetPrgRomSize() / 0x2000; // 8KB
-
         switch (bank_select_) {
         case 6:
-            prg_bank_[0] = data;
-            prg_bank_[2] = prg_bank_count - 2;
-            prg_bank_[3] = prg_bank_count - 1;
+            prg_bank_[0] = prg_bank_id;
+            prg_bank_[2] = prg_bank_count_ - 2;
+            prg_bank_[3] = prg_bank_count_ - 1;
             break;
         case 7:
-            prg_bank_[1] = data;
-            prg_bank_[2] = prg_bank_count - 2;
-            prg_bank_[3] = prg_bank_count - 1;
+            prg_bank_[1] = prg_bank_id;
+            prg_bank_[2] = prg_bank_count_ - 2;
+            prg_bank_[3] = prg_bank_count_ - 1;
             break;
         }
     }
     else {
-        const int prg_bank_count = GetPrgRomSize() / 0x2000; // 8KB
-
         switch (bank_select_) {
         case 6:
-            prg_bank_[2] = data;
-            prg_bank_[0] = prg_bank_count - 2;
-            prg_bank_[3] = prg_bank_count - 1;
+            prg_bank_[2] = prg_bank_id;
+            prg_bank_[0] = prg_bank_count_ - 2;
+            prg_bank_[3] = prg_bank_count_ - 1;
             break;
         case 7:
-            prg_bank_[1] = data;
-            prg_bank_[0] = prg_bank_count - 2;
-            prg_bank_[3] = prg_bank_count - 1;
+            prg_bank_[1] = prg_bank_id;
+            prg_bank_[0] = prg_bank_count_ - 2;
+            prg_bank_[3] = prg_bank_count_ - 1;
             break;
         }
     }

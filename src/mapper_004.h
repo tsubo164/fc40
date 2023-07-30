@@ -18,6 +18,8 @@ private:
     uint8_t bank_select_ = 0;
     uint8_t prg_bank_mode_ = 0;
     uint8_t chr_bank_mode_ = 0;
+    uint8_t prg_bank_count_ = 0;
+    uint8_t chr_bank_count_ = 0;
 
     uint8_t mirroring_ = 0;
     uint8_t irq_latch_ = 0;
