@@ -30,6 +30,57 @@ void PrintCpuStatus(const CPU &cpu, const PPU &ppu)
     printf("\n");
 }
 
+void print_cpu_status_style_1(const CPU &cpu, const PPU &ppu)
+{
+    const CpuStatus stat = cpu.GetStatus();
+    const Code line = DisassembleLine(cpu, stat.pc);
+    const std::string code_str = GetCodeString(line);
+    const std::string mem_str = GetMemoryString(line, cpu);
+
+    // Registers
+    printf("A:%02X X:%02X Y:%02X S:%02X ", stat.a, stat.x, stat.y, stat.s);
+    // Flags
+    char flags[] = "nvubdizc";
+    for (int i = 0; i < 8; i++)
+        if (stat.p & (0x80 >> i))
+            flags[i] = std::toupper(flags[i]);
+    printf("P:%s ", flags);
+
+    // Stack Pointer
+    const int depth = 0xFF - stat.s;
+    for (int i = 0; i < depth; i++) {
+        printf(" ");
+    }
+
+    // Code
+    printf("$%s:%s%s",
+            code_str.substr(0, 4).c_str(),
+            code_str.substr(5, 10).c_str(),
+            code_str.substr(16).c_str());
+
+    // Memory ref
+    std::string memref = mem_str;
+    {
+        const auto pos = memref.find(" @ ");
+        if (pos != std::string::npos) {
+            memref =
+                memref.substr(0, pos + 3) + "$" +
+                memref.substr(pos + 3);
+        }
+    }
+    {
+        const auto pos = memref.find(" = ");
+        if (pos != std::string::npos) {
+            memref =
+                memref.substr(0, pos + 3) + "#$" +
+                memref.substr(pos + 3);
+        }
+    }
+    printf("%s", memref.c_str());
+
+    printf("\n");
+}
+
 void LogCpuStatus(NES &nes, int max_lines)
 {
     InitSound();
