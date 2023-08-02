@@ -101,6 +101,18 @@ void CPU::write_byte(uint16_t addr, uint8_t data)
     else if (addr == 0x400F) {
         apu_.WriteNoiseHi(data);
     }
+    else if (addr == 0x4010) {
+        apu_.WriteDmcFrequency(data);
+    }
+    else if (addr == 0x4011) {
+        apu_.WriteDmcLoadCounter(data);
+    }
+    else if (addr == 0x4012) {
+        apu_.WriteDmcSampleAddress(data);
+    }
+    else if (addr == 0x4013) {
+        apu_.WriteDmcSampleLength(data);
+    }
     else if (addr == 0x4014) {
         // DMA
         ppu_.WriteOamDma(data);

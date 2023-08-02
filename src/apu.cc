@@ -1,5 +1,7 @@
 #include "apu.h"
 #include "sound.h"
+#include <iostream>
+#include <cmath>
 
 namespace nes {
 
@@ -153,12 +155,15 @@ static void write_dmc_frequency(DmcChannel &dmc, uint8_t data)
     // 1789773/428 Hz = 4181.71 Hz. These periods are all even numbers because there
     // are 2 CPU cycles in an APU cycle. A rate of 428 means the output level changes
     // every 214 APU cycles.
-    static const uint16_t rate_table[] = {
+    static const uint16_t period_table[] = {
         428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106, 84, 72, 54
     };
     dmc.irq_enabled = data & 0x80;
     dmc.loop = data & 0x40;
-    dmc.rate = rate_table[data & 0x0F];
+    //dmc.rate = rate_table[data & 0x0F];
+    dmc.timer_period = period_table[data & 0x0F];
+    dmc.timer = dmc.timer_period;
+    //printf("dmc.timer: 0x%04X\n", dmc.timer);
 }
 
 static void write_dmc_load_counter(DmcChannel &dmc, uint8_t data)
@@ -168,6 +173,7 @@ static void write_dmc_load_counter(DmcChannel &dmc, uint8_t data)
     //                      | If the timer is outputting a clock at the same time,
     //                      | the output level is occasionally not changed properly.[1]
     dmc.direct_load = data & 0x7F;
+    //printf("direct_load: 0x%02X\n", dmc.direct_load);
 }
 
 static void write_dmc_sample_address(DmcChannel &dmc, uint8_t data)
@@ -175,6 +181,7 @@ static void write_dmc_sample_address(DmcChannel &dmc, uint8_t data)
     // $4012    | AAAA.AAAA | Sample address (write)
     // bits 7-0 | AAAA.AAAA | Sample address = %11AAAAAA.AA000000 = $C000 + (A * 64)
     dmc.sample_address = (data << 6) | 0xC000;
+    //printf("address: 0x%04X\n", dmc.sample_address);
 }
 
 static void write_dmc_sample_length(DmcChannel &dmc, uint8_t data)
@@ -182,6 +189,7 @@ static void write_dmc_sample_length(DmcChannel &dmc, uint8_t data)
     // $4013    | LLLL.LLLL | Sample length (write)
     // bits 7-0 | LLLL.LLLL | Sample length = %LLLL.LLLL0001 = (L * 16) + 1 bytes
     dmc.sample_length = (data << 4) | 0x0001;
+    //printf("length: 0x%02X => 0x%04X\n", data, dmc.sample_length);
 }
 
 void APU::WriteStatus(uint8_t data)
@@ -217,8 +225,15 @@ void APU::WriteStatus(uint8_t data)
     // - Writing to this register clears the DMC interrupt flag.
     // - Power-up and reset have the effect of writing $00, silencing all channels.
     dmc_.enabled = data & 0x10;
-    if (!dmc_.enabled)
+    //static int i = 0;
+    if (!dmc_.enabled) {
         dmc_.length = 0;
+        //dmc_.sample_length = 0;
+        //printf("****** %d: 0x%02X\n", i++, dmc_.enabled);
+    }
+    else {
+        //printf("****** %d: 0x%02X\n", i++, dmc_.enabled);
+    }
 }
 
 void APU::WriteFrameCounter(uint8_t data)
@@ -469,6 +484,12 @@ static uint8_t sample_noise(NoiseChannel &noise)
         return noise.envelope.decay;
 }
 
+static uint8_t sample_dmc(DmcChannel &dmc)
+{
+    dmc.empty = true;
+    return dmc.sample;
+}
+
 static void clock_pulse_timer(PulseChannel &pulse)
 {
     if (pulse.timer == 0) {
@@ -513,6 +534,41 @@ static void clock_noise_timer(NoiseChannel &noise)
     }
     else {
         noise.timer--;
+    }
+}
+
+static void clock_dmc_timer(DmcChannel &dmc)
+{
+    if (dmc.timer == 0) {
+        dmc.timer = dmc.timer_period;
+
+        // read sample
+        if (!dmc.empty || dmc.sample_length == 0)
+            return;
+
+        // output sample
+        static float x = 0;
+        x += 0.7;
+        float y = sin(x);
+        dmc.sample = 32 * (0.5 * y + .5);
+        dmc.empty = false;
+        //printf("----------- %d\n", dmc.sample);
+        if (dmc.sample_address == 0xFFFF)
+            dmc.sample_address = 0x8000;
+        else
+            dmc.sample_address++;
+
+        // bytes remaining
+        dmc.sample_length--;
+        if (dmc.sample_length == 0) {
+            if (dmc.loop)
+                dmc.restarted = true;
+            else if (dmc.irq_enabled)
+                dmc.irq_generated = true;
+        }
+    }
+    else {
+        dmc.timer--;
     }
 }
 
@@ -584,6 +640,7 @@ void APU::clock_timers()
         clock_pulse_timer(pulse1_);
         clock_pulse_timer(pulse2_);
         clock_noise_timer(noise_);
+        clock_dmc_timer(dmc_);
     }
 
     clock_triangle_timer(triangle_);
@@ -734,7 +791,8 @@ void APU::Clock()
 
         const uint8_t t = (chan_enable_ & 0x04) ? sample_triangle(triangle_) : 0;
         const uint8_t n = (chan_enable_ & 0x08) ? sample_noise(noise_) : 0;
-        const float tnd_out = calculate_tnd_level(t, n, 0);
+        const uint8_t d = (chan_enable_ & 0x10) ? sample_dmc(dmc_) : 0;
+        const float tnd_out = calculate_tnd_level(t, n, d);
 
         static float lpf = 0;
         const float raw_data = pulse_out + tnd_out;
