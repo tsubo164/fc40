@@ -160,7 +160,6 @@ static void write_dmc_frequency(DmcChannel &dmc, uint8_t data)
     };
     dmc.irq_enabled = data & 0x80;
     dmc.loop = data & 0x40;
-    //dmc.rate = rate_table[data & 0x0F];
     dmc.timer_period = period_table[data & 0x0F];
     dmc.timer = dmc.timer_period;
     //printf("dmc.timer: 0x%04X\n", dmc.timer);
@@ -227,12 +226,13 @@ void APU::WriteStatus(uint8_t data)
     dmc_.enabled = data & 0x10;
     //static int i = 0;
     if (!dmc_.enabled) {
-        dmc_.length = 0;
-        //dmc_.sample_length = 0;
+        dmc_.sample_remaining = 0;
         //printf("****** %d: 0x%02X\n", i++, dmc_.enabled);
     }
     else {
         //printf("****** %d: 0x%02X\n", i++, dmc_.enabled);
+        if (dmc_.sample_remaining == 0)
+            dmc_.sample_remaining = dmc_.sample_length;
     }
 }
 
@@ -368,14 +368,15 @@ uint8_t APU::PeekStatus() const
 {
     uint8_t data = 0x00;
 
-    data |= (dmc_interrupt_)       << 7;
-    data |= (frame_interrupt_)     << 6;
+    //data |= (dmc_interrupt_)         << 7;
+    data |= (dmc_.irq_generated)        << 7;
+    data |= (frame_interrupt_)          << 6;
     // no use of bit 5
-    data |= (dmc_.enabled > 0)     << 4;
-    data |= (noise_.length > 0)    << 3;
-    data |= (triangle_.length > 0) << 2;
-    data |= (pulse2_.length > 0)   << 1;
-    data |= (pulse1_.length > 0)   << 0;
+    data |= (dmc_.sample_remaining > 0) << 4;
+    data |= (noise_.length > 0)         << 3;
+    data |= (triangle_.length > 0)      << 2;
+    data |= (pulse2_.length > 0)        << 1;
+    data |= (pulse1_.length > 0)        << 0;
 
     return data;
 }
@@ -543,7 +544,7 @@ static void clock_dmc_timer(DmcChannel &dmc)
         dmc.timer = dmc.timer_period;
 
         // read sample
-        if (!dmc.empty || dmc.sample_length == 0)
+        if (!dmc.empty || dmc.sample_remaining == 0)
             return;
 
         // output sample
@@ -559,8 +560,8 @@ static void clock_dmc_timer(DmcChannel &dmc)
             dmc.sample_address++;
 
         // bytes remaining
-        dmc.sample_length--;
-        if (dmc.sample_length == 0) {
+        dmc.sample_remaining--;
+        if (dmc.sample_remaining == 0) {
             if (dmc.loop)
                 dmc.restarted = true;
             else if (dmc.irq_enabled)

@@ -74,18 +74,17 @@ struct DmcChannel {
     uint16_t timer = 0;
     uint16_t timer_period = 0;
 
-    uint8_t length = 0;
-    //bool length_halt = false;
-
     bool irq_generated = false;
     bool irq_enabled = false;
     bool loop = false;
     bool empty = true;
     bool restarted = false;
+
     uint8_t direct_load = 0;
     uint8_t sample = 0;
     uint16_t sample_address = 0;
     uint16_t sample_length = 0;
+    uint16_t sample_remaining = 0;
 };
 
 class APU {
