@@ -538,34 +538,64 @@ static void clock_noise_timer(NoiseChannel &noise)
     }
 }
 
+static bool read_dmc_memory(DmcChannel &dmc)
+{
+    // Any time the sample buffer is in an empty state and
+    // bytes remaining is not zero (including just after a write to $4015
+    // that enables the channel, regardless of where that write occurs
+    // relative to the bit counter mentioned below), the following occur:
+    if (!dmc.empty || dmc.sample_remaining == 0)
+        return false;
+
+    // 1. The CPU is stalled for up to 4 CPU cycles[2] to allow the longest
+    // possible write (the return address and write after an IRQ) to finish.
+    // If OAM DMA is in progress, it is paused for two cycles.[3] The sample
+    // fetch always occurs on an even CPU cycle due to its alignment with the APU
+    //dmc.cpu_stall = true;
+
+    // 2. The sample buffer is filled with the next sample byte read from
+    // the current address, subject to whatever mapping hardware is present.
+    //dmc.read_sample = mem[dmc.reading_addr];
+    dmc.empty = false;
+
+    // 3. The address is incremented; if it exceeds $FFFF,
+    // it is wrapped around to $8000.
+    if (dmc.sample_address == 0xFFFF)
+        dmc.sample_address = 0x8000;
+    else
+        dmc.sample_address++;
+
+    // 4. The bytes remaining counter is decremented; if it becomes zero
+    // and the loop flag is set, the sample is restarted (see above);
+    // otherwise, if the bytes remaining counter becomes zero and
+    // the IRQ enabled flag is set, the interrupt flag is set.
+    dmc.sample_remaining--;
+    if (dmc.sample_remaining == 0) {
+        if (dmc.loop)
+            dmc.restarted = true;
+        else if (dmc.irq_enabled)
+            dmc.irq_generated = true;
+    }
+
+    return true;
+}
+
 static void clock_dmc_timer(DmcChannel &dmc)
 {
     if (dmc.timer == 0) {
         dmc.timer = dmc.timer_period;
 
         // read sample
-        if (!dmc.empty || dmc.sample_remaining == 0)
+        const bool has_sample = read_dmc_memory(dmc);
+        if (!has_sample)
             return;
 
         // output sample
-        static float x = 0;
-        x += 0.7;
-        float y = sin(x);
-        dmc.sample = 32 * (0.5 * y + .5);
-        dmc.empty = false;
-        //printf("----------- %d\n", dmc.sample);
-        if (dmc.sample_address == 0xFFFF)
-            dmc.sample_address = 0x8000;
-        else
-            dmc.sample_address++;
-
-        // bytes remaining
-        dmc.sample_remaining--;
-        if (dmc.sample_remaining == 0) {
-            if (dmc.loop)
-                dmc.restarted = true;
-            else if (dmc.irq_enabled)
-                dmc.irq_generated = true;
+        {
+            static float x = 0;
+            x += 0.7;
+            float y = sin(x);
+            dmc.sample = 32 * (0.5 * y + .5);
         }
     }
     else {
