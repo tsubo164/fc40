@@ -27,6 +27,8 @@ void NES::PowerUp()
     ppu.PowerUp();
     apu.PowerUp();
     dma.PowerUp();
+
+    apu.SetCPU(&cpu);
 }
 
 void NES::ShutDown()

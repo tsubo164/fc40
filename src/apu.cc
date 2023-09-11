@@ -162,7 +162,6 @@ static void write_dmc_frequency(DmcChannel &dmc, uint8_t data)
     dmc.loop = data & 0x40;
     dmc.timer_period = period_table[data & 0x0F];
     dmc.timer = dmc.timer_period;
-    //printf("dmc.timer: 0x%04X\n", dmc.timer);
 }
 
 static void write_dmc_load_counter(DmcChannel &dmc, uint8_t data)
@@ -224,7 +223,6 @@ void APU::WriteStatus(uint8_t data)
     // - Power-up and reset have the effect of writing $00, silencing all channels.
     dmc_.enabled = data & 0x10;
     dmc_.irq_enabled = false;
-    //static int i = 0;
     if (!dmc_.enabled) {
         dmc_.bytes_remaining = 0;
     }
@@ -366,7 +364,6 @@ uint8_t APU::PeekStatus() const
 {
     uint8_t data = 0x00;
 
-    //data |= (dmc_interrupt_)         << 7;
     data |= (dmc_.irq_generated)       << 7;
     data |= (frame_interrupt_)         << 6;
     // no use of bit 5
@@ -487,7 +484,6 @@ static uint8_t sample_dmc(DmcChannel &dmc)
 {
     // The output level is sent to the mixer whether
     // the channel is enabled or not.
-    //dmc.empty = true;
     return dmc.output_level;
 }
 
@@ -534,7 +530,8 @@ static void clock_noise_timer(NoiseChannel &noise)
         noise.shift |= (feedback << 14);
     }
     else {
-        noise.timer--;
+        // Noise timer period table is based on CPU cycles
+        noise.timer -= 2;
     }
 }
 
@@ -544,14 +541,14 @@ static void restart_dmc_sample(DmcChannel &dmc)
     dmc.bytes_remaining = dmc.sample_length;
 }
 
-static bool read_dmc_memory(DmcChannel &dmc)
+static void read_dmc_memory(DmcChannel &dmc)
 {
     // Any time the sample buffer is in an empty state and
     // bytes remaining is not zero (including just after a write to $4015
     // that enables the channel, regardless of where that write occurs
     // relative to the bit counter mentioned below), the following occur:
     if (!dmc.empty || dmc.bytes_remaining == 0)
-        return false;
+        return;
 
     // 1. The CPU is stalled for up to 4 CPU cycles[2] to allow the longest
     // possible write (the return address and write after an IRQ) to finish.
@@ -561,7 +558,7 @@ static bool read_dmc_memory(DmcChannel &dmc)
 
     // 2. The sample buffer is filled with the next sample byte read from
     // the current address, subject to whatever mapping hardware is present.
-    dmc.sample_buffer = 0; //mem[dmc.reading_addr];
+    dmc.sample_buffer = dmc.cpu->PeekData(dmc.byte_addr);
     dmc.empty = false;
 
     // 3. The address is incremented; if it exceeds $FFFF,
@@ -582,8 +579,6 @@ static bool read_dmc_memory(DmcChannel &dmc)
         else if (dmc.irq_enabled)
             dmc.irq_generated = true;
     }
-
-    return true;
 }
 
 static void clock_dmc_shift_register(DmcChannel &dmc)
@@ -628,8 +623,6 @@ static void clock_dmc_shift_register(DmcChannel &dmc)
             dmc.enabled = true;
             dmc.shift = dmc.sample_buffer;
             dmc.empty = true;
-
-            read_dmc_memory(dmc);
         }
     }
 }
@@ -640,27 +633,14 @@ static void clock_dmc_timer(DmcChannel &dmc)
         dmc.timer = dmc.timer_period;
 
         // read sample
-        //const bool has_sample = read_dmc_memory(dmc);
-        //if (!has_sample)
-        //    return;
         read_dmc_memory(dmc);
 
+        // clock sample
         clock_dmc_shift_register(dmc);
-
-        // output sample
-        if (!dmc.empty) {
-            static float x = 0;
-            x += 0.7;
-            float y = sin(x);
-            dmc.output_level = 32 * (0.5 * y + .5);
-        }
-        else {
-            dmc.output_level = 0;
-        }
-
     }
     else {
-        dmc.timer--;
+        // DMC timer period table is based on CPU cycles
+        dmc.timer -= 2;
     }
 }
 
@@ -952,6 +932,11 @@ void APU::Reset()
 bool APU::IsSetIRQ() const
 {
     return frame_interrupt_;
+}
+
+void APU::SetCPU(const CPU *cpu)
+{
+    dmc_.cpu = cpu;
 }
 
 void APU::SetChannelEnable(uint8_t chan_bits)

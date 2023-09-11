@@ -1,6 +1,7 @@
 #ifndef APU_H
 #define APU_H
 
+#include "cpu.h"
 #include <cstdint>
 
 namespace nes {
@@ -70,10 +71,11 @@ struct NoiseChannel {
 };
 
 struct DmcChannel {
-    // timer
     bool enabled = false;
     uint16_t timer = 0;
     uint16_t timer_period = 0;
+
+    const CPU *cpu = nullptr;
 
     // flags
     bool irq_generated = false;
@@ -131,6 +133,8 @@ public:
 
     // interrupts
     bool IsSetIRQ() const;
+    // CPU
+    void SetCPU(const CPU *cpu);
 
     // write registers
     void WriteStatus(uint8_t data);
