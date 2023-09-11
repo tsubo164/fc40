@@ -81,19 +81,41 @@ struct DmcChannel {
     bool cpu_stall = false;
     bool loop = false;
     bool empty = true;
+    bool silent = true;
 
     // shift register
     uint8_t shift = 0;
     uint8_t bits_remaining = 0;
 
     // samples
-    uint8_t direct_load = 0;
-    uint8_t sample = 0;
+    uint8_t output_level = 0;
     uint16_t sample_address = 0;
     uint16_t sample_length = 0;
     uint16_t sample_buffer = 0;
     uint16_t bytes_remaining = 0;
     uint16_t byte_addr = 0;
+
+    // sample
+    struct Sample {
+        bool empty = true;
+        uint8_t buffer = 0;
+    } sample;
+
+    // memory reader
+    struct MemoryReader {
+        uint16_t start = 0;
+        uint16_t length = 0;
+        uint16_t addr = 0;
+        uint16_t remaining = 0;
+    } memory;
+
+    // output unit
+    struct OutputUnit {
+        bool silent = true;
+        uint8_t level = 0;
+        uint8_t shift = 0;
+        uint8_t bits = 0;
+    } output;
 };
 
 class APU {

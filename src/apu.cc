@@ -171,7 +171,7 @@ static void write_dmc_load_counter(DmcChannel &dmc, uint8_t data)
     // bits 6-0 | -DDD.DDDD | The DMC output level is set to D, an unsigned value.
     //                      | If the timer is outputting a clock at the same time,
     //                      | the output level is occasionally not changed properly.[1]
-    dmc.direct_load = data & 0x7F;
+    dmc.output_level = data & 0x7F;
 }
 
 static void write_dmc_sample_address(DmcChannel &dmc, uint8_t data)
@@ -223,6 +223,7 @@ void APU::WriteStatus(uint8_t data)
     // - Writing to this register clears the DMC interrupt flag.
     // - Power-up and reset have the effect of writing $00, silencing all channels.
     dmc_.enabled = data & 0x10;
+    dmc_.irq_enabled = false;
     //static int i = 0;
     if (!dmc_.enabled) {
         dmc_.bytes_remaining = 0;
@@ -484,8 +485,10 @@ static uint8_t sample_noise(NoiseChannel &noise)
 
 static uint8_t sample_dmc(DmcChannel &dmc)
 {
-    dmc.empty = true;
-    return dmc.sample;
+    // The output level is sent to the mixer whether
+    // the channel is enabled or not.
+    //dmc.empty = true;
+    return dmc.output_level;
 }
 
 static void clock_pulse_timer(PulseChannel &pulse)
@@ -595,12 +598,12 @@ static void clock_dmc_shift_register(DmcChannel &dmc)
     // or add 2 only if the current level is at most 125.
     if (dmc.enabled) {
         if (dmc.shift & 0x01) {
-            if (dmc.sample <= 125)
-                dmc.sample += 2;
+            if (dmc.output_level <= 125)
+                dmc.output_level += 2;
         }
         else {
-            if (dmc.sample >= 2)
-                dmc.sample -= 2;
+            if (dmc.output_level >= 2)
+                dmc.output_level -= 2;
         }
     }
 
@@ -637,19 +640,24 @@ static void clock_dmc_timer(DmcChannel &dmc)
         dmc.timer = dmc.timer_period;
 
         // read sample
-        const bool has_sample = read_dmc_memory(dmc);
-        if (!has_sample)
-            return;
+        //const bool has_sample = read_dmc_memory(dmc);
+        //if (!has_sample)
+        //    return;
+        read_dmc_memory(dmc);
 
         clock_dmc_shift_register(dmc);
 
         // output sample
-        {
+        if (!dmc.empty) {
             static float x = 0;
             x += 0.7;
             float y = sin(x);
-            dmc.sample = 32 * (0.5 * y + .5);
+            dmc.output_level = 32 * (0.5 * y + .5);
         }
+        else {
+            dmc.output_level = 0;
+        }
+
     }
     else {
         dmc.timer--;
