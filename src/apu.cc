@@ -172,7 +172,6 @@ static void write_dmc_load_counter(DmcChannel &dmc, uint8_t data)
     //                      | If the timer is outputting a clock at the same time,
     //                      | the output level is occasionally not changed properly.[1]
     dmc.direct_load = data & 0x7F;
-    //printf("direct_load: 0x%02X\n", dmc.direct_load);
 }
 
 static void write_dmc_sample_address(DmcChannel &dmc, uint8_t data)
@@ -180,7 +179,6 @@ static void write_dmc_sample_address(DmcChannel &dmc, uint8_t data)
     // $4012    | AAAA.AAAA | Sample address (write)
     // bits 7-0 | AAAA.AAAA | Sample address = %11AAAAAA.AA000000 = $C000 + (A * 64)
     dmc.sample_address = (data << 6) | 0xC000;
-    //printf("address: 0x%04X\n", dmc.sample_address);
 }
 
 static void write_dmc_sample_length(DmcChannel &dmc, uint8_t data)
@@ -188,8 +186,9 @@ static void write_dmc_sample_length(DmcChannel &dmc, uint8_t data)
     // $4013    | LLLL.LLLL | Sample length (write)
     // bits 7-0 | LLLL.LLLL | Sample length = %LLLL.LLLL0001 = (L * 16) + 1 bytes
     dmc.sample_length = (data << 4) | 0x0001;
-    //printf("length: 0x%02X => 0x%04X\n", data, dmc.sample_length);
 }
+
+static void restart_dmc_sample(DmcChannel &dmc);
 
 void APU::WriteStatus(uint8_t data)
 {
@@ -226,13 +225,11 @@ void APU::WriteStatus(uint8_t data)
     dmc_.enabled = data & 0x10;
     //static int i = 0;
     if (!dmc_.enabled) {
-        dmc_.sample_remaining = 0;
-        //printf("****** %d: 0x%02X\n", i++, dmc_.enabled);
+        dmc_.bytes_remaining = 0;
     }
     else {
-        //printf("****** %d: 0x%02X\n", i++, dmc_.enabled);
-        if (dmc_.sample_remaining == 0)
-            dmc_.sample_remaining = dmc_.sample_length;
+        if (dmc_.bytes_remaining == 0)
+            restart_dmc_sample(dmc_);
     }
 }
 
@@ -369,14 +366,14 @@ uint8_t APU::PeekStatus() const
     uint8_t data = 0x00;
 
     //data |= (dmc_interrupt_)         << 7;
-    data |= (dmc_.irq_generated)        << 7;
-    data |= (frame_interrupt_)          << 6;
+    data |= (dmc_.irq_generated)       << 7;
+    data |= (frame_interrupt_)         << 6;
     // no use of bit 5
-    data |= (dmc_.sample_remaining > 0) << 4;
-    data |= (noise_.length > 0)         << 3;
-    data |= (triangle_.length > 0)      << 2;
-    data |= (pulse2_.length > 0)        << 1;
-    data |= (pulse1_.length > 0)        << 0;
+    data |= (dmc_.bytes_remaining > 0) << 4;
+    data |= (noise_.length > 0)        << 3;
+    data |= (triangle_.length > 0)     << 2;
+    data |= (pulse2_.length > 0)       << 1;
+    data |= (pulse1_.length > 0)       << 0;
 
     return data;
 }
@@ -538,46 +535,100 @@ static void clock_noise_timer(NoiseChannel &noise)
     }
 }
 
+static void restart_dmc_sample(DmcChannel &dmc)
+{
+    dmc.byte_addr = dmc.sample_address;
+    dmc.bytes_remaining = dmc.sample_length;
+}
+
 static bool read_dmc_memory(DmcChannel &dmc)
 {
     // Any time the sample buffer is in an empty state and
     // bytes remaining is not zero (including just after a write to $4015
     // that enables the channel, regardless of where that write occurs
     // relative to the bit counter mentioned below), the following occur:
-    if (!dmc.empty || dmc.sample_remaining == 0)
+    if (!dmc.empty || dmc.bytes_remaining == 0)
         return false;
 
     // 1. The CPU is stalled for up to 4 CPU cycles[2] to allow the longest
     // possible write (the return address and write after an IRQ) to finish.
     // If OAM DMA is in progress, it is paused for two cycles.[3] The sample
     // fetch always occurs on an even CPU cycle due to its alignment with the APU
-    //dmc.cpu_stall = true;
+    dmc.cpu_stall = true;
 
     // 2. The sample buffer is filled with the next sample byte read from
     // the current address, subject to whatever mapping hardware is present.
-    //dmc.read_sample = mem[dmc.reading_addr];
+    dmc.sample_buffer = 0; //mem[dmc.reading_addr];
     dmc.empty = false;
 
     // 3. The address is incremented; if it exceeds $FFFF,
     // it is wrapped around to $8000.
-    if (dmc.sample_address == 0xFFFF)
-        dmc.sample_address = 0x8000;
+    if (dmc.byte_addr == 0xFFFF)
+        dmc.byte_addr = 0x8000;
     else
-        dmc.sample_address++;
+        dmc.byte_addr++;
 
     // 4. The bytes remaining counter is decremented; if it becomes zero
     // and the loop flag is set, the sample is restarted (see above);
     // otherwise, if the bytes remaining counter becomes zero and
     // the IRQ enabled flag is set, the interrupt flag is set.
-    dmc.sample_remaining--;
-    if (dmc.sample_remaining == 0) {
+    dmc.bytes_remaining--;
+    if (dmc.bytes_remaining == 0) {
         if (dmc.loop)
-            dmc.restarted = true;
+            restart_dmc_sample(dmc);
         else if (dmc.irq_enabled)
             dmc.irq_generated = true;
     }
 
     return true;
+}
+
+static void clock_dmc_shift_register(DmcChannel &dmc)
+{
+    // When the timer outputs a clock, the following actions occur in order:
+
+    // 1. If the silence flag is clear, the output level changes
+    // based on bit 0 of the shift register. If the bit is 1, add 2; otherwise,
+    // subtract 2. But if adding or subtracting 2 would cause the output level
+    // to leave the 0-127 range, leave the output level unchanged.
+    // This means subtract 2 only if the current level is at least 2,
+    // or add 2 only if the current level is at most 125.
+    if (dmc.enabled) {
+        if (dmc.shift & 0x01) {
+            if (dmc.sample <= 125)
+                dmc.sample += 2;
+        }
+        else {
+            if (dmc.sample >= 2)
+                dmc.sample -= 2;
+        }
+    }
+
+    // 2. The right shift register is clocked.
+    dmc.shift >>= 1;
+
+    // 3. As stated above, the bits-remaining counter is decremented.
+    // If it becomes zero, a new output cycle is started.
+    dmc.bits_remaining--;
+    if (dmc.bits_remaining == 0) {
+        dmc.bits_remaining = 8;
+
+        // When an output cycle ends, a new cycle is started as follows:
+        // 1. The bits-remaining counter is loaded with 8.
+        // 2. If the sample buffer is empty, then the silence flag is set;
+        // otherwise, the silence flag is cleared and the sample buffer is
+        // emptied into the shift register.
+        if (dmc.empty) {
+            dmc.enabled = false;
+        }
+        else {
+            dmc.enabled = true;
+            dmc.shift = dmc.sample_buffer;
+            dmc.empty = true;
+
+            read_dmc_memory(dmc);
+        }
+    }
 }
 
 static void clock_dmc_timer(DmcChannel &dmc)
@@ -589,6 +640,8 @@ static void clock_dmc_timer(DmcChannel &dmc)
         const bool has_sample = read_dmc_memory(dmc);
         if (!has_sample)
             return;
+
+        clock_dmc_shift_register(dmc);
 
         // output sample
         {
