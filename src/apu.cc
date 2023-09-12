@@ -537,7 +537,7 @@ static void clock_noise_timer(NoiseChannel &noise)
 
 static void restart_dmc_sample(DmcChannel &dmc)
 {
-    dmc.byte_addr = dmc.sample_address;
+    dmc.current_address = dmc.sample_address;
     dmc.bytes_remaining = dmc.sample_length;
 }
 
@@ -547,26 +547,27 @@ static void read_dmc_memory(DmcChannel &dmc)
     // bytes remaining is not zero (including just after a write to $4015
     // that enables the channel, regardless of where that write occurs
     // relative to the bit counter mentioned below), the following occur:
-    if (!dmc.empty || dmc.bytes_remaining == 0)
+    if (!dmc.buffer_empty || dmc.bytes_remaining == 0)
         return;
 
     // 1. The CPU is stalled for up to 4 CPU cycles[2] to allow the longest
     // possible write (the return address and write after an IRQ) to finish.
     // If OAM DMA is in progress, it is paused for two cycles.[3] The sample
     // fetch always occurs on an even CPU cycle due to its alignment with the APU
+    // TODO implement cpu stall
     dmc.cpu_stall = true;
 
     // 2. The sample buffer is filled with the next sample byte read from
     // the current address, subject to whatever mapping hardware is present.
-    dmc.sample_buffer = dmc.cpu->PeekData(dmc.byte_addr);
-    dmc.empty = false;
+    dmc.sample_buffer = dmc.cpu->PeekData(dmc.current_address);
+    dmc.buffer_empty = false;
 
     // 3. The address is incremented; if it exceeds $FFFF,
     // it is wrapped around to $8000.
-    if (dmc.byte_addr == 0xFFFF)
-        dmc.byte_addr = 0x8000;
+    if (dmc.current_address == 0xFFFF)
+        dmc.current_address = 0x8000;
     else
-        dmc.byte_addr++;
+        dmc.current_address++;
 
     // 4. The bytes remaining counter is decremented; if it becomes zero
     // and the loop flag is set, the sample is restarted (see above);
@@ -592,7 +593,7 @@ static void clock_dmc_shift_register(DmcChannel &dmc)
     // This means subtract 2 only if the current level is at least 2,
     // or add 2 only if the current level is at most 125.
     if (dmc.enabled) {
-        if (dmc.shift & 0x01) {
+        if (dmc.shift_register & 0x01) {
             if (dmc.output_level <= 125)
                 dmc.output_level += 2;
         }
@@ -603,26 +604,26 @@ static void clock_dmc_shift_register(DmcChannel &dmc)
     }
 
     // 2. The right shift register is clocked.
-    dmc.shift >>= 1;
+    dmc.shift_register >>= 1;
 
     // 3. As stated above, the bits-remaining counter is decremented.
     // If it becomes zero, a new output cycle is started.
-    dmc.bits_remaining--;
-    if (dmc.bits_remaining == 0) {
-        dmc.bits_remaining = 8;
+    dmc.bits_counter--;
+    if (dmc.bits_counter == 0) {
+        dmc.bits_counter = 8;
 
         // When an output cycle ends, a new cycle is started as follows:
         // 1. The bits-remaining counter is loaded with 8.
         // 2. If the sample buffer is empty, then the silence flag is set;
         // otherwise, the silence flag is cleared and the sample buffer is
         // emptied into the shift register.
-        if (dmc.empty) {
+        if (dmc.buffer_empty) {
             dmc.enabled = false;
         }
         else {
             dmc.enabled = true;
-            dmc.shift = dmc.sample_buffer;
-            dmc.empty = true;
+            dmc.shift_register = dmc.sample_buffer;
+            dmc.buffer_empty = true;
         }
     }
 }

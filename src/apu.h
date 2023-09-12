@@ -26,12 +26,14 @@ struct Envelope {
 };
 
 struct PulseChannel {
+    // timer
     bool enabled = false;
-    uint8_t length = 0;
-    bool length_halt = false;
-
     uint16_t timer = 0;
     uint16_t timer_period = 0;
+
+    // length
+    uint8_t length = 0;
+    bool length_halt = false;
 
     uint8_t duty = 0;
     uint8_t sequence_pos = 0;
@@ -41,7 +43,12 @@ struct PulseChannel {
 };
 
 struct TriangleChannel {
+    // timer
     bool enabled = false;
+    uint16_t timer = 0;
+    uint16_t timer_period = 0;
+
+    // length
     uint8_t length = 0;
     bool length_halt = false;
 
@@ -50,74 +57,52 @@ struct TriangleChannel {
     uint8_t linear_period = 0;
     uint8_t linear_reload = 0;
 
-    uint16_t timer = 0;
-    uint16_t timer_period = 0;
-
     uint8_t sequence_pos = 0;
 };
 
 struct NoiseChannel {
+    // timer
     bool enabled = false;
+    uint16_t timer = 0;
+    uint16_t timer_period = 0;
+
+    // length
     uint8_t length = 0;
     bool length_halt = false;
 
     uint16_t shift = 1;
     uint8_t mode = 0;
 
-    uint16_t timer = 0;
-    uint16_t timer_period = 0;
-
     Envelope envelope;
 };
 
 struct DmcChannel {
+    // timer
     bool enabled = false;
     uint16_t timer = 0;
     uint16_t timer_period = 0;
-
-    const CPU *cpu = nullptr;
 
     // flags
     bool irq_generated = false;
     bool irq_enabled = false;
     bool cpu_stall = false;
-    bool loop = false;
-    bool empty = true;
-    bool silent = true;
-
-    // shift register
-    uint8_t shift = 0;
-    uint8_t bits_remaining = 0;
-
-    // samples
-    uint8_t output_level = 0;
-    uint16_t sample_address = 0;
-    uint16_t sample_length = 0;
-    uint16_t sample_buffer = 0;
-    uint16_t bytes_remaining = 0;
-    uint16_t byte_addr = 0;
 
     // sample
-    struct Sample {
-        bool empty = true;
-        uint8_t buffer = 0;
-    } sample;
+    bool buffer_empty = true;
+    uint8_t sample_buffer = 0;
 
     // memory reader
-    struct MemoryReader {
-        uint16_t start = 0;
-        uint16_t length = 0;
-        uint16_t addr = 0;
-        uint16_t remaining = 0;
-    } memory;
+    bool loop = false;
+    const CPU *cpu = nullptr;
+    uint16_t sample_address = 0;
+    uint16_t sample_length = 0;
+    uint16_t current_address = 0;
+    uint16_t bytes_remaining = 0;
 
     // output unit
-    struct OutputUnit {
-        bool silent = true;
-        uint8_t level = 0;
-        uint8_t shift = 0;
-        uint8_t bits = 0;
-    } output;
+    uint8_t output_level = 0;
+    uint8_t shift_register = 0;
+    uint8_t bits_counter = 0;
 };
 
 class APU {
