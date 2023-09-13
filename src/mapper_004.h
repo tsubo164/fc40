@@ -15,6 +15,7 @@ private:
     uint8_t prg_bank_[4] = {};
     uint8_t chr_bank_[8] = {};
 
+    bool use_chr_ram_ = false;
     uint8_t bank_select_ = 0;
     uint8_t prg_bank_mode_ = 0;
     uint8_t chr_bank_mode_ = 0;

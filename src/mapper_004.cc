@@ -16,6 +16,13 @@ Mapper_004::Mapper_004(const std::vector<uint8_t> &prg_rom,
     for (int i = 0; i < 8; i++)
         chr_bank_[i] = i;
 
+    if (GetChrRomSize() == 0) {
+        use_chr_ram(0x2000);
+        use_chr_ram_ = true;
+        // not used
+        chr_bank_count_ = 8;
+    }
+
     // TODO confirm
     use_prg_ram(0x2000);
 }
@@ -55,6 +62,11 @@ uint8_t Mapper_004::do_read_prg(uint16_t addr) const
 
 uint8_t Mapper_004::do_read_chr(uint16_t addr) const
 {
+    if (use_chr_ram_) {
+        const uint32_t a = addr & 0x1FFF;
+        return read_chr_ram(a);
+    }
+
     if (addr >= 0x0000 && addr <= 0x03FF) {
         const uint32_t a = chr_bank_[0] * 0x0400 + (addr & 0x03FF);
         return read_chr_rom(a);
@@ -96,7 +108,10 @@ void Mapper_004::do_write_prg(uint16_t addr, uint8_t data)
 {
     const bool even = addr % 2 == 0;
 
-    if (addr >= 0x8000 && addr <= 0x9FFF) {
+    if (addr >= 0x6000 && addr <= 0x7FFF) {
+        write_prg_ram(addr - 0x6000, data);
+    }
+    else if (addr >= 0x8000 && addr <= 0x9FFF) {
         if (even)
             set_bank_select(addr, data);
         else
@@ -276,6 +291,11 @@ void Mapper_004::irq_enable(uint8_t data)
 
 void Mapper_004::do_write_chr(uint16_t addr, uint8_t data)
 {
+    if (!use_chr_ram_)
+        return;
+
+    const uint32_t a = addr & 0x1FFF;
+    write_chr_ram(a, data);
 }
 
 } // namespace
