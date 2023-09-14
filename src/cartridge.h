@@ -27,6 +27,10 @@ public:
     size_t GetPrgSize() const;
     size_t GetChrSize() const;
 
+    bool IsSetIRQ() const;
+    void ClearIRQ();
+    void Clock(int cycle, int scanline);
+
     bool IsMapperSupported() const;
     bool IsVerticalMirroring() const;
     bool HasBattery() const;

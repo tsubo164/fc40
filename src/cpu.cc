@@ -978,6 +978,10 @@ int CPU::handle_interrupt()
     else if (apu_.IsSetIRQ() && !get_flag(I)) {
         cycles = do_interrupt(0xFFFE);
     }
+    else if (cart_->IsSetIRQ() && !get_flag(I)) {
+        cycles = do_interrupt(0xFFFE);
+        cart_->ClearIRQ();
+    }
 
     return cycles;
 }

@@ -131,6 +131,21 @@ size_t Cartridge::GetChrSize() const
     return mapper_->GetChrRomSize();
 }
 
+bool Cartridge::IsSetIRQ() const
+{
+    return mapper_->IsSetIRQ();
+}
+
+void Cartridge::ClearIRQ()
+{
+    mapper_->ClearIRQ();
+}
+
+void Cartridge::Clock(int cycle, int scanline)
+{
+    mapper_->Clock(cycle, scanline);
+}
+
 bool Cartridge::IsMapperSupported() const
 {
     return mapper_ != nullptr;

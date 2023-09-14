@@ -76,6 +76,21 @@ void Mapper::SetPrgRam(const std::vector<uint8_t> &sram)
     prg_ram_ = sram;
 }
 
+bool Mapper::IsSetIRQ() const
+{
+    return irq_generated_;
+}
+
+void Mapper::ClearIRQ()
+{
+    irq_generated_ = false;
+}
+
+void Mapper::Clock(int cycle, int scanline)
+{
+    do_clock(cycle, scanline);
+}
+
 Mirroring Mapper::GetMirroring() const
 {
     return mirroring_;
@@ -148,6 +163,11 @@ void Mapper::use_chr_ram(uint32_t size)
 void Mapper::set_board_name(const std::string &name)
 {
     board_name_ = name;
+}
+
+void Mapper::set_irq_generated(bool generated)
+{
+    irq_generated_ = generated;
 }
 
 std::shared_ptr<Mapper> new_mapper(int id,

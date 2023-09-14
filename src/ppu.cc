@@ -812,6 +812,11 @@ void PPU::Clock()
         if (cycle_ == 1)
             leave_vblank();
 
+    // The counter is based on the following trick:
+    // whenever rendering is turned on in the PPU
+    if (is_rendering)
+        cart_->Clock(cycle_, scanline_);
+
     // render pixel
     if (scanline_ >= 0 && scanline_ <= 239) {
         if (cycle_ >= 1 && cycle_ <= 256) {
