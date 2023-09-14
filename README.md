@@ -7,8 +7,7 @@
 - A NES Emulator
 - Written in C++
 - Requires GLFW and OpenAL
-- Supports mapper 0 (200+ games)
-- Partically supports mapper 1, 2 and 3
+- Supports mapper 0, 1, 2, 3, 4 (200+ games)
 
 ## Features
 - Game pad support
@@ -18,9 +17,7 @@
 - R -> reset button
 - P -> Show tile pattern
 - G -> Show tile and sprite grid
-- Space -> Pause emulator
-- Tab -> Step when paused
-- Four audio channels supoprted
+- Five audio channels supoprted
 - No multi player supoprt yet
 
 ## Build
