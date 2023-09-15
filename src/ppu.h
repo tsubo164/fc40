@@ -118,6 +118,7 @@ private:
     // control
     void set_stat(uint8_t flag, bool val);
     bool get_ctrl(uint8_t flag) const;
+    bool is_sprite8x16() const;
     bool is_rendering_bg() const;
     bool is_rendering_sprite() const;
     bool is_rendering_left_bg(int x) const;
@@ -140,7 +141,9 @@ private:
     void clear_secondary_oam();
     ObjectAttribute get_sprite(int index) const;
     void evaluate_sprite();
-    uint8_t fetch_sprite_row(uint8_t tile_id, int y, uint8_t plane) const;
+    uint8_t fetch_sprite_row(uint8_t tile_id, int y, uint8_t plane, bool flip_v) const;
+    uint8_t fetch_sprite_row8x8(uint8_t tile_id, int y, uint8_t plane, bool flip_v) const;
+    uint8_t fetch_sprite_row8x16(uint8_t tile_id, int y, uint8_t plane, bool flip_v) const;
     void fetch_sprite_data();
     void shift_sprite_data();
 

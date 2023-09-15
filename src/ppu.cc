@@ -48,6 +48,12 @@ bool PPU::get_ctrl(uint8_t flag) const
     return (ctrl_ & flag) > 0;
 }
 
+bool PPU::is_sprite8x16() const
+{
+    // Sprite size (0: 8x8 pixels; 1: 8x16 pixels – see PPU OAM#Byte 1)
+    return get_ctrl(CTRL_SPRITE_SIZE);
+}
+
 bool PPU::is_rendering_bg() const
 {
     return mask_ & MASK_SHOW_BG;
@@ -489,7 +495,7 @@ void PPU::evaluate_sprite()
     // secondary oam crear occurs cycle 65 - 256
     // index = 0 .. 191
     const int index = cycle_ - 65;
-    const int sprite_height = 8;
+    const int sprite_height = is_sprite8x16() ? 16 : 8;
 
     if (index > 63)
         return;
@@ -509,12 +515,59 @@ void PPU::evaluate_sprite()
     }
 }
 
-uint8_t PPU::fetch_sprite_row(uint8_t tile_id, int y, uint8_t plane) const
+uint8_t PPU::fetch_sprite_row8x8(uint8_t tile_id, int y, uint8_t plane, bool flip_v) const
 {
+    // For 8x8 sprites, this is the tile number of this sprite within
+    // the pattern table selected in bit 3 of PPUCTRL ($2000).
+    const int yy = flip_v ? 7 - y : y;
     const uint16_t base = get_ctrl(CTRL_PATTERN_SPRITE) ? 0x1000 : 0x0000;
-    const uint16_t addr = base + 16 * tile_id + plane + y;
+    const uint16_t addr = base + 16 * tile_id + plane + yy;
 
     return read_byte(addr);
+}
+
+uint8_t PPU::fetch_sprite_row8x16(uint8_t tile_id, int y, uint8_t plane, bool flip_v) const
+{
+    // For 8x16 sprites, the PPU ignores the pattern table selection and
+    // selects a pattern table from bit 0 of this number.
+    // 76543210
+    // ||||||||
+    // |||||||+- Bank ($0000 or $1000) of tiles
+    // +++++++-- Tile number of top of sprite
+    //           (0 to 254; bottom half gets the next tile)
+    int yy = 0;
+    int top_or_bottom = 0;
+
+    if (flip_v) {
+        yy = 7 - (y & 0x07);
+        top_or_bottom = y > 7 ? 0xFE : 0xFF;
+    }
+    else {
+        yy = y & 0x07;
+        top_or_bottom = y > 7 ? 0xFF : 0xFE;
+    }
+
+    const uint16_t base = (tile_id & 0x01) ? 0x1000 : 0x0000;
+    const uint16_t addr = base + 16 * (tile_id & top_or_bottom) + plane + yy;
+
+    // Thus, the pattern table memory map for 8x16 sprites looks like this:
+    // $00: $0000-$001F
+    // $01: $1000-$101F
+    // $02: $0020-$003F
+    // $03: $1020-$103F
+    // $04: $0040-$005F
+    // [...]
+    // $FE: $0FE0-$0FFF
+    // $FF: $1FE0-$1FFF
+    return read_byte(addr);
+}
+
+uint8_t PPU::fetch_sprite_row(uint8_t tile_id, int y, uint8_t plane, bool flip_v) const
+{
+    if (is_sprite8x16())
+        return fetch_sprite_row8x16(tile_id, y, plane, flip_v);
+    else
+        return fetch_sprite_row8x8(tile_id, y, plane, flip_v);
 }
 
 static uint8_t flip_pattern_row(uint8_t bits)
@@ -554,11 +607,8 @@ void PPU::fetch_sprite_data()
 
     case 5:
         // Low sprite byte
-        if (obj.flipped_v)
-            sprite_y = 7 - sprite_y;
-
         if (is_visible)
-            patt.lo = fetch_sprite_row(sprite_id, sprite_y, 0);
+            patt.lo = fetch_sprite_row(sprite_id, sprite_y, 0, obj.flipped_v);
         else
             patt.lo = 0x00;
 
@@ -568,11 +618,8 @@ void PPU::fetch_sprite_data()
 
     case 7:
         // High sprite byte
-        if (obj.flipped_v)
-            sprite_y = 7 - sprite_y;
-
         if (is_visible)
-            patt.hi = fetch_sprite_row(sprite_id, sprite_y, 8);
+            patt.hi = fetch_sprite_row(sprite_id, sprite_y, 8, obj.flipped_v);
         else
             patt.hi = 0x00;
 
@@ -609,12 +656,12 @@ static const Pixel BACKDROP;
 
 static Pixel get_pixel(PatternRow patt, uint8_t fine_x)
 {
-    const uint8_t mask_ = 0x80 >> fine_x;
-    const uint8_t hi = (patt.hi & mask_) > 0;
-    const uint8_t lo = (patt.lo & mask_) > 0;
+    const uint8_t mask = 0x80 >> fine_x;
+    const uint8_t hi = (patt.hi & mask) > 0;
+    const uint8_t lo = (patt.lo & mask) > 0;
     const uint8_t val = (hi << 1) | lo;
-    const uint8_t pal_lo = (patt.palette_lo & mask_) > 0;
-    const uint8_t pal_hi = (patt.palette_hi & mask_) > 0;
+    const uint8_t pal_lo = (patt.palette_lo & mask) > 0;
+    const uint8_t pal_hi = (patt.palette_hi & mask) > 0;
     const uint8_t pal = (pal_hi << 1) | pal_lo;
 
     Pixel pix;
