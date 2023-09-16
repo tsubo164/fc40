@@ -1122,4 +1122,9 @@ int PPU::GetScanline() const
     return scanline_;
 }
 
+bool PPU::IsSprite8x16() const
+{
+    return is_sprite8x16();
+}
+
 } // namespace

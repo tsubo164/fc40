@@ -77,6 +77,7 @@ public:
     ObjectAttribute ReadOam(int index) const;
     int GetCycle() const;
     int GetScanline() const;
+    bool IsSprite8x16() const;
 
 private:
     Cartridge *cart_ = nullptr;

@@ -367,6 +367,8 @@ static void render_pattern_table(const FrameBuffer &patt)
 
 static void render_sprite_box(const PPU &ppu, int width, int height)
 {
+    const int sprite_h = ppu.IsSprite8x16() ? 16 : 8;
+
     glPushAttrib(GL_CURRENT_BIT);
 
     for (int i = 0; i < 64; i++) {
@@ -385,8 +387,8 @@ static void render_sprite_box(const PPU &ppu, int width, int height)
         glBegin(GL_LINE_LOOP);
             glVertex3f(x + 0, y - 0, 0);
             glVertex3f(x + 8, y - 0, 0);
-            glVertex3f(x + 8, y - 8, 0);
-            glVertex3f(x + 0, y - 8, 0);
+            glVertex3f(x + 8, y - sprite_h, 0);
+            glVertex3f(x + 0, y - sprite_h, 0);
         glEnd();
     }
 
