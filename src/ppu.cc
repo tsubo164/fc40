@@ -536,19 +536,19 @@ uint8_t PPU::fetch_sprite_row8x16(uint8_t tile_id, int y, uint8_t plane, bool fl
     // +++++++-- Tile number of top of sprite
     //           (0 to 254; bottom half gets the next tile)
     int yy = 0;
-    int top_or_bottom = 0;
+    int bottom = 0;
 
     if (flip_v) {
         yy = 7 - (y & 0x07);
-        top_or_bottom = y > 7 ? 0xFE : 0xFF;
+        bottom = y > 7 ? 0 : 1;
     }
     else {
         yy = y & 0x07;
-        top_or_bottom = y > 7 ? 0xFF : 0xFE;
+        bottom = y > 7 ? 1 : 0;
     }
 
     const uint16_t base = (tile_id & 0x01) ? 0x1000 : 0x0000;
-    const uint16_t addr = base + 16 * (tile_id & top_or_bottom) + plane + yy;
+    const uint16_t addr = base + 0x10 * ((tile_id & 0xFE) + bottom) + plane + yy;
 
     // Thus, the pattern table memory map for 8x16 sprites looks like this:
     // $00: $0000-$001F
