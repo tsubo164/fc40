@@ -1,9 +1,13 @@
 #include "apu.h"
 #include "sound.h"
 #include <iostream>
+#include <algorithm>
 #include <cmath>
 
 namespace nes {
+
+constexpr float AUDIO_SAMPLE_PER_FRAME = 44100 / 60;
+constexpr float DECAY_RATE = 1.0 / AUDIO_SAMPLE_PER_FRAME;
 
 static const uint8_t length_table[] = {
      10, 254,  20,   2,  40,   4,  80,   6,
@@ -376,23 +380,10 @@ uint8_t APU::PeekStatus() const
     return data;
 }
 
-static float calculate_pulse_level(uint8_t pulse1_, uint8_t pulse2_)
+static float calculate_pulse_level(float pulse1_, float pulse2_)
 {
     // Linear Approximation sounds less cracking/popping
     return 0.00752 * (pulse1_ + pulse2_);
-
-    static float output_table[32] = {0.f};
-    static int table_built = 0;
-
-    if (!table_built) {
-        const int N = sizeof(output_table) / sizeof(output_table[0]);
-        int i;
-        for (i = 0; i < N; i++)
-            output_table[i] = 95.88 / (8128. / i + 100);
-        table_built = 1;
-    }
-
-    return output_table[(pulse1_ + pulse2_) & 0x1F];
 }
 
 static float calculate_tnd_level(uint8_t triangle, uint8_t noise, uint8_t dmc)
@@ -407,7 +398,7 @@ static float calculate_tnd_level(uint8_t triangle, uint8_t noise, uint8_t dmc)
     return 159.79 / (1. / tnd + 100.);
 }
 
-static uint8_t sample_pulse(PulseChannel &pulse)
+static float sample_pulse(PulseChannel &pulse)
 {
     const static uint8_t sequence_table[][8] = {
         {0, 1, 0, 0, 0, 0, 0, 0}, // (12.5%)
@@ -436,34 +427,42 @@ static uint8_t sample_pulse(PulseChannel &pulse)
         return pulse.envelope.decay;
 }
 
-static uint8_t sample_triangle(TriangleChannel &tri)
+static float sample_triangle(TriangleChannel &tri)
 {
     const static uint8_t sequence_table[32] = {
         15, 14, 13, 12, 11, 10,  9,  8,  7,  6,  5,  4,  3,  2,  1,  0,
          0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15
     };
 
-    const uint8_t sample = sequence_table[tri.sequence_pos];
+    if (tri.length > 0) {
+        // active. updating output_level
+        const float t = static_cast<float>(tri.timer) / tri.timer_period;
+        const uint8_t a = sequence_table[tri.sequence_pos];
+        const uint8_t b = sequence_table[(tri.sequence_pos + 1) % 32];
 
-    if (sample == 0)
-        return 0;
+        if (tri.start_ramp < 1) {
+            tri.start_ramp += DECAY_RATE;
+            tri.start_ramp = std::min(tri.start_ramp, 1.f);
+        }
 
-    if (tri.enabled == false)
-        return 0;
+        tri.output_level = a * t + b * (1 - t);
+        tri.output_level *= tri.start_ramp;
+    }
+    else if (tri.output_level > 0) {
+        // silenced but volume is still remaining
+        tri.output_level -= 16 * DECAY_RATE;
+        tri.output_level = std::max(tri.output_level, 0.f);
+    }
+    else {
+        // finished outputting volume
+        tri.output_level = 0;
+        tri.start_ramp = 0;
+    }
 
-    if (tri.length == 0)
-        return 0;
-
-    if (tri.timer_period < 2)
-        return 0;
-
-    if (tri.linear_counter == 0)
-        return 0;
-
-    return sample;
+    return tri.output_level;
 }
 
-static uint8_t sample_noise(NoiseChannel &noise)
+static float sample_noise(NoiseChannel &noise)
 {
     if (noise.enabled == 0)
         return 0;
@@ -480,7 +479,7 @@ static uint8_t sample_noise(NoiseChannel &noise)
         return noise.envelope.decay;
 }
 
-static uint8_t sample_dmc(DmcChannel &dmc)
+static float sample_dmc(DmcChannel &dmc)
 {
     // The output level is sent to the mixer whether
     // the channel is enabled or not.
@@ -841,8 +840,8 @@ bool APU::Run(int cpu_cycles)
 }
 
 constexpr int CPU_CLOCK_FREQ = 1789773;
-constexpr double APU_TIME_STEP = 1. / CPU_CLOCK_FREQ;
-constexpr double AUDIO_SAMPLE_STEP = 1. / 44100;
+constexpr float APU_TIME_STEP = 1. / CPU_CLOCK_FREQ;
+constexpr float AUDIO_SAMPLE_STEP = 1. / 44100;
 
 void APU::Clock()
 {
@@ -858,13 +857,13 @@ void APU::Clock()
         // generate a sample
         audio_time_ -= AUDIO_SAMPLE_STEP;
 
-        const uint8_t p1 = (chan_enable_ & 0x01) ? sample_pulse(pulse1_) : 0;
-        const uint8_t p2 = (chan_enable_ & 0x02) ? sample_pulse(pulse2_) : 0;
+        const float p1 = (chan_enable_ & 0x01) ? sample_pulse(pulse1_) : 0;
+        const float p2 = (chan_enable_ & 0x02) ? sample_pulse(pulse2_) : 0;
         const float pulse_out = calculate_pulse_level(p1, p2);
 
-        const uint8_t t = (chan_enable_ & 0x04) ? sample_triangle(triangle_) : 0;
-        const uint8_t n = (chan_enable_ & 0x08) ? sample_noise(noise_) : 0;
-        const uint8_t d = (chan_enable_ & 0x10) ? sample_dmc(dmc_) : 0;
+        const float t = (chan_enable_ & 0x04) ? sample_triangle(triangle_) : 0;
+        const float n = (chan_enable_ & 0x08) ? sample_noise(noise_) : 0;
+        const float d = (chan_enable_ & 0x10) ? sample_dmc(dmc_) : 0;
         const float tnd_out = calculate_tnd_level(t, n, d);
 
         static float lpf = 0;

@@ -58,6 +58,10 @@ struct TriangleChannel {
     uint8_t linear_reload = 0;
 
     uint8_t sequence_pos = 0;
+
+    // output
+    float output_level = 0;
+    float start_ramp = 0;
 };
 
 struct NoiseChannel {
