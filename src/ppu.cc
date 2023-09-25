@@ -878,10 +878,12 @@ void PPU::Clock()
 
         // for debug
         if (cycle_ == 0) {
-            const VramPointer v = decode_address(temp_addr_);
-            scrolls_[scanline_] = {
-                v.tile_x, v.tile_y, fine_x_, v.fine_y
-            };
+            if (is_rendering_bg()) {
+                const VramPointer v = decode_address(temp_addr_);
+                scrolls_[scanline_] = {
+                    v.tile_x, v.tile_y, fine_x_, v.fine_y
+                };
+            }
         }
     }
 
