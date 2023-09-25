@@ -22,7 +22,7 @@ struct KeyState {
 static void init_gl();
 static void transfer_texture(const FrameBuffer &fb);
 static void resize(GLFWwindow *window, int width, int height);
-static void render_grid(int width, int height);
+static void render_grid(const PPU &ppu, int width, int height);
 static void render_pattern_table(const FrameBuffer &patt);
 static void render_sprite_box(const PPU &ppu, int width, int height);
 
@@ -222,7 +222,7 @@ void Display::render() const
     glDisable(GL_TEXTURE_2D);
 
     if (show_guide_) {
-        render_grid(W, H);
+        render_grid(nes_.ppu, W, H);
         render_sprite_box(nes_.ppu, W, H);
     }
 
@@ -286,36 +286,58 @@ static void resize(GLFWwindow *window, int width, int height)
             -win_h/2 - MARGIN, win_h/2 + MARGIN, -1., 1.);
 }
 
-static void render_grid(int width, int height)
+static void render_grid(const PPU &ppu, int width, int height)
 {
     const int W = width;
     const int H = height;
 
     glPushAttrib(GL_CURRENT_BIT);
+
+    // grid
     glBegin(GL_LINES);
-    for (int i = 0; i <= W / 8; i++) {
-        if (i % 4 == 0)
+    for (int y = 0; y < H; y++) {
+        const Scroll scroll = ppu.GetScroll(y);
+        const int Y = (y + 8 * scroll.coarse_y + scroll.fine_y) % 240;
+
+        if (Y % 32 == 0)
             glColor3f(0, 1, 0);
-        else
-        if (i % 2 == 0)
+        else if (Y % 16 == 0)
             glColor3f(0, .5, 0);
         else
             glColor3f(0, .25, 0);
-        glVertex3f(-W/2 + i * 8,  H/2, 0);
-        glVertex3f(-W/2 + i * 8, -H/2, 0);
-    }
-    for (int i = 0; i <= H / 8; i++) {
-        if (i % 4 == 2 || i == 0)
-            glColor3f(0, 1, 0);
-        else
-        if (i % 2 == 0)
-            glColor3f(0, .5, 0);
-        else
-            glColor3f(0, .25, 0);
-        glVertex3f( W/2, -H/2 + i * 8, 0);
-        glVertex3f(-W/2, -H/2 + i * 8, 0);
+
+        if (Y % 8 == 0) {
+            glVertex3f( W/2, H/2 - y, 0);
+            glVertex3f(-W/2, H/2 - y, 0);
+        }
+
+        for (int x = 0; x < W; x++) {
+            const int X = x + 8 * scroll.coarse_x + scroll.fine_x;
+
+            if (X % 32 == 0)
+                glColor3f(0, 1, 0);
+            else if (X % 16 == 0)
+                glColor3f(0, .5, 0);
+            else
+                glColor3f(0, .25, 0);
+
+            if (X % 8 == 0) {
+                glVertex3f(-W/2 + x, H/2 - y, 0);
+                glVertex3f(-W/2 + x, H/2 - y - 1, 0);
+            }
+        }
     }
     glEnd();
+
+    // outer frame
+    glBegin(GL_LINE_LOOP);
+    glColor3f(0, 1, 0);
+    glVertex3f(-W/2,  H/2, 0);
+    glVertex3f( W/2,  H/2, 0);
+    glVertex3f( W/2, -H/2, 0);
+    glVertex3f(-W/2, -H/2, 0);
+    glEnd();
+
     glPopAttrib();
 }
 

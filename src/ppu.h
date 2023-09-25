@@ -18,7 +18,7 @@ struct PatternRow {
 
 struct ObjectAttribute {
     uint8_t id = 0xFF;
-    uint8_t x, y = 0xFF;
+    uint8_t x = 0xFF, y = 0xFF;
     uint8_t palette = 0xFF;
     uint8_t priority = 0xFF;
     uint8_t flipped_h = 0xFF;
@@ -30,6 +30,17 @@ struct Pixel {
     uint8_t palette = 0;
     uint8_t priority = 0;
     bool sprite_zero = false;
+};
+
+// for debug
+struct Scroll {
+    Scroll() {}
+    Scroll(int coarseX, int coarseY, int fineX, int fineY)
+        : coarse_x(coarseX), coarse_y(coarseY), fine_x(fineX), fine_y(fineY) {}
+    uint8_t coarse_x = 0;
+    uint8_t coarse_y = 0;
+    uint8_t fine_x = 0;
+    uint8_t fine_y = 0;
 };
 
 class PPU {
@@ -78,6 +89,7 @@ public:
     int GetCycle() const;
     int GetScanline() const;
     bool IsSprite8x16() const;
+    Scroll GetScroll(int scanline) const;
 
 private:
     Cartridge *cart_ = nullptr;
@@ -115,6 +127,9 @@ private:
     ObjectAttribute rendering_oam_[8];
     PatternRow rendering_sprite_[8];
     int sprite_count_ = 0;
+
+    // debug
+    std::array<Scroll,240> scrolls_;
 
     // control
     void set_stat(uint8_t flag, bool val);

@@ -6,9 +6,6 @@
 
 namespace nes {
 
-constexpr float AUDIO_SAMPLE_PER_FRAME = 44100 / 60;
-constexpr float DECAY_RATE = 1.0 / AUDIO_SAMPLE_PER_FRAME;
-
 static const uint8_t length_table[] = {
      10, 254,  20,   2,  40,   4,  80,   6,
     160,   8,  60,  10,  14,  12,  26,  14,
@@ -429,6 +426,9 @@ static float sample_pulse(PulseChannel &pulse)
 
 static float sample_triangle(TriangleChannel &tri)
 {
+    static constexpr float AUDIO_SAMPLE_PER_FRAME = 44100 / 60;
+    static constexpr float DECAY_RATE = 1.0 / AUDIO_SAMPLE_PER_FRAME;
+
     const static uint8_t sequence_table[32] = {
         15, 14, 13, 12, 11, 10,  9,  8,  7,  6,  5,  4,  3,  2,  1,  0,
          0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15

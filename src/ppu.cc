@@ -875,6 +875,14 @@ void PPU::Clock()
             if (is_rendering_sprite())
                 shift_sprite_data();
         }
+
+        // for debug
+        if (cycle_ == 0) {
+            const VramPointer v = decode_address(temp_addr_);
+            scrolls_[scanline_] = {
+                v.tile_x, v.tile_y, fine_x_, v.fine_y
+            };
+        }
     }
 
     // advance cycle and scanline
@@ -1125,6 +1133,11 @@ int PPU::GetScanline() const
 bool PPU::IsSprite8x16() const
 {
     return is_sprite8x16();
+}
+
+Scroll PPU::GetScroll(int scanline) const
+{
+    return scrolls_[scanline];
 }
 
 } // namespace
