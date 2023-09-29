@@ -141,9 +141,15 @@ void Cartridge::ClearIRQ()
     mapper_->ClearIRQ();
 }
 
-void Cartridge::Clock(int cycle, int scanline)
+void Cartridge::PpuClock(int cycle, int scanline)
 {
-    mapper_->Clock(cycle, scanline);
+    mapper_->PpuClock(cycle, scanline);
+}
+
+void Cartridge::Run(int cpu_cycles)
+{
+    for (int i = 0; i < cpu_cycles; i++)
+        mapper_->CpuClock();
 }
 
 bool Cartridge::IsMapperSupported() const

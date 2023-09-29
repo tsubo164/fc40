@@ -29,7 +29,8 @@ public:
 
     bool IsSetIRQ() const;
     void ClearIRQ();
-    void Clock(int cycle, int scanline);
+    void PpuClock(int cycle, int scanline);
+    void Run(int cpu_cycles);
 
     bool IsMapperSupported() const;
     bool IsVerticalMirroring() const;

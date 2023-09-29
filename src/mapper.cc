@@ -4,6 +4,7 @@
 #include "mapper_002.h"
 #include "mapper_003.h"
 #include "mapper_004.h"
+#include "mapper_019.h"
 
 namespace nes {
 
@@ -86,9 +87,14 @@ void Mapper::ClearIRQ()
     irq_generated_ = false;
 }
 
-void Mapper::Clock(int cycle, int scanline)
+void Mapper::PpuClock(int cycle, int scanline)
 {
-    do_clock(cycle, scanline);
+    do_ppu_clock(cycle, scanline);
+}
+
+void Mapper::CpuClock()
+{
+    do_cpu_clock();
 }
 
 Mirroring Mapper::GetMirroring() const
@@ -165,9 +171,9 @@ void Mapper::set_board_name(const std::string &name)
     board_name_ = name;
 }
 
-void Mapper::set_irq_generated(bool generated)
+void Mapper::set_irq()
 {
-    irq_generated_ = generated;
+    irq_generated_ = true;
 }
 
 std::shared_ptr<Mapper> new_mapper(int id,
@@ -194,7 +200,12 @@ std::shared_ptr<Mapper> new_mapper(int id,
         break;
 
     case 4:
+    case 206:
         m = new Mapper_004(prg_data, chr_data);
+        break;
+
+    case 19:
+        m = new Mapper_019(prg_data, chr_data);
         break;
 
     default:

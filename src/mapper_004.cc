@@ -336,7 +336,7 @@ void Mapper_004::irq_enable(uint8_t data)
     irq_enabled_ = true;
 }
 
-void Mapper_004::do_clock(int cycle, int scanline)
+void Mapper_004::do_ppu_clock(int cycle, int scanline)
 {
     if (cycle != 261)
         return;
@@ -359,7 +359,7 @@ void Mapper_004::do_clock(int cycle, int scanline)
     // triggered. The "alternate revision" checks the IRQ counter
     // transition 1->0, whether from decrementing or reloading.
     if (irq_counter_ == 0 && irq_enabled_) {
-        set_irq_generated(true);
+        set_irq();
     }
 }
 

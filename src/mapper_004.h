@@ -45,7 +45,8 @@ private:
     uint8_t do_read_chr(uint16_t addr) const override final;
     void do_write_prg(uint16_t addr, uint8_t data) override final;
     void do_write_chr(uint16_t addr, uint8_t data) override final;
-    void do_clock(int cycle, int scanline) override final;
+
+    void do_ppu_clock(int cycle, int scanline) override final;
 };
 
 } // namespace

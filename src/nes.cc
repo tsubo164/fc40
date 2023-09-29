@@ -1,5 +1,6 @@
 #include "nes.h"
 #include "framebuffer.h"
+#include "cartridge.h"
 #include "display.h"
 #include "sound.h"
 #include "debug.h"
@@ -89,6 +90,7 @@ void NES::UpdateFrame()
         const int cpu_cycles = cpu.IsSuspended() ? dma.Run() : cpu.Run();
         const bool frame_ready = ppu.Run(cpu_cycles);
         apu.Run(cpu_cycles);
+        cart_->Run(cpu_cycles);
 
         if (frame_ready)
             break;

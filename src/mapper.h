@@ -38,7 +38,8 @@ public:
 
     bool IsSetIRQ() const;
     void ClearIRQ();
-    void Clock(int cycle, int scanline);
+    void PpuClock(int cycle, int scanline);
+    void CpuClock();
 
     Mirroring GetMirroring() const;
     void SetMirroring(Mirroring mirroring);
@@ -58,7 +59,7 @@ protected:
     void use_chr_ram(uint32_t size);
 
     void set_board_name(const std::string &name);
-    void set_irq_generated(bool generated);
+    void set_irq();
 
 private:
     std::string board_name_ = "";
@@ -74,7 +75,9 @@ private:
     virtual uint8_t do_read_chr(uint16_t addr) const = 0;
     virtual void do_write_prg(uint16_t addr, uint8_t data) = 0;
     virtual void do_write_chr(uint16_t addr, uint8_t data) = 0;
-    virtual void do_clock(int cycle, int scanline) {}
+
+    virtual void do_ppu_clock(int cycle, int scanline) {}
+    virtual void do_cpu_clock() {}
 };
 
 extern std::shared_ptr<Mapper> new_mapper(int id,
