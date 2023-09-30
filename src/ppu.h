@@ -114,7 +114,7 @@ private:
     // vram
     uint8_t read_buffer_ = 0;
     std::array<uint8_t,32> palette_ram_ = {0};
-    std::array<uint8_t,2048> name_table_ = {0};
+    std::array<uint8_t,2048> nametable_ = {0};
 
     // bg tile cache
     PatternRow tile_queue_[3];

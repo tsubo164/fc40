@@ -36,7 +36,7 @@ public:
             windows_[i] = i;
     }
 
-    void Switch(uint16_t window_index, int32_t bank_index)
+    void Select(uint16_t window_index, int32_t bank_index)
     {
         if (bank_index < 0)
             windows_[window_index] = bank_count_ + bank_index;

@@ -101,6 +101,11 @@ uint8_t Cartridge::ReadChr(uint16_t addr) const
     return mapper_->ReadChr(addr);
 }
 
+uint8_t Cartridge::ReadNameTable(uint16_t addr) const
+{
+    return mapper_->ReadNameTable(addr);
+}
+
 void Cartridge::WritePrg(uint16_t addr, uint8_t data)
 {
     mapper_->WritePrg(addr, data);
@@ -109,6 +114,11 @@ void Cartridge::WritePrg(uint16_t addr, uint8_t data)
 void Cartridge::WriteChr(uint16_t addr, uint8_t data)
 {
     mapper_->WriteChr(addr, data);
+}
+
+void Cartridge::WriteNameTable(uint16_t addr, uint8_t data)
+{
+    mapper_->WriteNameTable(addr, data);
 }
 
 uint8_t Cartridge::PeekPrg(uint32_t physical_addr) const
@@ -129,6 +139,11 @@ size_t Cartridge::GetPrgSize() const
 size_t Cartridge::GetChrSize() const
 {
     return mapper_->GetChrRomSize();
+}
+
+void Cartridge::SetNameTable(std::array<uint8_t,2048> *nt)
+{
+    mapper_->SetNameTable(nt);
 }
 
 bool Cartridge::IsSetIRQ() const

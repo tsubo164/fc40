@@ -8,7 +8,7 @@ Mapper_019::Mapper_019(const std::vector<uint8_t> &prg_rom,
 {
     prg_banks_.Resize(GetPrgRomSize(), Size::_32KB, Size::_8KB);
     chr_banks_.Resize(GetChrRomSize(), Size::_8KB,  Size::_1KB);
-    prg_banks_.Switch(3, -1);
+    prg_banks_.Select(3, -1);
 }
 
 Mapper_019::~Mapper_019()
@@ -107,16 +107,20 @@ void Mapper_019::do_write_prg(uint16_t addr, uint8_t data)
         // $C800-$CFFF | $2400-$27FF | always
         // $D000-$D7FF | $2800-$2BFF | always
         // $D800-$DFFF | $2C00-$2FFF | always
-        const bool denote_ntram = 
-            ((addr >= 0x8000 && addr <= 0x9FFF) && (data >= 0xE0) && ntram_a_) ||
-            ((addr >= 0xA000 && addr <= 0xBFFF) && (data >= 0xE0) && ntram_b_);
+        const int chr_page = (addr - 0x8000) / 0x0800;
+        const bool ntram_select_table[] = {
+            use_ntram_lo_, use_ntram_lo_, use_ntram_lo_, use_ntram_lo_,
+            use_ntram_hi_, use_ntram_hi_, use_ntram_hi_, use_ntram_hi_,
+            true,          true,          true,          true
+        };
+        const bool denote_ntram = data >= 0xE0 && ntram_select_table[chr_page];
 
         if (denote_ntram) {
+            ntram_select_[chr_page] = (data & 0x01) ? NTRAM::Hi : NTRAM::Lo;
         }
         else {
-            const int chr_select = (addr - 0x8000) / 0x0800;
-            if (chr_select < 8)
-                chr_banks_.Switch(chr_select, data);
+            ntram_select_[chr_page] = NTRAM::No;
+            chr_banks_.Select(chr_page, data);
         }
     }
     else if (addr >= 0xE000 && addr <= 0xE7FF) {
@@ -129,7 +133,7 @@ void Mapper_019::do_write_prg(uint16_t addr, uint8_t data)
         // |+-------- Disable sound if set
         // +--------- Pin 22 (open collector) reflects the inverse of
         //            this value, unchanged by the address bus inputs.
-        prg_banks_.Switch(0, data & 0x3F);
+        prg_banks_.Select(0, data & 0x3F);
         //select_prg_bank(0x8000, data & 0x3F);
     }
     else if (addr >= 0xE800 && addr <= 0xEFFF) {
@@ -145,9 +149,9 @@ void Mapper_019::do_write_prg(uint16_t addr, uint8_t data)
         // +--------- Disable CHR-RAM at $1000-$1FFF
         //              0: Pages $E0-$FF use NT RAM as CHR-RAM
         //              1: Pages $E0-$FF are the last $20 banks of CHR-ROM
-        prg_banks_.Switch(1, data & 0x3F);
-        ntram_a_ = !((data >> 6) & 0x01);
-        ntram_b_ = !((data >> 7) & 0x01);
+        prg_banks_.Select(1, data & 0x3F);
+        use_ntram_hi_ = !((data >> 6) & 0x01);
+        use_ntram_lo_ = !((data >> 7) & 0x01);
     }
     else if (addr >= 0xF000 && addr <= 0xF7FF) {
         // PRG Select 3 ($F000-$F7FF) w
@@ -157,7 +161,7 @@ void Mapper_019::do_write_prg(uint16_t addr, uint8_t data)
         // | || ||||
         // | ++-++++- Select 8KB page of PRG-ROM at $C000
         // +--------- Pin 44 reflects this value.
-        prg_banks_.Switch(2, data & 0x3F);
+        prg_banks_.Select(2, data & 0x3F);
     }
     else if (addr >= 0xF800 && addr <= 0xFFFF) {
         // Write Protect for External RAM AND Chip RAM Address Port

@@ -18,14 +18,17 @@ public:
 
     uint8_t ReadPrg(uint16_t addr) const;
     uint8_t ReadChr(uint16_t addr) const;
+    uint8_t ReadNameTable(uint16_t addr) const;
     void WritePrg(uint16_t addr, uint8_t data);
     void WriteChr(uint16_t addr, uint8_t data);
+    void WriteNameTable(uint16_t addr, uint8_t data);
 
     uint8_t PeekPrg(uint32_t physical_addr) const;
 
     int GetMapperID() const;
     size_t GetPrgSize() const;
     size_t GetChrSize() const;
+    void SetNameTable(std::array<uint8_t,2048> *nt);
 
     bool IsSetIRQ() const;
     void ClearIRQ();

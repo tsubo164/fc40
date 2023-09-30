@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <array>
 
 namespace nes {
 
@@ -23,8 +24,10 @@ public:
 
     uint8_t ReadPrg(uint16_t addr) const;
     uint8_t ReadChr(uint16_t addr) const;
+    uint8_t ReadNameTable(uint16_t addr) const;
     void WritePrg(uint16_t addr, uint8_t data);
     void WriteChr(uint16_t addr, uint8_t data);
+    void WriteNameTable(uint16_t addr, uint8_t data);
 
     uint8_t PeekPrg(uint32_t physical_addr) const;
 
@@ -35,6 +38,7 @@ public:
 
     std::vector<uint8_t> GetPrgRam() const;
     void SetPrgRam(const std::vector<uint8_t> &sram);
+    void SetNameTable(std::array<uint8_t,2048> *nt);
 
     bool IsSetIRQ() const;
     void ClearIRQ();
@@ -51,12 +55,16 @@ protected:
     uint8_t read_chr_rom(uint32_t index) const;
     uint8_t read_prg_ram(uint32_t index) const;
     uint8_t read_chr_ram(uint32_t index) const;
+    uint8_t read_nametable(uint32_t index) const;
 
     void write_prg_ram(uint32_t index, uint8_t data);
     void write_chr_ram(uint32_t index, uint8_t data);
+    void write_nametable(uint32_t index, uint8_t data);
 
     void use_prg_ram(uint32_t size);
     void use_chr_ram(uint32_t size);
+
+    uint16_t nametable_index(uint16_t addr) const;
 
     void set_board_name(const std::string &name);
     void set_irq();
@@ -67,14 +75,17 @@ private:
     std::vector<uint8_t> chr_rom_;
     std::vector<uint8_t> prg_ram_;
     std::vector<uint8_t> chr_ram_;
+    std::array<uint8_t,2048> *nametable_ = nullptr;
 
     Mirroring mirroring_ = Mirroring::HORIZONTAL;
     bool irq_generated_ = false;
 
     virtual uint8_t do_read_prg(uint16_t addr) const = 0;
     virtual uint8_t do_read_chr(uint16_t addr) const = 0;
+    virtual uint8_t do_read_nametable(uint16_t addr) const;
     virtual void do_write_prg(uint16_t addr, uint8_t data) = 0;
     virtual void do_write_chr(uint16_t addr, uint8_t data) = 0;
+    virtual void do_write_nametable(uint16_t addr, uint8_t data);
 
     virtual void do_ppu_clock(int cycle, int scanline) {}
     virtual void do_cpu_clock() {}

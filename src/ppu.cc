@@ -170,33 +170,13 @@ static Color get_color(int index)
     return get_color(index, false, 0x00);
 }
 
-static uint16_t name_table_index(const Cartridge *cart_, uint16_t addr)
-{
-    const uint16_t index = addr - 0x2000;
-
-    // vertical mirroring
-    if (cart_->IsVerticalMirroring())
-        return index & 0x07FF;
-
-    // horizontal mirroring
-    if (index >= 0x0000 && index <= 0x07FF)
-        return index & 0x03FF;
-
-    if (index >= 0x0800 && index <= 0x0FFF)
-        return 0x400 | (index & 0x03FF);
-
-    // unreachable
-    return 0x0000;
-}
-
 uint8_t PPU::read_byte(uint16_t addr) const
 {
     if (addr >= 0x0000 && addr <= 0x1FFF) {
         return cart_->ReadChr(addr);
     }
     else if (addr >= 0x2000 && addr <= 0x2FFF) {
-        const uint16_t index = name_table_index(cart_, addr);
-        return name_table_[index];
+        return cart_->ReadNameTable(addr);
     }
     else if (addr >= 0x3000 && addr <= 0x3EFF) {
         // mirrors of 0x2000-0x2EFF
@@ -223,8 +203,7 @@ void PPU::write_byte(uint16_t addr, uint8_t data)
         cart_->WriteChr(addr, data);
     }
     else if (addr >= 0x2000 && addr <= 0x2FFF) {
-        const uint16_t index = name_table_index(cart_, addr);
-        name_table_[index] = data;
+        cart_->WriteNameTable(addr, data);
     }
     else if (addr >= 0x3000 && addr <= 0x3EFF) {
         // mirrors of 0x2000-0x2EFF
@@ -784,6 +763,7 @@ void PPU::render_pixel(int x, int y)
 void PPU::SetCartride(Cartridge *cart)
 {
     cart_ = cart;
+    cart_->SetNameTable(&nametable_);
 }
 
 // --------------------------------------------------------------------------
@@ -933,7 +913,7 @@ void PPU::PowerUp()
 
     oam_.fill(0xFF);
     palette_ram_.fill(0xFF);
-    name_table_.fill(0xFF);
+    nametable_.fill(0xFF);
 
     init_palette();
 }

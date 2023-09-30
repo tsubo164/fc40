@@ -29,6 +29,11 @@ uint8_t Mapper::ReadChr(uint16_t addr) const
     return do_read_chr(addr);
 }
 
+uint8_t Mapper::ReadNameTable(uint16_t addr) const
+{
+    return do_read_nametable(addr);
+}
+
 void Mapper::WritePrg(uint16_t addr, uint8_t data)
 {
     do_write_prg(addr, data);
@@ -37,6 +42,11 @@ void Mapper::WritePrg(uint16_t addr, uint8_t data)
 void Mapper::WriteChr(uint16_t addr, uint8_t data)
 {
     do_write_chr(addr, data);
+}
+
+void Mapper::WriteNameTable(uint16_t addr, uint8_t data)
+{
+    do_write_nametable(addr, data);
 }
 
 uint8_t Mapper::PeekPrg(uint32_t physical_addr) const
@@ -75,6 +85,11 @@ std::vector<uint8_t> Mapper::GetPrgRam() const
 void Mapper::SetPrgRam(const std::vector<uint8_t> &sram)
 {
     prg_ram_ = sram;
+}
+
+void Mapper::SetNameTable(std::array<uint8_t,2048> *nt)
+{
+    nametable_ = nt;
 }
 
 bool Mapper::IsSetIRQ() const
@@ -144,6 +159,11 @@ uint8_t Mapper::read_chr_ram(uint32_t index) const
         return 0xFF;
 }
 
+uint8_t Mapper::read_nametable(uint32_t index) const
+{
+    return (*nametable_)[index];
+}
+
 void Mapper::write_prg_ram(uint32_t index, uint8_t data)
 {
     if (index < GetPrgRamSize())
@@ -154,6 +174,11 @@ void Mapper::write_chr_ram(uint32_t index, uint8_t data)
 {
     if (index < GetChrRamSize())
         chr_ram_[index] = data;
+}
+
+void Mapper::write_nametable(uint32_t index, uint8_t data)
+{
+    (*nametable_)[index] = data;
 }
 
 void Mapper::use_prg_ram(uint32_t size)
@@ -174,6 +199,37 @@ void Mapper::set_board_name(const std::string &name)
 void Mapper::set_irq()
 {
     irq_generated_ = true;
+}
+
+uint8_t Mapper::do_read_nametable(uint16_t addr) const
+{
+    const uint16_t index = nametable_index(addr);
+    return read_nametable(index);
+}
+
+void Mapper::do_write_nametable(uint16_t addr, uint8_t data)
+{
+    const uint16_t index = nametable_index(addr);
+    write_nametable(index, data);
+}
+
+uint16_t Mapper::nametable_index(uint16_t addr) const
+{
+    const uint16_t index = addr - 0x2000;
+
+    // vertical mirroring
+    if (GetMirroring() == Mirroring::VERTICAL)
+        return index & 0x07FF;
+
+    // horizontal mirroring
+    if (index >= 0x0000 && index <= 0x07FF)
+        return index & 0x03FF;
+
+    if (index >= 0x0800 && index <= 0x0FFF)
+        return 0x400 | (index & 0x03FF);
+
+    // unreachable
+    return 0x0000;
 }
 
 std::shared_ptr<Mapper> new_mapper(int id,

@@ -17,10 +17,17 @@ private:
     BankMap prg_banks_;
     BankMap chr_banks_;
 
-    bool ntram_a_ = false;
-    bool ntram_b_ = false;
+    bool use_ntram_lo_ = false;
+    bool use_ntram_hi_ = false;
     uint16_t irq_counter_ = 0;
     bool irq_enabled_ = false;
+
+    enum class NTRAM {
+        No = 0,
+        Lo = 1,
+        Hi = 2,
+    };
+    std::array<NTRAM,12> ntram_select_ = { NTRAM::No };
 
     // These ASICs have the unusual ability to select the internal
     // 2 KB nametable RAM as a CHR bank page, allowing it to be used as
