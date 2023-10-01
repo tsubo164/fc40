@@ -54,7 +54,6 @@ void Mapper_019::do_write_prg(uint16_t addr, uint8_t data)
 {
     if (addr >= 0x4800 && addr <= 0x4FFF) {
         // Chip RAM Data Port ($4800-$4FFF) r/w
-        //printf("%X => %0X\n", addr, data);
     }
     else if (addr >= 0x5000 && addr <= 0x57FF) {
         // IRQ Counter (low) ($5000-$57FF) r/w
@@ -116,10 +115,10 @@ void Mapper_019::do_write_prg(uint16_t addr, uint8_t data)
         const bool denote_ntram = data >= 0xE0 && ntram_select_table[chr_page];
 
         if (denote_ntram) {
-            ntram_select_[chr_page] = (data & 0x01) ? NTRAM::Hi : NTRAM::Lo;
+            bank_select_[chr_page] = (data & 0x01) ? SELECT_NTRAM_HI : SELECT_NTRAM_LO;
         }
         else {
-            ntram_select_[chr_page] = NTRAM::No;
+            bank_select_[chr_page] = SELECT_CHR_ROM;
             chr_banks_.Select(chr_page, data);
         }
     }
@@ -185,18 +184,118 @@ void Mapper_019::do_write_prg(uint16_t addr, uint8_t data)
 
 uint8_t Mapper_019::do_read_chr(uint16_t addr) const
 {
-    //if (addr >= 0x0000 && addr <= 0x1FFF)
-    //    return read_chr_ram(addr);
-    //else
-    //    return 0xFF;
-    const uint32_t a = chr_banks_.Map(addr);
-    return read_chr_rom(a);
+    if (addr >= 0x0000 && addr <= 0x1FFF) {
+        const int chr_page = addr / 0x400;
+        switch (bank_select_[chr_page]) {
+
+        case SELECT_CHR_ROM:
+            return read_chr_rom(chr_banks_.Map(addr));
+
+        case SELECT_NTRAM_LO:
+            {
+                const uint32_t index = (addr & 0x3FF);
+                return read_nametable(index);
+            }
+
+        case SELECT_NTRAM_HI:
+            {
+                const uint32_t index = (addr & 0x3FF) + 0x400;
+                return read_nametable(index);
+            }
+
+        default:
+            break;
+        }
+    }
+    return 0x00;
+}
+
+uint8_t Mapper_019::do_read_nametable(uint16_t addr) const
+{
+    if (addr >= 0x2000 && addr <= 0x2FFF) {
+        const int chr_page = addr / 0x400;
+        switch (bank_select_[chr_page]) {
+
+        case SELECT_CHR_ROM:
+            return read_chr_rom(chr_banks_.Map(addr));
+
+        case SELECT_NTRAM_LO:
+            {
+                const uint32_t index = (addr & 0x3FF);
+                return read_nametable(index);
+            }
+
+        case SELECT_NTRAM_HI:
+            {
+                const uint32_t index = (addr & 0x3FF) + 0x400;
+                return read_nametable(index);
+            }
+
+        default:
+            //return 0x00;
+            break;
+        }
+    }
+    return 0x00;
 }
 
 void Mapper_019::do_write_chr(uint16_t addr, uint8_t data)
 {
-    //if (addr >= 0x0000 && addr <= 0x1FFF)
-    //    write_chr_ram(addr, data);
+    if (addr >= 0x0000 && addr <= 0x1FFF) {
+        const int chr_page = addr / 0x400;
+        switch (bank_select_[chr_page]) {
+
+        case SELECT_CHR_ROM:
+            //return write_chr_rom(chr_banks_.Map(addr), data);
+            break;
+
+        case SELECT_NTRAM_LO:
+            {
+                const uint32_t index = (addr & 0x3FF);
+                write_nametable(index, data);
+            }
+
+        case SELECT_NTRAM_HI:
+            {
+                const uint32_t index = (addr & 0x3FF) + 0x400;
+                write_nametable(index, data);
+            }
+
+        default:
+            //return 0x00;
+            break;
+        }
+    }
+}
+
+void Mapper_019::do_write_nametable(uint16_t addr, uint8_t data)
+{
+    if (addr >= 0x2000 && addr <= 0x2FFF) {
+        const int chr_page = addr / 0x400;
+        switch (bank_select_[chr_page]) {
+
+        case SELECT_CHR_ROM:
+            //write_chr_rom(chr_banks_.Map(addr), data);
+            break;
+
+        case SELECT_NTRAM_LO:
+            {
+                const uint32_t index = (addr & 0x3FF);
+                write_nametable(index, data);
+            }
+            break;
+
+        case SELECT_NTRAM_HI:
+            {
+                const uint32_t index = (addr & 0x3FF) + 0x400;
+                write_nametable(index, data);
+            }
+            break;
+
+        default:
+            break;
+        }
+    }
 }
 
 void Mapper_019::do_cpu_clock()
