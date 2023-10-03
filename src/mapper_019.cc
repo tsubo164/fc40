@@ -9,6 +9,8 @@ Mapper_019::Mapper_019(const std::vector<uint8_t> &prg_rom,
     prg_banks_.Resize(GetPrgRomSize(), Size::_32KB, Size::_8KB);
     chr_banks_.Resize(GetChrRomSize(), Size::_8KB,  Size::_1KB);
     prg_banks_.Select(3, -1);
+
+    use_prg_ram(0x2000);
 }
 
 Mapper_019::~Mapper_019()
@@ -232,7 +234,6 @@ uint8_t Mapper_019::do_read_nametable(uint16_t addr) const
             }
 
         default:
-            //return 0x00;
             break;
         }
     }
@@ -262,7 +263,6 @@ void Mapper_019::do_write_chr(uint16_t addr, uint8_t data)
             }
 
         default:
-            //return 0x00;
             break;
         }
     }
@@ -300,13 +300,13 @@ void Mapper_019::do_write_nametable(uint16_t addr, uint8_t data)
 
 void Mapper_019::do_cpu_clock()
 {
-    if (irq_counter_ == 0x7FFF) {
-        if (irq_enabled_)
-            set_irq();
-    }
-    else {
+    if (!irq_enabled_)
+        return;
+
+    if (irq_counter_ == 0x7FFF)
+        set_irq();
+    else
         irq_counter_++;
-    }
 }
 
 } // namespace
