@@ -21,11 +21,11 @@ public:
     BankMap() {}
     ~BankMap() {}
 
-    void Resize(int rom_size, Size bank_size, int window_count)
+    void Resize(int capacity, Size bank_size, int window_count)
     {
-        rom_size_ = rom_size;
+        capacity_ = capacity;
         bank_size_ = static_cast<int>(bank_size);
-        bank_count_ = rom_size_ / bank_size_;
+        bank_count_ = capacity_ / bank_size_;
 
         windows_.resize(window_count);
         for (int i = 0; i < windows_.size(); i++)
@@ -49,14 +49,9 @@ public:
         return base + offset;
     }
 
-    int GetBankSize() const
-    {
-        return bank_size_;
-    }
-
 private:
     std::vector<int> windows_;
-    int rom_size_ = 0;
+    int capacity_ = 0;
     int bank_size_ = 0;
     int bank_count_ = 0;
 };

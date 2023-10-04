@@ -6,10 +6,10 @@ namespace nes {
 Mapper_019::Mapper_019(const std::vector<uint8_t> &prg_rom,
         const std::vector<uint8_t> &chr_rom) : Mapper(prg_rom, chr_rom)
 {
-    set_prg_bank_size(Size::_8KB);
-    set_chr_bank_size(Size::_1KB, 12); // 12 -> specialized window count
+    prg_.Resize(GetPrgRomSize(), Size::_8KB, 4);
+    chr_.Resize(GetChrRomSize(), Size::_1KB, 12); // CHR window 1K x 8(PT) + 1K x 4(NT)
 
-    select_prg_bank(3, -1);
+    prg_.Select(3, -1);
     use_prg_ram(0x2000);
 }
 
@@ -42,11 +42,11 @@ uint8_t Mapper_019::do_read_prg(uint16_t addr) const
         return ((irq_counter_ >> 8) & 0x007F) | (irq_enabled_ << 7);
     }
     else if (addr >= 0x6000 && addr <= 0x7FFF) {
-        const int index = addr - 0x6000;
+        const int index = prg_.Map(addr - 0x6000);
         return read_prg_ram(index);
     }
     else if (addr >= 0x8000 && addr <= 0xFFFF) {
-        const int index = addr - 0x8000;
+        const int index = prg_.Map(addr - 0x8000);
         return read_prg_rom(index);
     }
 
@@ -81,7 +81,7 @@ void Mapper_019::do_write_prg(uint16_t addr, uint8_t data)
         ClearIRQ();
     }
     else if (addr >= 0x6000 && addr <= 0x7FFF) {
-        const int index = addr - 0x6000;
+        const int index = prg_.Map(addr - 0x6000);
         write_prg_ram(index, data);
     }
     else if (addr >= 0x8000 && addr <= 0xDFFF) {
@@ -109,20 +109,20 @@ void Mapper_019::do_write_prg(uint16_t addr, uint8_t data)
         // $C800-$CFFF | $2400-$27FF | always
         // $D000-$D7FF | $2800-$2BFF | always
         // $D800-$DFFF | $2C00-$2FFF | always
-        const int chr_page = (addr - 0x8000) / 0x0800;
+        const int window = (addr - 0x8000) / 0x0800;
         const bool ntram_select_table[] = {
             use_ntram_lo_, use_ntram_lo_, use_ntram_lo_, use_ntram_lo_,
             use_ntram_hi_, use_ntram_hi_, use_ntram_hi_, use_ntram_hi_,
             true,          true,          true,          true
         };
-        const bool denote_ntram = data >= 0xE0 && ntram_select_table[chr_page];
+        const bool denote_ntram = data >= 0xE0 && ntram_select_table[window];
 
         if (denote_ntram) {
-            bank_select_[chr_page] = (data & 0x01) ? SELECT_NTRAM_HI : SELECT_NTRAM_LO;
+            bank_select_[window] = (data & 0x01) ? SELECT_NTRAM_HI : SELECT_NTRAM_LO;
         }
         else {
-            bank_select_[chr_page] = SELECT_CHR_ROM;
-            select_chr_bank(chr_page * 0x400, data);
+            bank_select_[window] = SELECT_CHR_ROM;
+            chr_.Select(window, data);
         }
     }
     else if (addr >= 0xE000 && addr <= 0xE7FF) {
@@ -135,7 +135,7 @@ void Mapper_019::do_write_prg(uint16_t addr, uint8_t data)
         // |+-------- Disable sound if set
         // +--------- Pin 22 (open collector) reflects the inverse of
         //            this value, unchanged by the address bus inputs.
-        select_prg_bank(0, data & 0x3F);
+        prg_.Select(0, data & 0x3F);
     }
     else if (addr >= 0xE800 && addr <= 0xEFFF) {
         // PRG Select 2 / CHR-RAM Enable ($E800-$EFFF) w
@@ -150,7 +150,7 @@ void Mapper_019::do_write_prg(uint16_t addr, uint8_t data)
         // +--------- Disable CHR-RAM at $1000-$1FFF
         //              0: Pages $E0-$FF use NT RAM as CHR-RAM
         //              1: Pages $E0-$FF are the last $20 banks of CHR-ROM
-        select_prg_bank(1, data & 0x3F);
+        prg_.Select(1, data & 0x3F);
         use_ntram_hi_ = !((data >> 6) & 0x01);
         use_ntram_lo_ = !((data >> 7) & 0x01);
     }
@@ -162,7 +162,7 @@ void Mapper_019::do_write_prg(uint16_t addr, uint8_t data)
         // | || ||||
         // | ++-++++- Select 8KB page of PRG-ROM at $C000
         // +--------- Pin 44 reflects this value.
-        select_prg_bank(2, data & 0x3F);
+        prg_.Select(2, data & 0x3F);
     }
     else if (addr >= 0xF800 && addr <= 0xFFFF) {
         // Write Protect for External RAM AND Chip RAM Address Port
@@ -190,7 +190,10 @@ uint8_t Mapper_019::read_chr(uint16_t addr) const
     switch (bank_select_[window]) {
 
     case SELECT_CHR_ROM:
-        return read_chr_rom(addr);
+        {
+            const int index = chr_.Map(addr);
+            return read_chr_rom(index);
+        }
 
     case SELECT_NTRAM_LO:
         {

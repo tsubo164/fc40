@@ -129,16 +129,7 @@ std::string Mapper::GetBoardName() const
 
 uint8_t Mapper::read_prg_rom(int index) const
 {
-    if (new_api) {
-    const int mapped = prg_banks_.Map(index);
-
-    if (mapped < GetPrgRomSize())
-        return prg_rom_[mapped];
-    else
-        return 0xFF;
-    }
-
-    if (index < GetPrgRomSize())
+    if (index >= 0 && index < GetPrgRomSize())
         return prg_rom_[index];
     else
         return 0xFF;
@@ -146,16 +137,7 @@ uint8_t Mapper::read_prg_rom(int index) const
 
 uint8_t Mapper::read_chr_rom(int index) const
 {
-    if (new_api) {
-    const int mapped = chr_banks_.Map(index);
-
-    if (mapped < GetChrRomSize())
-        return chr_rom_[mapped];
-    else
-        return 0xFF;
-    }
-
-    if (index < GetChrRomSize())
+    if (index >= 0 && index < GetChrRomSize())
         return chr_rom_[index];
     else
         return 0xFF;
@@ -163,16 +145,7 @@ uint8_t Mapper::read_chr_rom(int index) const
 
 uint8_t Mapper::read_prg_ram(int index) const
 {
-    if (new_api) {
-    const int mapped = prg_banks_.Map(index);
-
-    if (mapped < GetPrgRamSize())
-        return prg_ram_[mapped];
-    else
-        return 0xFF;
-    }
-
-    if (index < GetPrgRamSize())
+    if (index >= 0 && index < GetPrgRamSize())
         return prg_ram_[index];
     else
         return 0xFF;
@@ -180,16 +153,7 @@ uint8_t Mapper::read_prg_ram(int index) const
 
 uint8_t Mapper::read_chr_ram(int index) const
 {
-    if (new_api) {
-    const int mapped = chr_banks_.Map(index);
-
-    if (mapped < GetChrRamSize())
-        return chr_ram_[mapped];
-    else
-        return 0xFF;
-    }
-
-    if (index < GetChrRamSize())
+    if (index >= 0 && index < GetChrRamSize())
         return chr_ram_[index];
     else
         return 0xFF;
@@ -202,27 +166,13 @@ uint8_t Mapper::read_nametable(int index) const
 
 void Mapper::write_prg_ram(int index, uint8_t data)
 {
-    if (new_api) {
-    const int mapped = prg_banks_.Map(index);
-
-    if (mapped < GetPrgRamSize())
-        prg_ram_[mapped] = data;
-    }
-
-    if (index < GetPrgRamSize())
+    if (index >= 0 && index < GetPrgRamSize())
         prg_ram_[index] = data;
 }
 
 void Mapper::write_chr_ram(int index, uint8_t data)
 {
-    if (new_api) {
-    const int mapped = chr_banks_.Map(index);
-
-    if (mapped < GetChrRamSize())
-        chr_ram_[mapped] = data;
-    }
-
-    if (index < GetChrRamSize())
+    if (index >= 0 && index < GetChrRamSize())
         chr_ram_[index] = data;
 }
 
@@ -239,43 +189,6 @@ void Mapper::use_prg_ram(int size)
 void Mapper::use_chr_ram(int size)
 {
     chr_ram_.resize(size, 0x00);
-}
-
-void Mapper::set_prg_bank_size(Size bank_size)
-{
-    new_api = true;
-    const uint32_t window_size = static_cast<uint16_t>(Size::_32KB);
-    const uint16_t window_count =
-        window_size / static_cast<uint16_t>(bank_size);
-
-    prg_banks_.Resize(GetPrgRomSize(), bank_size, window_count);
-}
-
-void Mapper::set_chr_bank_size(Size bank_size)
-{
-    new_api = true;
-    const uint32_t window_size = static_cast<uint16_t>(Size::_8KB);
-    const uint16_t window_count =
-        window_size / static_cast<uint16_t>(bank_size);
-
-    chr_banks_.Resize(GetPrgRomSize(), bank_size, window_count);
-}
-
-void Mapper::set_chr_bank_size(Size bank_size, int window_count)
-{
-    new_api = true;
-    chr_banks_.Resize(GetPrgRomSize(), bank_size, window_count);
-}
-
-void Mapper::select_prg_bank(int window_index, int bank_index)
-{
-    prg_banks_.Select(window_index, bank_index);
-}
-
-void Mapper::select_chr_bank(int window_base, int bank_index)
-{
-    const int window_index = window_base / chr_banks_.GetBankSize();
-    chr_banks_.Select(window_index, bank_index);
 }
 
 void Mapper::set_board_name(const std::string &name)

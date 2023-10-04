@@ -6,7 +6,6 @@
 #include <vector>
 #include <memory>
 #include <array>
-#include "bank_map.h"
 
 namespace nes {
 
@@ -65,14 +64,6 @@ protected:
     void use_prg_ram(int size);
     void use_chr_ram(int size);
 
-    // TODO remove this after switching to new APIs
-    bool new_api = false;
-    void set_prg_bank_size(Size bank_size);
-    void set_chr_bank_size(Size bank_size);
-    void set_chr_bank_size(Size bank_size, int window_count);
-    void select_prg_bank(int window_base, int bank_index);
-    void select_chr_bank(int window_base, int bank_index);
-
     void set_board_name(const std::string &name);
     void set_irq();
 
@@ -83,9 +74,6 @@ private:
     std::vector<uint8_t> prg_ram_;
     std::vector<uint8_t> chr_ram_;
     std::array<uint8_t,2048> *nametable_ = nullptr;
-
-    BankMap prg_banks_;
-    BankMap chr_banks_;
 
     Mirroring mirroring_ = Mirroring::HORIZONTAL;
     bool irq_generated_ = false;
@@ -103,7 +91,7 @@ private:
     int nametable_index(uint16_t addr) const;
 };
 
-extern std::shared_ptr<Mapper> new_mapper(int id,
+std::shared_ptr<Mapper> new_mapper(int id,
         const std::vector<uint8_t> &prg_data,
         const std::vector<uint8_t> &chr_data);
 

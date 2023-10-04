@@ -2,6 +2,7 @@
 #define MAPPER_019_H
 
 #include "mapper.h"
+#include "bank_map.h"
 #include <array>
 
 namespace nes {
@@ -13,6 +14,9 @@ public:
     ~Mapper_019();
 
 private:
+    BankMap prg_;
+    BankMap chr_;
+
     bool use_ntram_lo_ = false;
     bool use_ntram_hi_ = false;
     int irq_counter_ = 0;
