@@ -1,8 +1,6 @@
 #ifndef BANK_MAP_H
 #define BANK_MAP_H
 
-#include <cstdint>
-
 enum class Size {
     _1KB   = 0x400 << 0,
     _2KB   = 0x400 << 1,
@@ -16,23 +14,22 @@ enum class Size {
     _512KB = 0x400 << 9,
 };
 
-class BankMap {
+template<Size BANK_SIZE, int WINDOW_COUNT>
+class bankmap {
 public:
-    BankMap() {}
-    ~BankMap() {}
-
-    void Resize(int capacity, Size bank_size, int window_count)
+    bankmap()
     {
-        capacity_ = capacity;
-        bank_size_ = static_cast<int>(bank_size);
-        bank_count_ = capacity_ / bank_size_;
-
-        windows_.resize(window_count);
         for (int i = 0; i < windows_.size(); i++)
             windows_[i] = i;
     }
+    ~bankmap() {}
 
-    void Select(int window_index, int bank_index)
+    void resize(int capacity)
+    {
+        bank_count_ = capacity / static_cast<int>(BANK_SIZE);
+    }
+
+    void select(int window_index, int bank_index)
     {
         if (bank_index < 0)
             windows_[window_index] = bank_count_ + bank_index;
@@ -41,19 +38,17 @@ public:
             windows_[window_index] = bank_index % bank_count_;
     }
 
-    int Map(int addr) const
+    int map(int addr) const
     {
-        const int offset = addr % bank_size_;
-        const int window = addr / bank_size_;
-        const int base = windows_[window] * bank_size_;
+        const int offset = addr % static_cast<int>(BANK_SIZE);
+        const int window = addr / static_cast<int>(BANK_SIZE);
+        const int base = windows_[window] * static_cast<int>(BANK_SIZE);
         return base + offset;
     }
 
 private:
-    std::vector<int> windows_;
-    int capacity_ = 0;
-    int bank_size_ = 0;
-    int bank_count_ = 0;
+    std::array<int,WINDOW_COUNT> windows_;
+    int bank_count_ = 1;
 };
 
 #endif // _H

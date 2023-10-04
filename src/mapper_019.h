@@ -14,8 +14,8 @@ public:
     ~Mapper_019();
 
 private:
-    BankMap prg_;
-    BankMap chr_;
+    bankmap<Size::_8KB,4>  prg_;
+    bankmap<Size::_1KB,12> chr_; // CHR window 1K x 8(PT) + 1K x 4(NT)
 
     bool use_ntram_lo_ = false;
     bool use_ntram_hi_ = false;
