@@ -127,57 +127,103 @@ std::string Mapper::GetBoardName() const
     return board_name_;
 }
 
-uint8_t Mapper::read_prg_rom(uint32_t index) const
+uint8_t Mapper::read_prg_rom(uint32_t addr) const
 {
+    if (new_api) {
+    const uint32_t index = prg_banks_.Map(addr - 0x8000);
     if (index < GetPrgRomSize())
         return prg_rom_[index];
     else
         return 0xFF;
+    }
+
+    if (addr < GetPrgRomSize())
+        return prg_rom_[addr];
+    else
+        return 0xFF;
 }
 
-uint8_t Mapper::read_chr_rom(uint32_t index) const
+uint8_t Mapper::read_chr_rom(uint32_t addr) const
 {
+    if (new_api) {
+    const uint32_t index = chr_banks_.Map(addr);
     if (index < GetChrRomSize())
         return chr_rom_[index];
     else
         return 0xFF;
+    }
+
+    if (addr < GetChrRomSize())
+        return chr_rom_[addr];
+    else
+        return 0xFF;
 }
 
-uint8_t Mapper::read_prg_ram(uint32_t index) const
+uint8_t Mapper::read_prg_ram(uint32_t addr) const
 {
+    if (new_api) {
+    const uint32_t index = prg_banks_.Map(addr - 0x6000);
     if (index < GetPrgRamSize())
         return prg_ram_[index];
     else
         return 0xFF;
-}
+    }
 
-uint8_t Mapper::read_chr_ram(uint32_t index) const
-{
-    if (index < GetChrRamSize())
-        return chr_ram_[index];
+    if (addr < GetPrgRamSize())
+        return prg_ram_[addr];
     else
         return 0xFF;
 }
 
-uint8_t Mapper::read_nametable(uint32_t index) const
+uint8_t Mapper::read_chr_ram(uint32_t addr) const
 {
+    if (new_api) {
+    const uint32_t index = chr_banks_.Map(addr);
+    if (index < GetChrRamSize())
+        return chr_ram_[index];
+    else
+        return 0xFF;
+    }
+
+    if (addr < GetChrRamSize())
+        return chr_ram_[addr];
+    else
+        return 0xFF;
+}
+
+uint8_t Mapper::read_nametable(uint16_t addr) const
+{
+    const uint32_t index = addr - 0x2000;
     return (*nametable_)[index];
 }
 
-void Mapper::write_prg_ram(uint32_t index, uint8_t data)
+void Mapper::write_prg_ram(uint32_t addr, uint8_t data)
 {
+    if (new_api) {
+    const uint32_t index = prg_banks_.Map(addr - 0x6000);
     if (index < GetPrgRamSize())
         prg_ram_[index] = data;
+    }
+
+    if (addr < GetPrgRamSize())
+        prg_ram_[addr] = data;
 }
 
-void Mapper::write_chr_ram(uint32_t index, uint8_t data)
+void Mapper::write_chr_ram(uint32_t addr, uint8_t data)
 {
+    if (new_api) {
+    const uint32_t index = chr_banks_.Map(addr);
     if (index < GetChrRamSize())
         chr_ram_[index] = data;
+    }
+
+    if (addr < GetChrRamSize())
+        chr_ram_[addr] = data;
 }
 
-void Mapper::write_nametable(uint32_t index, uint8_t data)
+void Mapper::write_nametable(uint16_t addr, uint8_t data)
 {
+    const uint32_t index = addr - 0x2000;
     (*nametable_)[index] = data;
 }
 
@@ -189,6 +235,48 @@ void Mapper::use_prg_ram(uint32_t size)
 void Mapper::use_chr_ram(uint32_t size)
 {
     chr_ram_.resize(size, 0x00);
+}
+
+void Mapper::set_prg_bank_size(Size bank_size)
+{
+    new_api = true;
+    const uint32_t window_size = static_cast<uint16_t>(Size::_32KB);
+    const uint16_t window_count =
+        window_size / static_cast<uint16_t>(bank_size);
+
+    prg_banks_.Resize(GetPrgRomSize(), bank_size, window_count);
+}
+
+void Mapper::set_chr_bank_size(Size bank_size)
+{
+    new_api = true;
+    const uint32_t window_size = static_cast<uint16_t>(Size::_8KB);
+    const uint16_t window_count =
+        window_size / static_cast<uint16_t>(bank_size);
+
+    chr_banks_.Resize(GetPrgRomSize(), bank_size, window_count);
+}
+
+void Mapper::set_chr_bank_size(Size bank_size, uint16_t window_count)
+{
+    new_api = true;
+    chr_banks_.Resize(GetPrgRomSize(), bank_size, window_count);
+}
+
+void Mapper::select_prg_bank(uint16_t window_base, int16_t bank_index)
+{
+    const uint16_t window_index =
+        (window_base - 0x8000) / prg_banks_.GetBankSize();
+
+    prg_banks_.Select(window_index, bank_index);
+}
+
+void Mapper::select_chr_bank(uint16_t window_base, int16_t bank_index)
+{
+    const uint16_t window_index =
+        window_base / chr_banks_.GetBankSize();
+
+    chr_banks_.Select(window_index, bank_index);
 }
 
 void Mapper::set_board_name(const std::string &name)
@@ -219,14 +307,14 @@ uint16_t Mapper::nametable_index(uint16_t addr) const
 
     // vertical mirroring
     if (GetMirroring() == Mirroring::VERTICAL)
-        return index & 0x07FF;
+        return (index & 0x07FF) + 0x2000;
 
     // horizontal mirroring
     if (index >= 0x0000 && index <= 0x07FF)
-        return index & 0x03FF;
+        return (index & 0x03FF) + 0x2000;
 
     if (index >= 0x0800 && index <= 0x0FFF)
-        return 0x400 | (index & 0x03FF);
+        return (0x400 | (index & 0x03FF)) + 0x2000;
 
     // unreachable
     return 0x0000;

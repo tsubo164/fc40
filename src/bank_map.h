@@ -22,14 +22,14 @@ public:
     BankMap() {}
     ~BankMap() {}
 
-    void Resize(uint32_t rom_size, Size window_size, Size bank_size)
+    void Resize(uint32_t rom_size, Size bank_size, uint16_t window_count)
     {
         rom_size_ = rom_size;
         bank_size_ = static_cast<uint32_t>(bank_size);
         bank_count_ = rom_size_ / bank_size_;
 
-        const uint16_t window_count =
-            static_cast<uint32_t>(window_size) / bank_size_;
+        //const uint16_t window_count =
+        //    static_cast<uint32_t>(window_size) / bank_size_;
 
         windows_.resize(window_count);
         for (int i = 0; i < windows_.size(); i++)
@@ -53,6 +53,15 @@ public:
         return base + offset;
     }
 
+    uint16_t GetBankSize() const
+    {
+        return bank_size_;
+    }
+
+    uint16_t GetWindowCount() const
+    {
+        return windows_.size();
+    }
 private:
     std::vector<uint16_t> windows_;
     uint32_t rom_size_ = 0;
