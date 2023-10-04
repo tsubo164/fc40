@@ -17,8 +17,8 @@ private:
     bankmap<Size::_8KB,4>  prg_;
     bankmap<Size::_1KB,12> chr_; // CHR window 1K x 8(PT) + 1K x 4(NT)
 
-    bool use_ntram_lo_ = false;
-    bool use_ntram_hi_ = false;
+    bool enable_nt_lo_ = false;
+    bool enable_nt_hi_ = false;
     int irq_counter_ = 0;
     bool irq_enabled_ = false;
 

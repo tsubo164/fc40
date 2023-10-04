@@ -109,15 +109,15 @@ void Mapper_019::do_write_prg(uint16_t addr, uint8_t data)
         // $C800-$CFFF | $2400-$27FF | always
         // $D000-$D7FF | $2800-$2BFF | always
         // $D800-$DFFF | $2C00-$2FFF | always
-        const int window = (addr - 0x8000) / 0x0800;
-        const bool ntram_select_table[] = {
-            use_ntram_lo_, use_ntram_lo_, use_ntram_lo_, use_ntram_lo_,
-            use_ntram_hi_, use_ntram_hi_, use_ntram_hi_, use_ntram_hi_,
+        const int window = (addr - 0x8000) / 0x800;
+        const bool enable_nt_table[] = {
+            enable_nt_lo_, enable_nt_lo_, enable_nt_lo_, enable_nt_lo_,
+            enable_nt_hi_, enable_nt_hi_, enable_nt_hi_, enable_nt_hi_,
             true,          true,          true,          true
         };
-        const bool denote_ntram = data >= 0xE0 && ntram_select_table[window];
+        const bool denote_nt = (data >= 0xE0) && enable_nt_table[window];
 
-        if (denote_ntram) {
+        if (denote_nt) {
             bank_select_[window] = (data & 0x01) ? SELECT_NTRAM_HI : SELECT_NTRAM_LO;
         }
         else {
@@ -151,8 +151,8 @@ void Mapper_019::do_write_prg(uint16_t addr, uint8_t data)
         //              0: Pages $E0-$FF use NT RAM as CHR-RAM
         //              1: Pages $E0-$FF are the last $20 banks of CHR-ROM
         prg_.select(1, data & 0x3F);
-        use_ntram_hi_ = !((data >> 6) & 0x01);
-        use_ntram_lo_ = !((data >> 7) & 0x01);
+        enable_nt_lo_ = !((data >> 6) & 0x1);
+        enable_nt_hi_ = !((data >> 7) & 0x1);
     }
     else if (addr >= 0xF000 && addr <= 0xF7FF) {
         // PRG Select 3 ($F000-$F7FF) w
