@@ -9,7 +9,7 @@ Mapper_019::Mapper_019(const std::vector<uint8_t> &prg_rom,
     set_prg_bank_size(Size::_8KB);
     set_chr_bank_size(Size::_1KB, 12); // 12 -> specialized window count
 
-    select_prg_bank(0xE000, -1);
+    select_prg_bank(3, -1);
     use_prg_ram(0x2000);
 }
 
@@ -42,10 +42,12 @@ uint8_t Mapper_019::do_read_prg(uint16_t addr) const
         return ((irq_counter_ >> 8) & 0x007F) | (irq_enabled_ << 7);
     }
     else if (addr >= 0x6000 && addr <= 0x7FFF) {
-        return read_prg_ram(addr);
+        const int index = addr - 0x6000;
+        return read_prg_ram(index);
     }
     else if (addr >= 0x8000 && addr <= 0xFFFF) {
-        return read_prg_rom(addr);
+        const int index = addr - 0x8000;
+        return read_prg_rom(index);
     }
 
     return 0x00;
@@ -79,7 +81,8 @@ void Mapper_019::do_write_prg(uint16_t addr, uint8_t data)
         ClearIRQ();
     }
     else if (addr >= 0x6000 && addr <= 0x7FFF) {
-        write_prg_ram(addr, data);
+        const int index = addr - 0x6000;
+        write_prg_ram(index, data);
     }
     else if (addr >= 0x8000 && addr <= 0xDFFF) {
         // CHR and NT Select ($8000-$DFFF) w
@@ -132,7 +135,7 @@ void Mapper_019::do_write_prg(uint16_t addr, uint8_t data)
         // |+-------- Disable sound if set
         // +--------- Pin 22 (open collector) reflects the inverse of
         //            this value, unchanged by the address bus inputs.
-        select_prg_bank(0x8000, data & 0x3F);
+        select_prg_bank(0, data & 0x3F);
     }
     else if (addr >= 0xE800 && addr <= 0xEFFF) {
         // PRG Select 2 / CHR-RAM Enable ($E800-$EFFF) w
@@ -147,7 +150,7 @@ void Mapper_019::do_write_prg(uint16_t addr, uint8_t data)
         // +--------- Disable CHR-RAM at $1000-$1FFF
         //              0: Pages $E0-$FF use NT RAM as CHR-RAM
         //              1: Pages $E0-$FF are the last $20 banks of CHR-ROM
-        select_prg_bank(0xA000, data & 0x3F);
+        select_prg_bank(1, data & 0x3F);
         use_ntram_hi_ = !((data >> 6) & 0x01);
         use_ntram_lo_ = !((data >> 7) & 0x01);
     }
@@ -159,7 +162,7 @@ void Mapper_019::do_write_prg(uint16_t addr, uint8_t data)
         // | || ||||
         // | ++-++++- Select 8KB page of PRG-ROM at $C000
         // +--------- Pin 44 reflects this value.
-        select_prg_bank(0xC000, data & 0x3F);
+        select_prg_bank(2, data & 0x3F);
     }
     else if (addr >= 0xF800 && addr <= 0xFFFF) {
         // Write Protect for External RAM AND Chip RAM Address Port
@@ -181,116 +184,84 @@ void Mapper_019::do_write_prg(uint16_t addr, uint8_t data)
     }
 }
 
+uint8_t Mapper_019::read_chr(uint16_t addr) const
+{
+    const int window = addr / 0x400;
+    switch (bank_select_[window]) {
+
+    case SELECT_CHR_ROM:
+        return read_chr_rom(addr);
+
+    case SELECT_NTRAM_LO:
+        {
+            const int index = (addr & 0x3FF);
+            return read_nametable(index);
+        }
+
+    case SELECT_NTRAM_HI:
+        {
+            const int index = (addr & 0x3FF) + 0x400;
+            return read_nametable(index);
+        }
+
+    default:
+        return 0xFF;
+    }
+}
+
+void Mapper_019::write_chr(uint16_t addr, uint8_t data)
+{
+    const int window = addr / 0x400;
+    switch (bank_select_[window]) {
+
+    case SELECT_CHR_ROM:
+        break;
+
+    case SELECT_NTRAM_LO:
+        {
+            const int index = (addr & 0x3FF);
+            write_nametable(index, data);
+        }
+        break;
+
+    case SELECT_NTRAM_HI:
+        {
+            const int index = (addr & 0x3FF) + 0x400;
+            write_nametable(index, data);
+        }
+        break;
+
+    default:
+        break;
+    }
+}
+
 uint8_t Mapper_019::do_read_chr(uint16_t addr) const
 {
-    if (addr >= 0x0000 && addr <= 0x1FFF) {
-        const int chr_page = addr / 0x400;
-        switch (bank_select_[chr_page]) {
-
-        case SELECT_CHR_ROM:
-            return read_chr_rom(addr);
-
-        case SELECT_NTRAM_LO:
-            {
-                const uint32_t index = (addr & 0x3FF) + 0x2000;
-                return read_nametable(index);
-            }
-
-        case SELECT_NTRAM_HI:
-            {
-                const uint32_t index = (addr & 0x3FF) + 0x2400;
-                return read_nametable(index);
-            }
-
-        default:
-            break;
-        }
-    }
-    return 0x00;
+    if (addr >= 0x0000 && addr <= 0x1FFF)
+        return read_chr(addr);
+    else
+        return 0xFF;
 }
 
 uint8_t Mapper_019::do_read_nametable(uint16_t addr) const
 {
-    if (addr >= 0x2000 && addr <= 0x2FFF) {
-        const int chr_page = addr / 0x400;
-        switch (bank_select_[chr_page]) {
-
-        case SELECT_CHR_ROM:
-            return read_chr_rom(addr);
-
-        case SELECT_NTRAM_LO:
-            {
-                const uint32_t index = (addr & 0x3FF) + 0x2000;
-                return read_nametable(index);
-            }
-
-        case SELECT_NTRAM_HI:
-            {
-                const uint32_t index = (addr & 0x3FF) + 0x2400;
-                return read_nametable(index);
-            }
-
-        default:
-            break;
-        }
-    }
-    return 0x00;
+    if (addr >= 0x2000 && addr <= 0x2FFF)
+        return read_chr(addr);
+    else
+        return 0xFF;
 }
 
 void Mapper_019::do_write_chr(uint16_t addr, uint8_t data)
 {
-    if (addr >= 0x0000 && addr <= 0x1FFF) {
-        const int chr_page = addr / 0x400;
-        switch (bank_select_[chr_page]) {
-
-        case SELECT_CHR_ROM:
-            break;
-
-        case SELECT_NTRAM_LO:
-            {
-                const uint32_t index = (addr & 0x3FF) + 0x2000;
-                write_nametable(index, data);
-            }
-
-        case SELECT_NTRAM_HI:
-            {
-                const uint32_t index = (addr & 0x3FF) + 0x2400;
-                write_nametable(index, data);
-            }
-
-        default:
-            break;
-        }
-    }
+    if (addr >= 0x0000 && addr <= 0x1FFF)
+        write_chr(addr, data);
 }
 
 void Mapper_019::do_write_nametable(uint16_t addr, uint8_t data)
 {
-    if (addr >= 0x2000 && addr <= 0x2FFF) {
-        const int chr_page = addr / 0x400;
-        switch (bank_select_[chr_page]) {
-
-        case SELECT_CHR_ROM:
-            break;
-
-        case SELECT_NTRAM_LO:
-            {
-                const uint32_t index = (addr & 0x3FF) + 0x2000;
-                write_nametable(index, data);
-            }
-            break;
-
-        case SELECT_NTRAM_HI:
-            {
-                const uint32_t index = (addr & 0x3FF) + 0x2400;
-                write_nametable(index, data);
-            }
-            break;
-
-        default:
-            break;
-        }
-    }
+    if (addr >= 0x2000 && addr <= 0x2FFF)
+        write_chr(addr, data);
 }
 
 void Mapper_019::do_cpu_clock()

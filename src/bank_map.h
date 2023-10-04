@@ -2,7 +2,6 @@
 #define BANK_MAP_H
 
 #include <cstdint>
-#include <iostream>
 
 enum class Size {
     _1KB   = 0x400 << 0,
@@ -22,21 +21,18 @@ public:
     BankMap() {}
     ~BankMap() {}
 
-    void Resize(uint32_t rom_size, Size bank_size, uint16_t window_count)
+    void Resize(int rom_size, Size bank_size, int window_count)
     {
         rom_size_ = rom_size;
-        bank_size_ = static_cast<uint32_t>(bank_size);
+        bank_size_ = static_cast<int>(bank_size);
         bank_count_ = rom_size_ / bank_size_;
-
-        //const uint16_t window_count =
-        //    static_cast<uint32_t>(window_size) / bank_size_;
 
         windows_.resize(window_count);
         for (int i = 0; i < windows_.size(); i++)
             windows_[i] = i;
     }
 
-    void Select(uint16_t window_index, int32_t bank_index)
+    void Select(int window_index, int bank_index)
     {
         if (bank_index < 0)
             windows_[window_index] = bank_count_ + bank_index;
@@ -45,28 +41,24 @@ public:
             windows_[window_index] = bank_index % bank_count_;
     }
 
-    uint32_t Map(uint16_t addr16) const
+    int Map(int addr) const
     {
-        const uint32_t offset = addr16 % bank_size_;
-        const uint32_t window = addr16 / bank_size_;
-        const uint32_t base = windows_[window] * bank_size_;
+        const int offset = addr % bank_size_;
+        const int window = addr / bank_size_;
+        const int base = windows_[window] * bank_size_;
         return base + offset;
     }
 
-    uint16_t GetBankSize() const
+    int GetBankSize() const
     {
         return bank_size_;
     }
 
-    uint16_t GetWindowCount() const
-    {
-        return windows_.size();
-    }
 private:
-    std::vector<uint16_t> windows_;
-    uint32_t rom_size_ = 0;
-    uint16_t bank_size_ = 0;
-    uint16_t bank_count_ = 0;
+    std::vector<int> windows_;
+    int rom_size_ = 0;
+    int bank_size_ = 0;
+    int bank_count_ = 0;
 };
 
 #endif // _H

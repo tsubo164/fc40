@@ -15,7 +15,7 @@ public:
 private:
     bool use_ntram_lo_ = false;
     bool use_ntram_hi_ = false;
-    uint16_t irq_counter_ = 0;
+    int irq_counter_ = 0;
     bool irq_enabled_ = false;
 
     enum Select {
@@ -24,6 +24,9 @@ private:
         SELECT_NTRAM_HI = 2,
     };
     std::array<int,12> bank_select_ = { SELECT_CHR_ROM };
+
+    uint8_t read_chr(uint16_t addr) const;
+    void write_chr(uint16_t addr, uint8_t data);
 
     uint8_t do_read_prg(uint16_t addr) const override final;
     uint8_t do_read_chr(uint16_t addr) const override final;
