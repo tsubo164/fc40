@@ -14,7 +14,8 @@ Mapper_003::Mapper_003(const std::vector<uint8_t> &prg_rom,
         prg_mirroring_mask_ = 0x7FFF;
     else
         prg_mirroring_mask_ = 0x3FFF;
-    chr_bank_ = 0;
+
+    chr_.resize(GetChrRomSize());
 }
 
 Mapper_003::~Mapper_003()
@@ -24,10 +25,12 @@ Mapper_003::~Mapper_003()
 uint8_t Mapper_003::do_read_prg(uint16_t addr) const
 {
     if (addr >= 0x8000 && addr <= 0xFFFF) {
-        const uint16_t a = addr & prg_mirroring_mask_;
-        return read_prg_rom(a);
+        const int index = addr & prg_mirroring_mask_;
+        return read_prg_rom(index);
     }
-    return 0x00;
+    else {
+        return 0x00;
+    }
 }
 
 void Mapper_003::do_write_prg(uint16_t addr, uint8_t data)
@@ -41,15 +44,16 @@ void Mapper_003::do_write_prg(uint16_t addr, uint8_t data)
     // CNROM only implements the lowest 2 bits, capping it at 32 KiB CHR.
     // Other boards may implement 4 or more bits for larger CHR.
     if (addr >= 0x8000 && addr <= 0xFFFF)
-        chr_bank_ = data & 0x03;
+        chr_.select(0, data & 0x03);
 }
 
 uint8_t Mapper_003::do_read_chr(uint16_t addr) const
 {
     if (addr >= 0x0000 && addr <= 0x1FFF) {
-        const uint32_t a = chr_bank_ * 0x2000 + addr;
-        return read_chr_rom(a);
-    } else {
+        const int index = chr_.map(addr);
+        return read_chr_rom(index);
+    }
+    else {
         return 0xFF;
     }
 }
