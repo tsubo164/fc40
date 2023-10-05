@@ -27,8 +27,8 @@ uint8_t Mapper_000::do_read_prg(uint16_t addr) const
     // CPU $8000-$BFFF: First 16 KB of ROM.
     // CPU $C000-$FFFF: Last 16 KB of ROM (NROM-256) or mirror of $8000-$BFFF (NROM-128).
     if (addr >= 0x8000 && addr <= 0xFFFF) {
-        const uint16_t a = addr & prg_mirroring_mask_;
-        return read_prg_rom(a);
+        const uint16_t index = addr & prg_mirroring_mask_;
+        return read_prg_rom(index);
     }
     else {
         return 0xFF;
