@@ -19,8 +19,8 @@ private:
 
     bool enable_nt_lo_ = false;
     bool enable_nt_hi_ = false;
-    int irq_counter_ = 0;
     bool irq_enabled_ = false;
+    unsigned int irq_counter_ = 0;
 
     enum Select {
         SELECT_CHR_ROM = 0,

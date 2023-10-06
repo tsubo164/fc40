@@ -20,8 +20,8 @@ private:
     int prg_bank_mode_ = 0;
     int chr_bank_mode_ = 0;
 
-    int irq_counter_ = 0;
-    int irq_latch_ = 0;
+    unsigned int irq_counter_ = 0;
+    unsigned int irq_latch_ = 0;
     bool irq_enabled_ = false;
     bool irq_reload_ = true;
 
