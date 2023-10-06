@@ -2,6 +2,7 @@
 #define MAPPER_000_H
 
 #include "mapper.h"
+#include "bank_map.h"
 
 namespace nes {
 
@@ -12,7 +13,7 @@ public:
     virtual ~Mapper_000();
 
 private:
-    uint16_t prg_mirroring_mask_ = 0x7FFF;
+    bankmap<Size::_16KB,2> prg_;
 
     uint8_t do_read_prg(uint16_t addr) const override final;
     uint8_t do_read_chr(uint16_t addr) const override final;

@@ -53,6 +53,22 @@ uint8_t Mapper_019::do_read_prg(uint16_t addr) const
     return 0x00;
 }
 
+uint8_t Mapper_019::do_read_chr(uint16_t addr) const
+{
+    if (addr >= 0x0000 && addr <= 0x1FFF)
+        return read_chr(addr);
+    else
+        return 0xFF;
+}
+
+uint8_t Mapper_019::do_read_nametable(uint16_t addr) const
+{
+    if (addr >= 0x2000 && addr <= 0x2FFF)
+        return read_chr(addr);
+    else
+        return 0xFF;
+}
+
 void Mapper_019::do_write_prg(uint16_t addr, uint8_t data)
 {
     if (addr >= 0x4800 && addr <= 0x4FFF) {
@@ -184,6 +200,18 @@ void Mapper_019::do_write_prg(uint16_t addr, uint8_t data)
     }
 }
 
+void Mapper_019::do_write_chr(uint16_t addr, uint8_t data)
+{
+    if (addr >= 0x0000 && addr <= 0x1FFF)
+        write_chr(addr, data);
+}
+
+void Mapper_019::do_write_nametable(uint16_t addr, uint8_t data)
+{
+    if (addr >= 0x2000 && addr <= 0x2FFF)
+        write_chr(addr, data);
+}
+
 uint8_t Mapper_019::read_chr(uint16_t addr) const
 {
     const int window = addr / 0x400;
@@ -237,34 +265,6 @@ void Mapper_019::write_chr(uint16_t addr, uint8_t data)
     default:
         break;
     }
-}
-
-uint8_t Mapper_019::do_read_chr(uint16_t addr) const
-{
-    if (addr >= 0x0000 && addr <= 0x1FFF)
-        return read_chr(addr);
-    else
-        return 0xFF;
-}
-
-uint8_t Mapper_019::do_read_nametable(uint16_t addr) const
-{
-    if (addr >= 0x2000 && addr <= 0x2FFF)
-        return read_chr(addr);
-    else
-        return 0xFF;
-}
-
-void Mapper_019::do_write_chr(uint16_t addr, uint8_t data)
-{
-    if (addr >= 0x0000 && addr <= 0x1FFF)
-        write_chr(addr, data);
-}
-
-void Mapper_019::do_write_nametable(uint16_t addr, uint8_t data)
-{
-    if (addr >= 0x2000 && addr <= 0x2FFF)
-        write_chr(addr, data);
 }
 
 void Mapper_019::do_cpu_clock()

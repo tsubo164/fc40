@@ -13,13 +13,13 @@ public:
     virtual ~Mapper_003();
 
 private:
-    uint16_t prg_mirroring_mask_ = 0x7FFF;
-    bankmap<Size::_8KB,1> chr_;
+    bankmap<Size::_16KB,2> prg_;
+    bankmap<Size::_8KB,1>  chr_;
 
-    virtual uint8_t do_read_prg(uint16_t addr) const final;
-    virtual void do_write_prg(uint16_t addr, uint8_t data) final;
-    virtual uint8_t do_read_chr(uint16_t addr) const final;
-    virtual void do_write_chr(uint16_t addr, uint8_t data) final;
+    uint8_t do_read_prg(uint16_t addr) const override final;
+    uint8_t do_read_chr(uint16_t addr) const override final;
+    void do_write_prg(uint16_t addr, uint8_t data) override final;
+    void do_write_chr(uint16_t addr, uint8_t data) override final;
 };
 
 } // namespace

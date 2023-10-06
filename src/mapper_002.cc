@@ -28,6 +28,14 @@ uint8_t Mapper_002::do_read_prg(uint16_t addr) const
     }
 }
 
+uint8_t Mapper_002::do_read_chr(uint16_t addr) const
+{
+    if (addr >= 0x0000 && addr <= 0x1FFF)
+        return read_chr_ram(addr);
+    else
+        return 0xFF;
+}
+
 void Mapper_002::do_write_prg(uint16_t addr, uint8_t data)
 {
     // Bank select ($8000-$FFFF)
@@ -39,14 +47,6 @@ void Mapper_002::do_write_prg(uint16_t addr, uint8_t data)
     //           (UNROM uses bits 2-0; UOROM uses bits 3-0)
     if (addr >= 0x8000 && addr <= 0xFFFF)
         prg_.select(0, data & 0x0F);
-}
-
-uint8_t Mapper_002::do_read_chr(uint16_t addr) const
-{
-    if (addr >= 0x0000 && addr <= 0x1FFF)
-        return read_chr_ram(addr);
-    else
-        return 0xFF;
 }
 
 void Mapper_002::do_write_chr(uint16_t addr, uint8_t data)

@@ -17,19 +17,15 @@ enum class Size {
 template<Size BANK_SIZE, int WINDOW_COUNT>
 class bankmap {
 public:
-    bankmap()
-    {
-        for (int i = 0; i < static_cast<int>(windows_.size()); i++)
-            windows_[i] = i;
-    }
-    ~bankmap() {}
-
     void resize(int capacity)
     {
         if (capacity > 0)
             bank_count_ = capacity / static_cast<int>(BANK_SIZE);
         else
             bank_count_ = 1;
+
+        for (int i = 0; i < static_cast<int>(windows_.size()); i++)
+            select(i, i);
     }
 
     void select(int window_index, int bank_index)
@@ -58,7 +54,7 @@ public:
     }
 
 private:
-    std::array<int,WINDOW_COUNT> windows_;
+    std::array<int,WINDOW_COUNT> windows_ = {0};
     int bank_count_ = 1;
 };
 
