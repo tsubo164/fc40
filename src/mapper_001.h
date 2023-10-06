@@ -13,8 +13,8 @@ public:
     virtual ~Mapper_001();
 
 private:
-    bankmap<Size::_16KB,2> prg_;
-    bankmap<Size::_4KB,2>  chr_;
+    bank_map<Size::_16KB,2> prg_;
+    bank_map<Size::_4KB,2>  chr_;
     uint16_t prg_ram_bank_ = 0;
 
     uint8_t shift_register_ = 0;

@@ -13,8 +13,8 @@ public:
     virtual ~Mapper_004();
 
 private:
-    bankmap<Size::_8KB,4> prg_;
-    bankmap<Size::_1KB,8> chr_;
+    bank_map<Size::_8KB,4> prg_;
+    bank_map<Size::_1KB,8> chr_;
 
     int bank_select_ = 0;
     int prg_bank_mode_ = 0;

@@ -13,7 +13,7 @@ public:
     virtual ~Mapper_000();
 
 private:
-    bankmap<Size::_16KB,2> prg_;
+    bank_map<Size::_16KB,2> prg_;
 
     uint8_t do_read_prg(uint16_t addr) const override final;
     uint8_t do_read_chr(uint16_t addr) const override final;

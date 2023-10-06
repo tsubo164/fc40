@@ -15,7 +15,7 @@ enum class Size {
 };
 
 template<Size BANK_SIZE, int WINDOW_COUNT>
-class bankmap {
+class bank_map {
 public:
     void resize(int capacity)
     {

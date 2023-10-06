@@ -14,8 +14,8 @@ public:
     ~Mapper_019();
 
 private:
-    bankmap<Size::_8KB,4>  prg_;
-    bankmap<Size::_1KB,12> chr_; // CHR window 1K x 8(PT) + 1K x 4(NT)
+    bank_map<Size::_8KB,4>  prg_;
+    bank_map<Size::_1KB,12> chr_; // CHR window 1K x 8(PT) + 1K x 4(NT)
 
     bool enable_nt_lo_ = false;
     bool enable_nt_hi_ = false;
