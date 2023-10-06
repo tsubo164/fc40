@@ -10,10 +10,8 @@ Mapper_004::Mapper_004(const std::vector<uint8_t> &prg_rom,
     prg_.select(2, -2);
     prg_.select(3, -1);
 
-    if (GetChrRomSize() == 0) {
+    if (GetChrRomSize() == 0)
         use_chr_ram(0x2000);
-        use_chr_ram_ = true;
-    }
 
     use_prg_ram(0x2000);
 }
@@ -41,7 +39,7 @@ uint8_t Mapper_004::do_read_prg(uint16_t addr) const
 
 uint8_t Mapper_004::do_read_chr(uint16_t addr) const
 {
-    if (use_chr_ram_) {
+    if (is_chr_ram_used()) {
         const int index = addr & 0x1FFF;
         return read_chr_ram(index);
     }
@@ -60,7 +58,7 @@ void Mapper_004::do_write_prg(uint16_t addr, uint8_t data)
     const bool even = addr % 2 == 0;
 
     if (addr >= 0x6000 && addr <= 0x7FFF) {
-        if (!prg_ram_protected_)
+        if (!is_prg_ram_protected())
             write_prg_ram(addr - 0x6000, data);
     }
     else if (addr >= 0x8000 && addr <= 0x9FFF) {
@@ -73,7 +71,7 @@ void Mapper_004::do_write_prg(uint16_t addr, uint8_t data)
         if (even)
             set_mirroring(data);
         else
-            set_prg_ram_protect(data);
+            set_protection(data);
     }
     else if (addr >= 0xC000 && addr <= 0xDFFF) {
         if (even)
@@ -91,7 +89,7 @@ void Mapper_004::do_write_prg(uint16_t addr, uint8_t data)
 
 void Mapper_004::do_write_chr(uint16_t addr, uint8_t data)
 {
-    if (!use_chr_ram_)
+    if (!is_chr_ram_used())
         return;
 
     const int index = addr & 0x1FFF;
@@ -231,7 +229,7 @@ void Mapper_004::set_mirroring(uint8_t data)
         SetMirroring(Mirroring::HORIZONTAL);
 }
 
-void Mapper_004::set_prg_ram_protect(uint8_t data)
+void Mapper_004::set_protection(uint8_t data)
 {
     // 7  bit  0
     // ---- ----
@@ -248,7 +246,7 @@ void Mapper_004::set_prg_ram_protect(uint8_t data)
     // an incompatibility with the MMC6.
     //
     // See iNES Mapper 004 and MMC6 below.
-    prg_ram_protected_ = (data >> 6) & 0x01;
+    set_prg_ram_protect((data >> 6) & 0x01);
 }
 
 void Mapper_004::set_irq_latch(uint8_t data)

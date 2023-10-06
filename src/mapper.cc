@@ -191,6 +191,26 @@ void Mapper::use_chr_ram(int size)
     chr_ram_.resize(size, 0x00);
 }
 
+bool Mapper::is_prg_ram_used() const
+{
+    return GetPrgRamSize() > 0;
+}
+
+bool Mapper::is_chr_ram_used() const
+{
+    return GetChrRamSize() > 0;
+}
+
+void Mapper::set_prg_ram_protect(bool enable)
+{
+    prg_ram_protected_ = enable;
+}
+
+bool Mapper::is_prg_ram_protected() const
+{
+    return prg_ram_protected_;
+}
+
 void Mapper::set_board_name(const std::string &name)
 {
     board_name_ = name;

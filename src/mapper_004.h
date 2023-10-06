@@ -16,8 +16,6 @@ private:
     bankmap<Size::_8KB,4> prg_;
     bankmap<Size::_1KB,8> chr_;
 
-    bool prg_ram_protected_ = false;
-    bool use_chr_ram_ = false;
     int bank_select_ = 0;
     int prg_bank_mode_ = 0;
     int chr_bank_mode_ = 0;
@@ -30,7 +28,7 @@ private:
     void set_bank_select(uint16_t addr, uint8_t data);
     void set_bank_data(uint16_t addr, uint8_t data);
     void set_mirroring(uint8_t data);
-    void set_prg_ram_protect(uint8_t data);
+    void set_protection(uint8_t data);
     void set_irq_latch(uint8_t data);
     void set_irq_reload(uint8_t data);
     void irq_disable(uint8_t data);

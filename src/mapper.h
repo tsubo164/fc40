@@ -63,6 +63,11 @@ protected:
 
     void use_prg_ram(int size);
     void use_chr_ram(int size);
+    bool is_prg_ram_used() const;
+    bool is_chr_ram_used() const;
+
+    void set_prg_ram_protect(bool enable);
+    bool is_prg_ram_protected() const;
 
     void set_board_name(const std::string &name);
     void set_irq();
@@ -77,6 +82,7 @@ private:
 
     Mirroring mirroring_ = Mirroring::HORIZONTAL;
     bool irq_generated_ = false;
+    bool prg_ram_protected_ = false;
 
     virtual uint8_t do_read_prg(uint16_t addr) const = 0;
     virtual uint8_t do_read_chr(uint16_t addr) const = 0;
