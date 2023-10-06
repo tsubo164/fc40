@@ -19,29 +19,22 @@ enum PrgBankMode {
 Mapper_001::Mapper_001(const std::vector<uint8_t> &prg_rom,
         const std::vector<uint8_t> &chr_rom) : Mapper(prg_rom, chr_rom)
 {
-    prg_nbanks_ = GetPrgRomSize() / 0x4000; // 16KB
-    chr_nbanks_ = GetChrRomSize() / 0x2000; // 8KB
-
-    prg_bank_0_ = 0;
-    prg_bank_1_ = 1;
-    chr_bank_0_ = 0;
-    chr_bank_1_ = 1;
+    prg_.resize(GetPrgRomSize());
+    chr_.resize(GetChrRomSize());
 
     shift_register_ = 0x10;
     prg_mode_ = PRG_FIX_LAST;
     chr_mode_ = CHR_8KB;
     prg_ram_disabled_ = false;
 
-    if (GetChrRomSize() == 0) {
+    if (GetChrRomSize() == 0)
         use_chr_ram(0x2000);
-        use_chr_ram_ = true;
-    }
 
     use_prg_ram(0x2000);
 
     select_board();
     write_prg_bank(0x00);
-    write_chr_bank_0(0x00);
+    write_chr_bank(0, 0x00);
 }
 
 Mapper_001::~Mapper_001()
@@ -51,21 +44,29 @@ Mapper_001::~Mapper_001()
 uint8_t Mapper_001::do_read_prg(uint16_t addr) const
 {
     if (addr >= 0x6000 && addr <= 0x7FFF) {
-        // TODO confirm use of prg_ram_bank_
-        // const uint32_t a = prg_ram_bank_ * 0x2000 + (addr & 0x1FFF);
-        // return read_prg_ram(a);
-        return read_prg_ram(addr & 0x1FFF);
+        const int index = addr - 0x6000;
+        return read_prg_ram(index);
     }
-    else if (addr >= 0x8000 && addr <= 0xBFFF) {
-        const uint32_t a = prg_bank_0_ * 0x4000 + (addr & 0x3FFF);
-        return read_prg_rom(a);
-    }
-    else if (addr >= 0xC000 && addr <= 0xFFFF) {
-        const uint32_t a = prg_bank_1_ * 0x4000 + (addr & 0x3FFF);
-        return read_prg_rom(a);
+    else if (addr >= 0x8000 && addr <= 0xFFFF) {
+        const int index = prg_.map(addr - 0x8000);
+        return read_prg_rom(index);
     }
     else {
         return 0;
+    }
+}
+
+uint8_t Mapper_001::do_read_chr(uint16_t addr) const
+{
+    if (addr >= 0x0000 && addr <= 0x1FFF) {
+        const int index = chr_.map(addr);
+        if (is_chr_ram_used())
+            return read_chr_ram(index);
+        else
+            return read_chr_rom(index);
+    }
+    else {
+        return 0xFF;
     }
 }
 
@@ -95,10 +96,8 @@ void Mapper_001::do_write_prg(uint16_t addr, uint8_t data)
     if (addr >= 0x6000 && addr <= 0x7FFF) {
         if (prg_ram_disabled_)
             return;
-        // TODO confirm use of prg_ram_bank_
-        // const uint32_t a = prg_ram_bank_ * 0x2000 + (addr & 0x1FFF);
-        // write_prg_ram(a, data);
-        write_prg_ram(addr & 0x1FFF, data);
+        const int index = addr - 0x6000;
+        write_prg_ram(index, data);
     }
     else if (addr >= 0x8000 && addr <= 0xFFFF) {
         // Load register ($8000-$FFFF)
@@ -124,9 +123,9 @@ void Mapper_001::do_write_prg(uint16_t addr, uint8_t data)
                 if (addr >= 0x8000 && addr <= 0x9FFF)
                     write_control(shift_register_);
                 else if (addr >= 0xA000 && addr <= 0xBFFF)
-                    write_chr_bank_0(shift_register_);
+                    write_chr_bank(0, shift_register_);
                 else if (addr >= 0xC000 && addr <= 0xDFFF)
-                    write_chr_bank_1(shift_register_);
+                    write_chr_bank(1, shift_register_);
                 else if (addr >= 0xE000 && addr <= 0xFFFF)
                     write_prg_bank(shift_register_);
 
@@ -136,40 +135,13 @@ void Mapper_001::do_write_prg(uint16_t addr, uint8_t data)
     }
 }
 
-uint8_t Mapper_001::do_read_chr(uint16_t addr) const
-{
-    if (addr >= 0x0000 && addr <= 0x0FFF) {
-        const uint32_t a = chr_bank_0_ * 0x1000 + (addr & 0x0FFF);
-        if (use_chr_ram_)
-            return read_chr_ram(a);
-        else
-            return read_chr_rom(a);
-    }
-    else if (addr >= 0x1000 && addr <= 0x1FFF) {
-        const uint32_t a = chr_bank_1_ * 0x1000 + (addr & 0x0FFF);
-        if (use_chr_ram_)
-            return read_chr_ram(a);
-        else
-            return read_chr_rom(a);
-    }
-    else {
-        return 0xFF;
-    }
-}
-
 void Mapper_001::do_write_chr(uint16_t addr, uint8_t data)
 {
-    if (!use_chr_ram_)
+    if (!is_chr_ram_used())
         return;
 
-    if (addr >= 0x0000 && addr <= 0x0FFF) {
-        const uint32_t a = chr_bank_0_ * 0x1000 + (addr & 0x0FFF);
-        write_chr_ram(a, data);
-    }
-    else if (addr >= 0x1000 && addr <= 0x1FFF) {
-        const uint32_t a = chr_bank_1_ * 0x1000 + (addr & 0x0FFF);
-        write_chr_ram(a, data);
-    }
+    if (addr >= 0x0000 && addr <= 0x1FFF)
+        write_chr_ram(addr, data);
 }
 
 void Mapper_001::write_control(uint8_t data)
@@ -189,13 +161,13 @@ void Mapper_001::write_control(uint8_t data)
     //        (0: switch 8 KB at a time; 1: switch two separate 4 KB banks)
     control_register_ = data;
 
-    mirroring_ = data & 0x03;
+    const int mirroring = data & 0x03;
     prg_mode_ = (data >> 2) & 0x03;
     chr_mode_ = (data >> 4) & 0x01;
 
-    if (mirroring_ == 3)
+    if (mirroring == 3)
         SetMirroring(Mirroring::HORIZONTAL);
-    else if (mirroring_ == 2)
+    else if (mirroring == 2)
         SetMirroring(Mirroring::VERTICAL);
 }
 
@@ -213,23 +185,24 @@ void Mapper_001::write_prg_bank(uint8_t data)
     switch (prg_mode_) {
     case PRG_32KB_0:
     case PRG_32KB_1:
-        prg_bank_0_ = (data & 0x0E); // 0, 2, 4, ...
-        prg_bank_1_ = prg_bank_0_ + 1; // 1, 3, 5, ...
+        prg_.select(0, (data & 0x0E));
+        prg_.select(1, (data & 0x0E) + 1);
         break;
 
     case PRG_FIX_FIRST:
-        prg_bank_0_ = 0;
-        prg_bank_1_ = (data & 0x0F);
+        prg_.select(0, 0);
+        prg_.select(1, data & 0x0F);
         break;
 
     case PRG_FIX_LAST:
-        prg_bank_0_ = (data & 0x0F);
-        prg_bank_1_ = prg_nbanks_ - 1;
+        prg_.select(0, data & 0x0F);
+        prg_.select(1, -1);
         break;
 
     default:
         break;
     }
+    // TODO PRG RAM chip enable
 }
 
 enum MMC1_Board {
@@ -273,7 +246,7 @@ static int find_board(uint32_t PRG_ROM, uint32_t PRG_RAM, uint32_t CHR, std::str
         {"SUROM",  {512},       {8},      {8}   , SUROM },
     };
 
-    for (auto entry: board_entries) {
+    for (const auto &entry: board_entries) {
         const bool found =
             match_size(entry.prg_rom, PRG_ROM) &&
             match_size(entry.prg_ram, PRG_RAM) &&
@@ -293,16 +266,19 @@ void Mapper_001::select_board()
 {
     const uint32_t PRG_ROM = GetPrgRomSize() / 1024;
     const uint32_t PRG_RAM = GetPrgRamSize() / 1024;
-    const uint32_t CHR = (use_chr_ram_ ? GetChrRamSize() : GetChrRomSize()) / 1024;
+    const uint32_t CHR = (is_chr_ram_used() ? GetChrRamSize() : GetChrRomSize()) / 1024;
     std::string name;
 
-    const int board = find_board(PRG_ROM, PRG_RAM, CHR, name);
+    mmc3_board_ = find_board(PRG_ROM, PRG_RAM, CHR, name);
     set_board_name(name);
+}
 
-    switch (board) {
+void Mapper_001::write_chr_bank(int window, uint8_t data)
+{
+    switch (mmc3_board_) {
+
     case SNROM:
-        write_chr_bank_0 = [=](uint8_t data)
-        {
+        if (window == 0) {
             // CHR bank 0 (internal, $A000-$BFFF)
             // 4bit0
             // -----
@@ -311,14 +287,11 @@ void Mapper_001::select_board()
             // |   +- Select 4 KB CHR RAM bank at PPU $0000 (ignored in 8 KB mode)
             // +----- PRG RAM disable (0: enable, 1: open bus)
             if (chr_mode_ == CHR_4KB) {
-                chr_bank_0_ = (data & 0x01);
-                prg_ram_disabled_ = (data & 0x10);
+                chr_.select(0, data & 0x01);
             }
-            else {
-            }
-        };
-        write_chr_bank_1 = [=](uint8_t data)
-        {
+            prg_ram_disabled_ = (data & 0x10);
+        }
+        else if (window == 1) {
             // CHR bank 1 (internal, $C000-$DFFF)
             // 4bit0
             // -----
@@ -327,17 +300,14 @@ void Mapper_001::select_board()
             // |   +- Select 4 KB CHR RAM bank at PPU $1000 (ignored in 8 KB mode)
             // +----- PRG RAM disable (0: enable, 1: open bus) (ignored in 8 KB mode)
             if (chr_mode_ == CHR_4KB) {
-                chr_bank_1_ = (data & 0x01);
+                chr_.select(1, data & 0x01);
                 prg_ram_disabled_ = (data & 0x10);
             }
-            else {
-            }
-        };
+        }
         break;
 
     case SUROM:
-        write_chr_bank_0 = [=](uint8_t data)
-        {
+        if (window == 0) {
             // CHR bank 0 (internal, $A000-$BFFF)
             // 4bit0
             // -----
@@ -347,18 +317,13 @@ void Mapper_001::select_board()
             // |++--- Select 8 KB PRG RAM bank
             // +----- Select 256 KB PRG ROM bank
             if (chr_mode_ == CHR_4KB) {
-                chr_bank_0_ = (data & 0x01);
-                prg_ram_bank_ = (data >> 2) & 0x03;
-                prg_bank_0_ = (prg_bank_0_ & 0x0F) | (data & 0x10);
-                prg_bank_1_ = (prg_bank_1_ & 0x0F) | (data & 0x10);
+                chr_.select(0, data & 0x01);
             }
-            else {
-                prg_bank_0_ = (prg_bank_0_ & 0x0F) | (data & 0x10);
-                prg_bank_1_ = (prg_bank_1_ & 0x0F) | (data & 0x10);
-            }
-        };
-        write_chr_bank_1 = [=](uint8_t data)
-        {
+            prg_ram_bank_ = (data >> 2) & 0x03;
+            prg_.select(0, (prg_.bank(0) & 0x0F) | (data & 0x10));
+            prg_.select(1, (prg_.bank(1) & 0x0F) | (data & 0x10));
+        }
+        else if (window == 1) {
             // CHR bank 1 (internal, $C000-$DFFF)
             // 4bit0
             // -----
@@ -368,21 +333,18 @@ void Mapper_001::select_board()
             // |++--- Select 8 KB PRG RAM bank (ignored in 8 KB mode)
             // +----- Select 256 KB PRG ROM bank (ignored in 8 KB mode)
             if (chr_mode_ == CHR_4KB) {
-                chr_bank_1_ = (data & 0x01);
+                chr_.select(1, data & 0x01);
                 prg_ram_bank_ = (data >> 2) & 0x03;
-                prg_bank_0_ = (prg_bank_0_ & 0x0F) | (data & 0x10);
-                prg_bank_1_ = (prg_bank_1_ & 0x0F) | (data & 0x10);
+                prg_.select(0, (prg_.bank(0) & 0x0F) | (data & 0x10));
+                prg_.select(1, (prg_.bank(1) & 0x0F) | (data & 0x10));
             }
-            else {
-            }
-        };
+        }
         break;
 
     case SLROM:
     case SxROM:
     default:
-        write_chr_bank_0 = [=](uint8_t data)
-        {
+        if (window == 0) {
             // CHR bank 0 (internal, $A000-$BFFF)
             // 4bit0
             // -----
@@ -391,15 +353,14 @@ void Mapper_001::select_board()
             // +++++- Select 4 KB or 8 KB CHR bank at PPU $0000
             //        (low bit ignored in 8 KB mode)
             if (chr_mode_ == CHR_4KB) {
-                chr_bank_0_ = (data & 0x1F);
+                chr_.select(0, data & 0x1F);
             }
             else {
-                chr_bank_0_ = (data & 0x1E); // 0, 2, 4, ...
-                chr_bank_1_ = chr_bank_0_ + 1; // 1, 3, 5, ...
+                chr_.select(0, (data & 0x1E));
+                chr_.select(1, (data & 0x1E) + 1);
             }
-        };
-        write_chr_bank_1 = [=](uint8_t data)
-        {
+        }
+        else if (window == 1) {
             // CHR bank 1 (internal, $C000-$DFFF)
             // 4bit0
             // -----
@@ -407,9 +368,7 @@ void Mapper_001::select_board()
             // |||||
             // +++++- Select 4 KB CHR bank at PPU $1000 (ignored in 8 KB mode)
             if (chr_mode_ == CHR_4KB) {
-                chr_bank_1_ = (data & 0x1F);
-            }
-            else {
+                chr_.select(1, data & 0x1F);
             }
         };
         break;
