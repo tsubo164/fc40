@@ -2,6 +2,7 @@
 #define MAPPER_004_H
 
 #include "mapper.h"
+#include "bank_map.h"
 
 namespace nes {
 
@@ -12,25 +13,19 @@ public:
     virtual ~Mapper_004();
 
 private:
-    uint8_t prg_bank_[4] = {};
-    uint8_t chr_bank_[8] = {};
+    bankmap<Size::_8KB,4> prg_;
+    bankmap<Size::_1KB,8> chr_;
 
     bool prg_ram_protected_ = false;
     bool use_chr_ram_ = false;
-    uint8_t bank_select_ = 0;
-    uint8_t prg_bank_mode_ = 0;
-    uint8_t chr_bank_mode_ = 0;
-    uint16_t prg_bank_count_ = 0;
-    uint16_t chr_bank_count_ = 0;
+    int bank_select_ = 0;
+    int prg_bank_mode_ = 0;
+    int chr_bank_mode_ = 0;
 
-    uint8_t mirroring_ = 0;
-    uint8_t irq_counter_ = 0;
-    uint8_t irq_latch_ = 0;
+    int irq_counter_ = 0;
+    int irq_latch_ = 0;
     bool irq_enabled_ = false;
     bool irq_reload_ = true;
-    bool prev_A12_ = false;
-
-    void clock_irq_counter(uint16_t addr);
 
     void set_bank_select(uint16_t addr, uint8_t data);
     void set_bank_data(uint16_t addr, uint8_t data);

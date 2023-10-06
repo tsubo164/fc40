@@ -19,7 +19,7 @@ class bankmap {
 public:
     bankmap()
     {
-        for (int i = 0; i < windows_.size(); i++)
+        for (int i = 0; i < static_cast<int>(windows_.size()); i++)
             windows_[i] = i;
     }
     ~bankmap() {}
@@ -44,6 +44,14 @@ public:
         const int window = addr / static_cast<int>(BANK_SIZE);
         const int base = windows_[window] * static_cast<int>(BANK_SIZE);
         return base + offset;
+    }
+
+    int bank(int window_index) const
+    {
+        if (window_index >= 0 && window_index < static_cast<int>(windows_.size()))
+            return windows_[window_index];
+        else
+            return 0;
     }
 
 private:

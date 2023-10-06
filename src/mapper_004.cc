@@ -5,25 +5,16 @@ namespace nes {
 Mapper_004::Mapper_004(const std::vector<uint8_t> &prg_rom,
         const std::vector<uint8_t> &chr_rom) : Mapper(prg_rom, chr_rom)
 {
-    prg_bank_count_ = GetPrgRomSize() / 0x2000; // 8KB
-    chr_bank_count_ = GetChrRomSize() / 0x0400; // 1KB
-
-    prg_bank_[0] = 0;
-    prg_bank_[1] = 1;
-    prg_bank_[2] = prg_bank_count_ - 2;
-    prg_bank_[3] = prg_bank_count_ - 1;
-
-    for (int i = 0; i < 8; i++)
-        chr_bank_[i] = i;
+    prg_.resize(GetPrgRomSize());
+    chr_.resize(GetChrRomSize());
+    prg_.select(2, -2);
+    prg_.select(3, -1);
 
     if (GetChrRomSize() == 0) {
         use_chr_ram(0x2000);
         use_chr_ram_ = true;
-        // not used
-        chr_bank_count_ = 8;
     }
 
-    // TODO confirm
     use_prg_ram(0x2000);
 }
 
@@ -36,24 +27,12 @@ uint8_t Mapper_004::do_read_prg(uint16_t addr) const
     if (addr >= 0x6000 && addr <= 0x7FFF) {
         if (GetPrgRamSize() == 0)
             return 0xFF;
-        const uint32_t a = addr - 0x6000;
-        return read_prg_ram(a);
+        const int index = addr - 0x6000;
+        return read_prg_ram(index);
     }
-    else if (addr >= 0x8000 && addr <= 0x9FFF) {
-        const uint32_t a = prg_bank_[0] * 0x2000 + (addr & 0x1FFF);
-        return read_prg_rom(a);
-    }
-    else if (addr >= 0xA000 && addr <= 0xBFFF) {
-        const uint32_t a = prg_bank_[1] * 0x2000 + (addr & 0x1FFF);
-        return read_prg_rom(a);
-    }
-    else if (addr >= 0xC000 && addr <= 0xDFFF) {
-        const uint32_t a = prg_bank_[2] * 0x2000 + (addr & 0x1FFF);
-        return read_prg_rom(a);
-    }
-    else if (addr >= 0xE000 && addr <= 0xFFFF) {
-        const uint32_t a = prg_bank_[3] * 0x2000 + (addr & 0x1FFF);
-        return read_prg_rom(a);
+    else if (addr >= 0x8000 && addr <= 0xFFFF) {
+        const int index = prg_.map(addr - 0x8000);
+        return read_prg_rom(index);
     }
     else {
         return 0xFF;
@@ -63,41 +42,13 @@ uint8_t Mapper_004::do_read_prg(uint16_t addr) const
 uint8_t Mapper_004::do_read_chr(uint16_t addr) const
 {
     if (use_chr_ram_) {
-        const uint32_t a = addr & 0x1FFF;
-        return read_chr_ram(a);
+        const int index = addr & 0x1FFF;
+        return read_chr_ram(index);
     }
 
-    if (addr >= 0x0000 && addr <= 0x03FF) {
-        const uint32_t a = chr_bank_[0] * 0x0400 + (addr & 0x03FF);
-        return read_chr_rom(a);
-    }
-    else if (addr >= 0x0400 && addr <= 0x07FF) {
-        const uint32_t a = chr_bank_[1] * 0x0400 + (addr & 0x03FF);
-        return read_chr_rom(a);
-    }
-    else if (addr >= 0x0800 && addr <= 0x0BFF) {
-        const uint32_t a = chr_bank_[2] * 0x0400 + (addr & 0x03FF);
-        return read_chr_rom(a);
-    }
-    else if (addr >= 0x0C00 && addr <= 0x0FFF) {
-        const uint32_t a = chr_bank_[3] * 0x0400 + (addr & 0x03FF);
-        return read_chr_rom(a);
-    }
-    else if (addr >= 0x1000 && addr <= 0x13FF) {
-        const uint32_t a = chr_bank_[4] * 0x0400 + (addr & 0x03FF);
-        return read_chr_rom(a);
-    }
-    else if (addr >= 0x1400 && addr <= 0x17FF) {
-        const uint32_t a = chr_bank_[5] * 0x0400 + (addr & 0x03FF);
-        return read_chr_rom(a);
-    }
-    else if (addr >= 0x1800 && addr <= 0x1BFF) {
-        const uint32_t a = chr_bank_[6] * 0x0400 + (addr & 0x03FF);
-        return read_chr_rom(a);
-    }
-    else if (addr >= 0x1C00 && addr <= 0x1FFF) {
-        const uint32_t a = chr_bank_[7] * 0x0400 + (addr & 0x03FF);
-        return read_chr_rom(a);
+    if (addr >= 0x0000 && addr <= 0x1FFF) {
+        const int index = chr_.map(addr);
+        return read_chr_rom(index);
     }
     else {
         return 0xFF;
@@ -143,8 +94,8 @@ void Mapper_004::do_write_chr(uint16_t addr, uint8_t data)
     if (!use_chr_ram_)
         return;
 
-    const uint32_t a = addr & 0x1FFF;
-    write_chr_ram(a, data);
+    const int index = addr & 0x1FFF;
+    write_chr_ram(index, data);
 }
 
 void Mapper_004::set_bank_select(uint16_t addr, uint8_t data)
@@ -176,6 +127,7 @@ void Mapper_004::set_bank_select(uint16_t addr, uint8_t data)
     bank_select_ = data & 0x07;
     prg_bank_mode_ = (data >> 6) & 0x01;
     chr_bank_mode_ = (data >> 7) & 0x01;
+    // TODO CHR A12 inversion
 }
 
 void Mapper_004::set_bank_data(uint16_t addr, uint8_t data)
@@ -187,82 +139,79 @@ void Mapper_004::set_bank_data(uint16_t addr, uint8_t data)
     // |||| ||||
     // ++++-++++- New bank value, based on last value written to
     //            Bank select register (mentioned above)
-    const uint8_t prg_bank_id = data % prg_bank_count_;
-    const uint8_t chr_bank_id = data % chr_bank_count_;
-
     if (chr_bank_mode_ == 0) {
         switch (bank_select_) {
         case 0:
-            chr_bank_[0] = (chr_bank_id & 0xFE);
-            chr_bank_[1] = (chr_bank_id & 0xFE) + 1;
+            chr_.select(0, (data & 0xFE));
+            chr_.select(1, (data & 0xFE) + 1);
             break;
         case 1:
-            chr_bank_[2] = (chr_bank_id & 0xFE);
-            chr_bank_[3] = (chr_bank_id & 0xFE) + 1;
+            chr_.select(2, (data & 0xFE));
+            chr_.select(3, (data & 0xFE) + 1);
             break;
         case 2:
-            chr_bank_[4] = chr_bank_id;
+            chr_.select(4, data);
             break;
         case 3:
-            chr_bank_[5] = chr_bank_id;
+            chr_.select(5, data);
             break;
         case 4:
-            chr_bank_[6] = chr_bank_id;
+            chr_.select(6, data);
             break;
         case 5:
-            chr_bank_[7] = chr_bank_id;
+            chr_.select(7, data);
             break;
         }
     }
     else {
         switch (bank_select_) {
         case 0:
-            chr_bank_[4] = (chr_bank_id & 0xFE);
-            chr_bank_[5] = (chr_bank_id & 0xFE) + 1;
+            chr_.select(4, (data & 0xFE));
+            chr_.select(5, (data & 0xFE) + 1);
             break;
         case 1:
-            chr_bank_[6] = (chr_bank_id & 0xFE);
-            chr_bank_[7] = (chr_bank_id & 0xFE) + 1;
+            chr_.select(6, (data & 0xFE));
+            chr_.select(7, (data & 0xFE) + 1);
             break;
         case 2:
-            chr_bank_[0] = chr_bank_id;
+            chr_.select(0, data);
             break;
         case 3:
-            chr_bank_[1] = chr_bank_id;
+            chr_.select(1, data);
             break;
         case 4:
-            chr_bank_[2] = chr_bank_id;
+            chr_.select(2, data);
             break;
         case 5:
-            chr_bank_[3] = chr_bank_id;
+            chr_.select(3, data);
             break;
         }
     }
     if (prg_bank_mode_ == 0) {
         switch (bank_select_) {
         case 6:
-            prg_bank_[0] = prg_bank_id;
-            prg_bank_[2] = prg_bank_count_ - 2;
-            prg_bank_[3] = prg_bank_count_ - 1;
+            prg_.select(0, data);
+            prg_.select(2, -2);
+            prg_.select(3, -1);
             break;
         case 7:
-            prg_bank_[1] = prg_bank_id;
-            prg_bank_[2] = prg_bank_count_ - 2;
-            prg_bank_[3] = prg_bank_count_ - 1;
+            prg_.select(1, data);
+            prg_.select(2, -2);
+            prg_.select(3, -1);
             break;
         }
     }
     else {
         switch (bank_select_) {
         case 6:
-            prg_bank_[2] = prg_bank_id;
-            prg_bank_[0] = prg_bank_count_ - 2;
-            prg_bank_[3] = prg_bank_count_ - 1;
+            prg_.select(2, data);
+            prg_.select(0, -2);
+            prg_.select(3, -1);
             break;
         case 7:
-            prg_bank_[1] = prg_bank_id;
-            prg_bank_[0] = prg_bank_count_ - 2;
-            prg_bank_[3] = prg_bank_count_ - 1;
+            prg_.select(1, data);
+            prg_.select(0, -2);
+            prg_.select(3, -1);
             break;
         }
     }
@@ -276,11 +225,9 @@ void Mapper_004::set_mirroring(uint8_t data)
     // xxxx xxxM
     //         |
     //         +- Nametable mirroring (0: vertical; 1: horizontal)
-    mirroring_ = data & 0x01;
-
-    if (mirroring_ == 0)
+    if ((data & 0x01) == 0)
         SetMirroring(Mirroring::VERTICAL);
-    else if (mirroring_ == 1)
+    else
         SetMirroring(Mirroring::HORIZONTAL);
 }
 
