@@ -26,7 +26,10 @@ public:
 
     void resize(int capacity)
     {
-        bank_count_ = capacity / static_cast<int>(BANK_SIZE);
+        if (capacity > 0)
+            bank_count_ = capacity / static_cast<int>(BANK_SIZE);
+        else
+            bank_count_ = 1;
     }
 
     void select(int window_index, int bank_index)
