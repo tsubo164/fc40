@@ -59,11 +59,13 @@ uint8_t Mapper_001::do_read_prg(uint16_t addr) const
 uint8_t Mapper_001::do_read_chr(uint16_t addr) const
 {
     if (addr >= 0x0000 && addr <= 0x1FFF) {
-        const int index = chr_.map(addr);
-        if (is_chr_ram_used())
-            return read_chr_ram(index);
-        else
+        if (is_chr_ram_used()) {
+            return read_chr_ram(addr);
+        }
+        else {
+            const int index = chr_.map(addr);
             return read_chr_rom(index);
+        }
     }
     else {
         return 0xFF;
