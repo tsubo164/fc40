@@ -16,11 +16,11 @@ private:
     bank_map<Size::_16KB,2> prg_;
     bank_map<Size::_1KB,8>  chr_;
 
-    int submapper_ = 5;
-
     bool irq_enabled_ = false;
     uint16_t irq_counter_ = 0;
     uint16_t irq_latch_ = 0;
+
+    int submapper_ = 5;
 
     uint8_t do_read_prg(uint16_t addr) const override final;
     uint8_t do_read_chr(uint16_t addr) const override final;

@@ -16,12 +16,12 @@ private:
     bank_map<Size::_8KB,4> prg_;
     bank_map<Size::_1KB,8> chr_;
 
-    int bank_select_ = 0;
-    int prg_bank_mode_ = 0;
-    int chr_bank_mode_ = 0;
+    uint8_t bank_select_ = 0;
+    uint8_t prg_bank_mode_ = 0;
+    uint8_t chr_bank_mode_ = 0;
 
-    unsigned int irq_counter_ = 0;
-    unsigned int irq_latch_ = 0;
+    uint8_t irq_counter_ = 0;
+    uint8_t irq_latch_ = 0;
     bool irq_enabled_ = false;
     bool irq_reload_ = true;
 

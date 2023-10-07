@@ -20,7 +20,7 @@ private:
     bool enable_nt_lo_ = false;
     bool enable_nt_hi_ = false;
     bool irq_enabled_ = false;
-    unsigned int irq_counter_ = 0;
+    uint16_t irq_counter_ = 0;
 
     enum Select {
         SELECT_CHR_ROM = 0,
