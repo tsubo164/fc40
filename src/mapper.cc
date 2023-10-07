@@ -93,6 +93,11 @@ void Mapper::SetNameTable(std::array<uint8_t,2048> *nt)
     nametable_ = nt;
 }
 
+bool Mapper::HasPrgRamWritten() const
+{
+    return prg_ram_written_;
+}
+
 bool Mapper::IsSetIRQ() const
 {
     return irq_generated_;
@@ -167,8 +172,10 @@ uint8_t Mapper::read_nametable(int index) const
 
 void Mapper::write_prg_ram(int index, uint8_t data)
 {
-    if (index >= 0 && index < GetPrgRamSize())
+    if (index >= 0 && index < GetPrgRamSize()) {
         prg_ram_[index] = data;
+        prg_ram_written_ = true;
+    }
 }
 
 void Mapper::write_chr_ram(int index, uint8_t data)

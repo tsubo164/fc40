@@ -40,6 +40,7 @@ public:
     std::vector<uint8_t> GetPrgRam() const;
     void SetPrgRam(const std::vector<uint8_t> &sram);
     void SetNameTable(std::array<uint8_t,2048> *nt);
+    bool HasPrgRamWritten() const;
 
     bool IsSetIRQ() const;
     void ClearIRQ();
@@ -84,6 +85,7 @@ private:
     Mirroring mirroring_ = Mirroring::HORIZONTAL;
     bool irq_generated_ = false;
     bool prg_ram_protected_ = false;
+    bool prg_ram_written_ = false;
 
     virtual uint8_t do_read_prg(uint16_t addr) const = 0;
     virtual uint8_t do_read_chr(uint16_t addr) const = 0;
