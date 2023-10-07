@@ -162,14 +162,25 @@ void Mapper_001::write_control(uint8_t data)
     //        (0: switch 8 KB at a time; 1: switch two separate 4 KB banks)
     control_register_ = data;
 
-    const int mirroring = data & 0x03;
     prg_mode_ = (data >> 2) & 0x03;
     chr_mode_ = (data >> 4) & 0x01;
 
-    if (mirroring == 3)
-        SetMirroring(Mirroring::HORIZONTAL);
-    else if (mirroring == 2)
+    switch (data & 0x03) {
+    case 0:
+        SetMirroring(Mirroring::SINGLE_SCREEN_0);
+        break;
+    case 1:
+        SetMirroring(Mirroring::SINGLE_SCREEN_1);
+        break;
+    case 2:
         SetMirroring(Mirroring::VERTICAL);
+        break;
+    case 3:
+        SetMirroring(Mirroring::HORIZONTAL);
+        break;
+    default:
+        break;
+    }
 }
 
 void Mapper_001::write_prg_bank(uint8_t data)
