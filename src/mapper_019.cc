@@ -1,5 +1,4 @@
 #include "mapper_019.h"
-#include <iostream>
 
 namespace nes {
 

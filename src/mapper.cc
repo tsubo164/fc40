@@ -4,6 +4,7 @@
 #include "mapper_002.h"
 #include "mapper_003.h"
 #include "mapper_004.h"
+#include "mapper_016.h"
 #include "mapper_019.h"
 
 namespace nes {
@@ -235,18 +236,21 @@ void Mapper::do_write_nametable(uint16_t addr, uint8_t data)
 
 int Mapper::nametable_index(uint16_t addr) const
 {
-    const uint16_t index = addr - 0x2000;
-
-    // vertical mirroring
-    if (GetMirroring() == Mirroring::VERTICAL)
-        return index & 0x07FF;
-
-    // horizontal mirroring
-    if (index >= 0x0000 && index <= 0x07FF)
-        return index & 0x03FF;
-
-    if (index >= 0x0800 && index <= 0x0FFF)
-        return 0x400 | (index & 0x03FF);
+    if (GetMirroring() == Mirroring::VERTICAL) {
+        return addr & 0x07FF;
+    }
+    else if (GetMirroring() == Mirroring::HORIZONTAL) {
+        if (addr >= 0x2000 && addr <= 0x27FF)
+            return addr & 0x03FF;
+        if (addr >= 0x2800 && addr <= 0x2FFF)
+            return 0x400 | (addr & 0x03FF);
+    }
+    else if (GetMirroring() == Mirroring::SINGLE_SCREEN_0) {
+        return addr & 0x03FF;
+    }
+    else if (GetMirroring() == Mirroring::SINGLE_SCREEN_1) {
+        return 0x400 | (addr & 0x03FF);
+    }
 
     // unreachable
     return 0x0000;
@@ -278,6 +282,10 @@ std::shared_ptr<Mapper> new_mapper(int id,
     case 4:
     case 206:
         m = new Mapper_004(prg_data, chr_data);
+        break;
+
+    case 16:
+        m = new Mapper_016(prg_data, chr_data);
         break;
 
     case 19:

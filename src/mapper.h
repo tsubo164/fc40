@@ -12,7 +12,8 @@ namespace nes {
 enum class Mirroring {
     HORIZONTAL,
     VERTICAL,
-    SINGLE_SCREEN,
+    SINGLE_SCREEN_0,
+    SINGLE_SCREEN_1,
     FOUR_SCREEN,
 };
 
