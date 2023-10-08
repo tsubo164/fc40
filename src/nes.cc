@@ -237,4 +237,11 @@ void NES::print_disassemble() const
     }
 }
 
+void Serialize(Archive &ar, const std::string &name, NES *data)
+{
+    static uint8_t i = 0x32;
+
+    Serialize(ar, "foo", &i);
+}
+
 } // namespace

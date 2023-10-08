@@ -7,6 +7,7 @@
 #include "dma.h"
 #include "disassemble.h"
 #include "framebuffer.h"
+#include "serialize.h"
 #include <cstdint>
 
 namespace nes {
@@ -65,6 +66,8 @@ private:
     bool need_log() const;
     void print_disassemble() const;
 };
+
+void Serialize(Archive &ar, const std::string &name, NES *data);
 
 } // namespace
 

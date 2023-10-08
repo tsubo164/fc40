@@ -1,10 +1,12 @@
 #include <iostream>
+#include <fstream>
 #include <GLFW/glfw3.h>
 #include "display.h"
 #include "framebuffer.h"
+#include "serialize.h"
+#include "debug.h"
 #include "nes.h"
 #include "ppu.h"
-#include "debug.h"
 
 namespace nes {
 
@@ -25,6 +27,7 @@ static void resize(GLFWwindow *window, int width, int height);
 static void render_grid(const PPU &ppu, int width, int height);
 static void render_pattern_table(const FrameBuffer &patt);
 static void render_sprite_box(const PPU &ppu, int width, int height);
+static bool serialize(NES &nes, const std::string &filename);
 
 // Audio channels
 static uint8_t toggle_bits(uint8_t chan_bits, uint8_t toggle_bit);
@@ -158,6 +161,9 @@ int Display::Open()
         else if (key.IsPressed(GLFW_KEY_TAB)) {
             if (!nes_.IsRunning())
                 nes_.Step();
+        }
+        else if (key.IsPressed(GLFW_KEY_F1)) {
+            serialize(nes_, "stat.txt");
         }
         // Keys reset
         else if (key.IsPressed(GLFW_KEY_R)) {
@@ -454,6 +460,21 @@ static void print_channel_status(uint8_t chan_bits)
             c[(chan_bits & 0x04) > 0],
             c[(chan_bits & 0x08) > 0],
             c[(chan_bits & 0x10) > 0]);
+}
+
+static bool serialize(NES &nes, const std::string &filename)
+{
+    std::ofstream ofs(filename);
+    if (!ofs)
+        return false;
+
+    Archive ar;
+
+    Serialize(ar, "nes", &nes);
+    ar.Write(ofs);
+
+    std::cout << filename << ": saved successfully" << std::endl;
+    return true;
 }
 
 } // namespace

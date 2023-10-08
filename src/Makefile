@@ -9,7 +9,7 @@ RM      := rm -f
 
 SRCS    := apu cartridge cpu debug disassemble display dma framebuffer instruction \
            main mapper mapper_000 mapper_001 mapper_002 mapper_003 mapper_004 \
-           mapper_016 mapper_019 nes ppu sound
+           mapper_016 mapper_019 nes ppu property serialize sound
 
 .PHONY: clean test
 
