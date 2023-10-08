@@ -1056,4 +1056,23 @@ uint64_t CPU::GetTotalCycles() const
     return total_cycles_;
 }
 
+void Serialize(Archive &ar, const std::string &name, CPU *cpu)
+{
+    ar.EnterNamespcae(name);
+
+    Serialize(ar, "total_cycles_", &cpu->total_cycles_);
+    Serialize(ar, "suspended_", &cpu->suspended_);
+
+    Serialize(ar, "a_", &cpu->a_);
+    Serialize(ar, "x_", &cpu->x_);
+    Serialize(ar, "y_", &cpu->y_);
+    Serialize(ar, "s_", &cpu->s_);
+    Serialize(ar, "p_", &cpu->p_);
+    Serialize(ar, "pc_", &cpu->pc_);
+
+    Serialize(ar, "wram_", &cpu->wram_);
+
+    ar.LeaveNamespcae();
+}
+
 } // namespace

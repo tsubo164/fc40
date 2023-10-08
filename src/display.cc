@@ -163,7 +163,7 @@ int Display::Open()
                 nes_.Step();
         }
         else if (key.IsPressed(GLFW_KEY_F1)) {
-            serialize(nes_, "stat.txt");
+            serialize(nes_, "../stat.txt");
         }
         // Keys reset
         else if (key.IsPressed(GLFW_KEY_R)) {

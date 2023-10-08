@@ -31,15 +31,15 @@ private:
 
 // For basic types
 template<typename T>
-void Serialize( Archive &ar, const std::string &name, T *data )
+void Serialize(Archive &ar, const std::string &name, T *data)
 {
-    ar.Serialize( name, Property(data) );
+    ar.Serialize(name, Property(data));
 }
 
-template<int COUNT>
-void Serialize( Archive &ar, const std::string &name, std::array<uint8_t, COUNT> *data )
+template<size_t COUNT>
+void Serialize(Archive &ar, const std::string &name, std::array<uint8_t, COUNT> *data)
 {
-    ar.Serialize( name, Property(data->data(), COUNT) );
+    ar.Serialize(name, Property(data->data(), COUNT));
 }
 
 } // namespace

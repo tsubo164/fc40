@@ -1,8 +1,10 @@
 #ifndef CPU_H
 #define CPU_H
 
-#include <cstdint>
 #include "instruction.h"
+#include "serialize.h"
+#include <cstdint>
+#include <array>
 
 namespace nes {
 
@@ -61,7 +63,7 @@ private:
     uint8_t controller_state_[2] = {0};
 
     // 4 2KB rams. 3 of them are mirroring
-    uint8_t wram_[2048] = {0};
+    std::array<uint8_t,2048> wram_ = {0};
 
     // read and write
     void write_byte(uint16_t addr, uint8_t data);
@@ -99,7 +101,12 @@ private:
     // interrupts
     int do_interrupt(uint16_t vector);
     int handle_interrupt();
+
+    friend
+    void Serialize(Archive &ar, const std::string &name, CPU *cpu);
 };
+
+void Serialize(Archive &ar, const std::string &name, CPU *cpu);
 
 } // namespace
 

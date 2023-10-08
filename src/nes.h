@@ -67,7 +67,7 @@ private:
     void print_disassemble() const;
 };
 
-void Serialize(Archive &ar, const std::string &name, NES *data);
+void Serialize(Archive &ar, const std::string &name, NES *nes);
 
 } // namespace
 

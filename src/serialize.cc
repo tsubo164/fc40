@@ -12,7 +12,7 @@ Archive::~Archive()
 {
 }
 
-bool Archive::Serialize( const std::string &name, const Property &prop )
+bool Archive::Serialize(const std::string &name, const Property &prop)
 {
     std::string name_ = name;
     for (auto it = namespaces_.crbegin(); it != namespaces_.crend(); ++it) {
@@ -38,15 +38,17 @@ void Archive::Write(std::ostream &os) const
             const Property &prop = it->second;
 
             if (prop.GetDataCount() == 1) {
-                os << std::setw( 12 ) << std::setfill( ' ' ) << std::left <<
+                os << std::setw(12) << std::setfill(' ') << std::left <<
                     name << " " <<
                     prop.ToString() << std::endl;
             }
             else {
-                os << std::setw( 12 ) << std::setfill( ' ' ) << std::left <<
-                    name << " " << std::endl;
+                os << std::setw(12) << std::setfill(' ') << std::left << name;
 
                 for (int i = 0; i < prop.GetDataCount(); i++) {
+                    if (i % 256 == 0)
+                        os << std::endl;
+
                     if (i % 16 == 0)
                         os << "  ";
 
@@ -65,7 +67,7 @@ void Archive::Write(std::ostream &os) const
     }
 }
 
-void Archive::Read( std::istream &is )
+void Archive::Read(std::istream &is)
 {
     while (is) {
         std::string name;
@@ -78,7 +80,7 @@ void Archive::Read( std::istream &is )
 
             if (prop.GetDataCount() == 1) {
                 is >> val;
-                prop.FromString( val );
+                prop.FromString(val);
             }
             else {
                 for (int i = 0; i < prop.GetDataCount(); i++) {
