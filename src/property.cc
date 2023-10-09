@@ -59,6 +59,12 @@ std::string Property::ToString(int index) const
     case DataType::Bool:
         return to_hex_string(p_bool);
 
+    case DataType::Float:
+        return std::to_string(*p_float);
+
+    case DataType::Double:
+        return std::to_string(*p_double);
+
     case DataType::String:
         return *p_string;
 
@@ -106,6 +112,14 @@ bool Property::FromString(const std::string &str, int index)
 
     case DataType::Bool:
         from_hex_string(str, p_bool);
+        break;
+
+    case DataType::Float:
+        *p_float = std::stof(str);
+        break;
+
+    case DataType::Double:
+        *p_double = std::stod(str);
         break;
 
     case DataType::String:

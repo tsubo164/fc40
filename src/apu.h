@@ -174,6 +174,8 @@ private:
     TriangleChannel triangle_;
     NoiseChannel noise_;
     DmcChannel dmc_;
+
+    // debug
     uint8_t chan_enable_ = 0x1F;
 
     void clock_timers();
@@ -185,7 +187,12 @@ private:
     void clock_sequencer_step4();
     void clock_sequencer_step5();
     void clock_sequencer();
+
+    friend
+    void Serialize(Archive &ar, const std::string &name, APU *apu);
 };
+
+void Serialize(Archive &ar, const std::string &name, APU *apu);
 
 } // namespace
 

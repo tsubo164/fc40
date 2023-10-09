@@ -20,6 +20,8 @@ public:
     Property(int64_t *data) : type_(DataType::Int64), p_int64(data) {}
 
     Property(bool *data) : type_(DataType::Bool), p_bool(data) {}
+    Property(float *data) : type_(DataType::Float), p_float(data) {}
+    Property(double *data) : type_(DataType::Double), p_double(data) {}
     Property(std::string *data) : type_(DataType::String), p_string(data) {}
     ~Property() {}
 
@@ -38,6 +40,8 @@ private:
         Int32,
         Int64,
         Bool,
+        Float,
+        Double,
         String,
     } type_ = DataType::UInt8;
 
@@ -51,6 +55,8 @@ private:
         int32_t *p_int32;
         int64_t *p_int64;
         bool *p_bool;
+        float *p_float;
+        double *p_double;
         std::string *p_string;
     };
 

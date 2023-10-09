@@ -243,6 +243,7 @@ void Serialize(Archive &ar, const std::string &name, NES *nes)
 
     Serialize(ar, "cpu", &nes->cpu);
     Serialize(ar, "ppu", &nes->ppu);
+    Serialize(ar, "apu", &nes->apu);
 
     ar.LeaveNamespcae();
 }
