@@ -1194,14 +1194,14 @@ void Serialize(Archive &ar, const std::string &name, PPU *ppu)
         Serialize(ar, "secondary_oam_[6]", &ppu->secondary_oam_[6]);
         Serialize(ar, "secondary_oam_[7]", &ppu->secondary_oam_[7]);
         // 8 latches and 8 counters
-        Serialize(ar, "rendering_oam_[0]", &ppu->rendering_sprite_[0]);
-        Serialize(ar, "rendering_oam_[1]", &ppu->rendering_sprite_[1]);
-        Serialize(ar, "rendering_oam_[2]", &ppu->rendering_sprite_[2]);
-        Serialize(ar, "rendering_oam_[3]", &ppu->rendering_sprite_[3]);
-        Serialize(ar, "rendering_oam_[4]", &ppu->rendering_sprite_[4]);
-        Serialize(ar, "rendering_oam_[5]", &ppu->rendering_sprite_[5]);
-        Serialize(ar, "rendering_oam_[6]", &ppu->rendering_sprite_[6]);
-        Serialize(ar, "rendering_oam_[7]", &ppu->rendering_sprite_[7]);
+        Serialize(ar, "rendering_oam_[0]", &ppu->rendering_oam_[0]);
+        Serialize(ar, "rendering_oam_[1]", &ppu->rendering_oam_[1]);
+        Serialize(ar, "rendering_oam_[2]", &ppu->rendering_oam_[2]);
+        Serialize(ar, "rendering_oam_[3]", &ppu->rendering_oam_[3]);
+        Serialize(ar, "rendering_oam_[4]", &ppu->rendering_oam_[4]);
+        Serialize(ar, "rendering_oam_[5]", &ppu->rendering_oam_[5]);
+        Serialize(ar, "rendering_oam_[6]", &ppu->rendering_oam_[6]);
+        Serialize(ar, "rendering_oam_[7]", &ppu->rendering_oam_[7]);
         Serialize(ar, "rendering_sprite_[0]", &ppu->rendering_sprite_[0]);
         Serialize(ar, "rendering_sprite_[1]", &ppu->rendering_sprite_[1]);
         Serialize(ar, "rendering_sprite_[2]", &ppu->rendering_sprite_[2]);

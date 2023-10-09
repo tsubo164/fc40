@@ -65,6 +65,9 @@ private:
 
     bool need_log() const;
     void print_disassemble() const;
+
+    friend
+    void Serialize(Archive &ar, const std::string &name, NES *nes);
 };
 
 void Serialize(Archive &ar, const std::string &name, NES *nes);
