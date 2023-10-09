@@ -27,7 +27,8 @@ static void resize(GLFWwindow *window, int width, int height);
 static void render_grid(const PPU &ppu, int width, int height);
 static void render_pattern_table(const FrameBuffer &patt);
 static void render_sprite_box(const PPU &ppu, int width, int height);
-static bool serialize(NES &nes, const std::string &filename);
+static bool save_stat(NES &nes, const std::string &filename);
+static bool load_stat(NES &nes, const std::string &filename);
 
 // Audio channels
 static uint8_t toggle_bits(uint8_t chan_bits, uint8_t toggle_bit);
@@ -163,7 +164,10 @@ int Display::Open()
                 nes_.Step();
         }
         else if (key.IsPressed(GLFW_KEY_F1)) {
-            serialize(nes_, "../stat.txt");
+            save_stat(nes_, "../stat.txt");
+        }
+        else if (key.IsPressed(GLFW_KEY_F2)) {
+            load_stat(nes_, "../stat.txt");
         }
         // Keys reset
         else if (key.IsPressed(GLFW_KEY_R)) {
@@ -462,7 +466,7 @@ static void print_channel_status(uint8_t chan_bits)
             c[(chan_bits & 0x10) > 0]);
 }
 
-static bool serialize(NES &nes, const std::string &filename)
+static bool save_stat(NES &nes, const std::string &filename)
 {
     std::ofstream ofs(filename);
     if (!ofs)
@@ -474,6 +478,21 @@ static bool serialize(NES &nes, const std::string &filename)
     ar.Write(ofs);
 
     std::cout << filename << ": saved successfully" << std::endl;
+    return true;
+}
+
+static bool load_stat(NES &nes, const std::string &filename)
+{
+    std::ifstream ifs(filename);
+    if (!ifs)
+        return false;
+
+    Archive ar;
+
+    Serialize(ar, "nes", &nes);
+    ar.Read(ifs);
+
+    std::cout << filename << ": loaded successfully" << std::endl;
     return true;
 }
 

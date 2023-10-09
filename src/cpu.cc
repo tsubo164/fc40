@@ -1063,6 +1063,7 @@ void Serialize(Archive &ar, const std::string &name, CPU *cpu)
     Serialize(ar, "total_cycles_", &cpu->total_cycles_);
     Serialize(ar, "suspended_", &cpu->suspended_);
 
+    // registers
     Serialize(ar, "a_", &cpu->a_);
     Serialize(ar, "x_", &cpu->x_);
     Serialize(ar, "y_", &cpu->y_);
@@ -1070,6 +1071,14 @@ void Serialize(Archive &ar, const std::string &name, CPU *cpu)
     Serialize(ar, "p_", &cpu->p_);
     Serialize(ar, "pc_", &cpu->pc_);
 
+    if (1) {
+        Serialize(ar, "controller_input_[0]", &cpu->controller_input_[0]);
+        Serialize(ar, "controller_input_[1]", &cpu->controller_input_[1]);
+        Serialize(ar, "controller_state_[0]", &cpu->controller_state_[0]);
+        Serialize(ar, "controller_state_[1]", &cpu->controller_state_[1]);
+    }
+
+    // 4 2KB rams. 3 of them are mirroring
     Serialize(ar, "wram_", &cpu->wram_);
 
     ar.LeaveNamespcae();

@@ -1,10 +1,10 @@
 #ifndef CPU_H
 #define CPU_H
 
-#include "instruction.h"
-#include "serialize.h"
 #include <cstdint>
 #include <array>
+#include "instruction.h"
+#include "serialize.h"
 
 namespace nes {
 
