@@ -397,7 +397,7 @@ static float calculate_tnd_level(uint8_t triangle, uint8_t noise, uint8_t dmc)
 
 static float sample_pulse(PulseChannel &pulse)
 {
-    const static uint8_t sequence_table[][8] = {
+    static const uint8_t sequence_table[][8] = {
         {0, 1, 0, 0, 0, 0, 0, 0}, // (12.5%)
         {0, 1, 1, 0, 0, 0, 0, 0}, // (25%)
         {0, 1, 1, 1, 1, 0, 0, 0}, // (50%)
@@ -429,7 +429,7 @@ static float sample_triangle(TriangleChannel &tri)
     static constexpr float AUDIO_SAMPLE_PER_FRAME = 44100 / 60;
     static constexpr float DECAY_RATE = 1.0 / AUDIO_SAMPLE_PER_FRAME;
 
-    const static uint8_t sequence_table[32] = {
+    static const uint8_t sequence_table[32] = {
         15, 14, 13, 12, 11, 10,  9,  8,  7,  6,  5,  4,  3,  2,  1,  0,
          0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15
     };
@@ -866,7 +866,7 @@ void APU::Clock()
         const float d = (chan_enable_ & 0x10) ? sample_dmc(dmc_) : 0;
         const float tnd_out = calculate_tnd_level(t, n, d);
 
-        static float lpf = 0;
+        float &lpf = low_pass_filter_;
         const float raw_data = pulse_out + tnd_out;
         const float k = .5;
 
@@ -947,160 +947,6 @@ void APU::SetChannelEnable(uint8_t chan_bits)
 uint8_t APU::GetChannelEnable() const
 {
     return chan_enable_;
-}
-
-void Serialize(Archive &ar, const std::string &name, Sweep *swp)
-{
-    ar.EnterNamespcae(name);
-
-    Serialize(ar, "enabled", &swp->enabled);
-    Serialize(ar, "period", &swp->period);
-    Serialize(ar, "target_period", &swp->target_period);
-    Serialize(ar, "negate", &swp->negate);
-    Serialize(ar, "shift", &swp->shift);
-    Serialize(ar, "reload", &swp->reload);
-    Serialize(ar, "divider", &swp->divider);
-
-    ar.LeaveNamespcae();
-}
-
-void Serialize(Archive &ar, const std::string &name, Envelope *env)
-{
-    ar.EnterNamespcae(name);
-
-    Serialize(ar, "start", &env->start);
-    Serialize(ar, "decay", &env->decay);
-    Serialize(ar, "divider", &env->divider);
-    Serialize(ar, "volume", &env->volume);
-    Serialize(ar, "loop", &env->loop);
-    Serialize(ar, "constant", &env->constant);
-
-    ar.LeaveNamespcae();
-}
-
-void Serialize(Archive &ar, const std::string &name, PulseChannel *pulse)
-{
-    ar.EnterNamespcae(name);
-
-    // timer
-    Serialize(ar, "enabled", &pulse->enabled);
-    Serialize(ar, "timer", &pulse->timer);
-    Serialize(ar, "timer_period", &pulse->timer_period);
-
-    // length
-    Serialize(ar, "length", &pulse->length);
-    Serialize(ar, "length_halt", &pulse->length_halt);
-
-    Serialize(ar, "duty", &pulse->duty);
-    Serialize(ar, "sequence_pos", &pulse->sequence_pos);
-
-    Serialize(ar, "sweep", &pulse->sweep);
-    Serialize(ar, "envelope", &pulse->envelope);
-
-    ar.LeaveNamespcae();
-};
-
-void Serialize(Archive &ar, const std::string &name, TriangleChannel *tri)
-{
-    ar.EnterNamespcae(name);
-
-    // timer
-    Serialize(ar, "enabled", &tri->enabled);
-    Serialize(ar, "timer", &tri->timer);
-    Serialize(ar, "timer_period", &tri->timer_period);
-
-    // length
-    Serialize(ar, "length", &tri->length);
-    Serialize(ar, "length_halt", &tri->length_halt);
-
-    Serialize(ar, "control", &tri->control);
-    Serialize(ar, "linear_counter", &tri->linear_counter);
-    Serialize(ar, "linear_period", &tri->linear_period);
-    Serialize(ar, "linear_reload", &tri->linear_reload);
-
-    Serialize(ar, "sequence_pos", &tri->sequence_pos);
-
-    // output
-    Serialize(ar, "output_level", &tri->output_level);
-    Serialize(ar, "start_ramp", &tri->start_ramp);
-
-    ar.LeaveNamespcae();
-}
-
-void Serialize(Archive &ar, const std::string &name, NoiseChannel *noise)
-{
-    ar.EnterNamespcae(name);
-
-    // timer
-    Serialize(ar, "enabled", &noise->enabled);
-    Serialize(ar, "timer", &noise->timer);
-    Serialize(ar, "timer_period", &noise->timer_period);
-
-    // length
-    Serialize(ar, "length", &noise->length);
-    Serialize(ar, "length_halt", &noise->length_halt);
-
-    Serialize(ar, "shift", &noise->shift);
-    Serialize(ar, "mode", &noise->mode);
-
-    Serialize(ar, "envelope", &noise->envelope);
-
-    ar.LeaveNamespcae();
-}
-
-void Serialize(Archive &ar, const std::string &name, DmcChannel *dmc)
-{
-    ar.EnterNamespcae(name);
-
-    // timer
-    Serialize(ar, "enabled", &dmc->enabled);
-    Serialize(ar, "timer", &dmc->timer);
-    Serialize(ar, "timer_period", &dmc->timer_period);
-
-    // flags
-    Serialize(ar, "irq_generated", &dmc->irq_generated);
-    Serialize(ar, "irq_enabled", &dmc->irq_enabled);
-    Serialize(ar, "cpu_stall", &dmc->cpu_stall);
-
-    // sample
-    Serialize(ar, "buffer_empty", &dmc->buffer_empty);
-    Serialize(ar, "sample_buffer", &dmc->sample_buffer);
-
-    // memory reader
-    Serialize(ar, "loop", &dmc->loop);
-    Serialize(ar, "sample_address", &dmc->sample_address);
-    Serialize(ar, "sample_length", &dmc->sample_length);
-    Serialize(ar, "current_address", &dmc->current_address);
-    Serialize(ar, "bytes_remaining", &dmc->bytes_remaining);
-
-    // output unit
-    Serialize(ar, "output_level", &dmc->output_level);
-    Serialize(ar, "shift_register", &dmc->shift_register);
-    Serialize(ar, "bits_counter", &dmc->bits_counter);
-
-    ar.LeaveNamespcae();
-};
-
-void Serialize(Archive &ar, const std::string &name, APU *apu)
-{
-    ar.EnterNamespcae(name);
-
-    Serialize(ar, "audio_time_", &apu->audio_time_);
-    Serialize(ar, "clock_", &apu->clock_);
-    Serialize(ar, "cycle_", &apu->cycle_);
-
-    Serialize(ar, "mode_", &apu->mode_);
-    Serialize(ar, "inhibit_interrupt_", &apu->inhibit_interrupt_);
-    Serialize(ar, "frame_interrupt_", &apu->frame_interrupt_);
-    Serialize(ar, "dmc_interrupt_", &apu->dmc_interrupt_);
-
-    Serialize(ar, "pulse1_", &apu->pulse1_);
-    Serialize(ar, "pulse2_", &apu->pulse2_);
-    Serialize(ar, "triangle_", &apu->triangle_);
-    Serialize(ar, "noise_", &apu->noise_);
-    Serialize(ar, "dmc_", &apu->dmc_);
-
-    ar.LeaveNamespcae();
 }
 
 } // namespace

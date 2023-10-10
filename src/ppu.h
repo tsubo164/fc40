@@ -196,12 +196,7 @@ private:
     bool has_hit_sprite_zero(Pixel bg, Pixel fg, int x) const;
     Color lookup_pixel_color(Pixel pix) const;
     void render_pixel(int x, int y);
-
-    friend
-    void Serialize(Archive &ar, const std::string &name, PPU *ppu);
 };
-
-void Serialize(Archive &ar, const std::string &name, PPU *ppu);
 
 } // namespace
 

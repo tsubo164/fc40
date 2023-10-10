@@ -14,6 +14,20 @@ struct Sweep {
     uint8_t shift = 0;
     bool reload = false;
     uint8_t divider = 0;
+
+    // serialization
+    friend void Serialize(Archive &ar, const std::string &name, Sweep *data)
+    {
+        SERIALIZE_NAMESPACE_BEGIN(ar, name);
+        SERIALIZE(ar, data, enabled);
+        SERIALIZE(ar, data, period);
+        SERIALIZE(ar, data, target_period);
+        SERIALIZE(ar, data, negate);
+        SERIALIZE(ar, data, shift);
+        SERIALIZE(ar, data, reload);
+        SERIALIZE(ar, data, divider);
+        SERIALIZE_NAMESPACE_END(ar);
+    }
 };
 
 struct Envelope {
@@ -23,6 +37,19 @@ struct Envelope {
     uint8_t volume = 0;
     bool loop = false;
     bool constant = false;
+
+    // serialization
+    friend void Serialize(Archive &ar, const std::string &name, Envelope *data)
+    {
+        SERIALIZE_NAMESPACE_BEGIN(ar, name);
+        SERIALIZE(ar, data, start);
+        SERIALIZE(ar, data, decay);
+        SERIALIZE(ar, data, divider);
+        SERIALIZE(ar, data, volume);
+        SERIALIZE(ar, data, loop);
+        SERIALIZE(ar, data, constant);
+        SERIALIZE_NAMESPACE_END(ar);
+    }
 };
 
 struct PulseChannel {
@@ -40,6 +67,22 @@ struct PulseChannel {
 
     Sweep sweep;
     Envelope envelope;
+
+    // serialization
+    friend void Serialize(Archive &ar, const std::string &name, PulseChannel *data)
+    {
+        SERIALIZE_NAMESPACE_BEGIN(ar, name);
+        SERIALIZE(ar, data, enabled);
+        SERIALIZE(ar, data, timer);
+        SERIALIZE(ar, data, timer_period);
+        SERIALIZE(ar, data, length);
+        SERIALIZE(ar, data, length_halt);
+        SERIALIZE(ar, data, duty);
+        SERIALIZE(ar, data, sequence_pos);
+        SERIALIZE(ar, data, sweep);
+        SERIALIZE(ar, data, envelope);
+        SERIALIZE_NAMESPACE_END(ar);
+    }
 };
 
 struct TriangleChannel {
@@ -62,6 +105,25 @@ struct TriangleChannel {
     // output
     float output_level = 0;
     float start_ramp = 0;
+
+    // serialization
+    friend void Serialize(Archive &ar, const std::string &name, TriangleChannel *data)
+    {
+        SERIALIZE_NAMESPACE_BEGIN(ar, name);
+        SERIALIZE(ar, data, enabled);
+        SERIALIZE(ar, data, timer);
+        SERIALIZE(ar, data, timer_period);
+        SERIALIZE(ar, data, length);
+        SERIALIZE(ar, data, length_halt);
+        SERIALIZE(ar, data, control);
+        SERIALIZE(ar, data, linear_counter);
+        SERIALIZE(ar, data, linear_period);
+        SERIALIZE(ar, data, linear_reload);
+        SERIALIZE(ar, data, sequence_pos);
+        SERIALIZE(ar, data, output_level);
+        SERIALIZE(ar, data, start_ramp);
+        SERIALIZE_NAMESPACE_END(ar);
+    }
 };
 
 struct NoiseChannel {
@@ -78,6 +140,21 @@ struct NoiseChannel {
     uint8_t mode = 0;
 
     Envelope envelope;
+
+    // serialization
+    friend void Serialize(Archive &ar, const std::string &name, NoiseChannel *data)
+    {
+        SERIALIZE_NAMESPACE_BEGIN(ar, name);
+        SERIALIZE(ar, data, enabled);
+        SERIALIZE(ar, data, timer);
+        SERIALIZE(ar, data, timer_period);
+        SERIALIZE(ar, data, length);
+        SERIALIZE(ar, data, length_halt);
+        SERIALIZE(ar, data, shift);
+        SERIALIZE(ar, data, mode);
+        SERIALIZE(ar, data, envelope);
+        SERIALIZE_NAMESPACE_END(ar);
+    }
 };
 
 struct DmcChannel {
@@ -107,6 +184,29 @@ struct DmcChannel {
     uint8_t output_level = 0;
     uint8_t shift_register = 0;
     uint8_t bits_counter = 0;
+
+    // serialization
+    friend void Serialize(Archive &ar, const std::string &name, DmcChannel *data)
+    {
+        SERIALIZE_NAMESPACE_BEGIN(ar, name);
+        SERIALIZE(ar, data, enabled);
+        SERIALIZE(ar, data, timer);
+        SERIALIZE(ar, data, timer_period);
+        SERIALIZE(ar, data, irq_generated);
+        SERIALIZE(ar, data, irq_enabled);
+        SERIALIZE(ar, data, cpu_stall);
+        SERIALIZE(ar, data, buffer_empty);
+        SERIALIZE(ar, data, sample_buffer);
+        SERIALIZE(ar, data, loop);
+        SERIALIZE(ar, data, sample_address);
+        SERIALIZE(ar, data, sample_length);
+        SERIALIZE(ar, data, current_address);
+        SERIALIZE(ar, data, bytes_remaining);
+        SERIALIZE(ar, data, output_level);
+        SERIALIZE(ar, data, shift_register);
+        SERIALIZE(ar, data, bits_counter);
+        SERIALIZE_NAMESPACE_END(ar);
+    }
 };
 
 class APU {
@@ -169,6 +269,7 @@ private:
     bool inhibit_interrupt_ = false;
     bool frame_interrupt_ = false;
     bool dmc_interrupt_ = false;
+    float low_pass_filter_ = 0.f;
 
     PulseChannel pulse1_, pulse2_;
     TriangleChannel triangle_;
@@ -177,6 +278,26 @@ private:
 
     // debug
     uint8_t chan_enable_ = 0x1F;
+
+    // serialization
+    friend void Serialize(Archive &ar, const std::string &name, APU *data)
+    {
+        SERIALIZE_NAMESPACE_BEGIN(ar, name);
+        SERIALIZE(ar, data, audio_time_);
+        SERIALIZE(ar, data, clock_);
+        SERIALIZE(ar, data, cycle_);
+        SERIALIZE(ar, data, mode_);
+        SERIALIZE(ar, data, inhibit_interrupt_);
+        SERIALIZE(ar, data, frame_interrupt_);
+        SERIALIZE(ar, data, dmc_interrupt_);
+        SERIALIZE(ar, data, low_pass_filter_);
+        SERIALIZE(ar, data, pulse1_);
+        SERIALIZE(ar, data, pulse2_);
+        SERIALIZE(ar, data, triangle_);
+        SERIALIZE(ar, data, noise_);
+        SERIALIZE(ar, data, dmc_);
+        SERIALIZE_NAMESPACE_END(ar);
+    }
 
     void clock_timers();
     void clock_length_counters();
@@ -187,12 +308,7 @@ private:
     void clock_sequencer_step4();
     void clock_sequencer_step5();
     void clock_sequencer();
-
-    friend
-    void Serialize(Archive &ar, const std::string &name, APU *apu);
 };
-
-void Serialize(Archive &ar, const std::string &name, APU *apu);
 
 } // namespace
 
