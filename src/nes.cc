@@ -237,17 +237,4 @@ void NES::print_disassemble() const
     }
 }
 
-void Serialize(Archive &ar, const std::string &name, NES *nes)
-{
-    ar.EnterNamespcae(name);
-
-    Serialize(ar, "cpu", &nes->cpu);
-    Serialize(ar, "ppu", &nes->ppu);
-    Serialize(ar, "apu", &nes->apu);
-    Serialize(ar, "dma", &nes->dma);
-    Serialize(ar, "frame_", &nes->frame_);
-
-    ar.LeaveNamespcae();
-}
-
 } // namespace

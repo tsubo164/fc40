@@ -42,6 +42,10 @@ void Serialize(Archive &ar, const std::string &name, std::array<uint8_t, COUNT> 
     ar.Serialize(name, Property(data->data(), COUNT));
 }
 
+#define SERIALIZE_NAMESPACE_BEGIN(ar, space) (ar).EnterNamespcae((space))
+#define SERIALIZE_NAMESPACE_END(ar) (ar).LeaveNamespcae()
+#define SERIALIZE(ar, obj, member) Serialize((ar),#member,&(obj)->member)
+
 } // namespace
 
 #endif // _H

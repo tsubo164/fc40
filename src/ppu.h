@@ -132,6 +132,30 @@ private:
     // debug
     std::array<Scroll,240> scrolls_;
 
+    // serialization
+    friend void Serialize(Archive &ar, const std::string &name, PPU *data)
+    {
+        SERIALIZE_NAMESPACE_BEGIN(ar, name);
+        SERIALIZE(ar, data, cycle_);
+        SERIALIZE(ar, data, scanline_);
+        SERIALIZE(ar, data, frame_);
+        SERIALIZE(ar, data, nmi_generated_);
+        SERIALIZE(ar, data, ctrl_);
+        SERIALIZE(ar, data, mask_);
+        SERIALIZE(ar, data, stat_);
+        SERIALIZE(ar, data, oam_dma_);
+        SERIALIZE(ar, data, write_toggle_);
+        SERIALIZE(ar, data, vram_addr_);
+        SERIALIZE(ar, data, temp_addr_);
+        SERIALIZE(ar, data, fine_x_);
+        SERIALIZE(ar, data, read_buffer_);
+        SERIALIZE(ar, data, palette_ram_);
+        SERIALIZE(ar, data, nametable_);
+        SERIALIZE(ar, data, oam_addr_);
+        SERIALIZE(ar, data, oam_);
+        SERIALIZE_NAMESPACE_END(ar);
+    }
+
     // control
     void set_stat(uint8_t flag, bool val);
     bool get_ctrl(uint8_t flag) const;

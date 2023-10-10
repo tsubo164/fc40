@@ -59,11 +59,27 @@ private:
     uint8_t p_ = 0; // processor status
     uint16_t pc_ = 0;
 
-    uint8_t controller_input_[2] = {0};
-    uint8_t controller_state_[2] = {0};
+    std::array<uint8_t,2> controller_input_ = {0};
+    std::array<uint8_t,2> controller_state_ = {0};
 
     // 4 2KB rams. 3 of them are mirroring
     std::array<uint8_t,2048> wram_ = {0};
+
+    // serialization
+    friend void Serialize(Archive &ar, const std::string &name, CPU *data)
+    {
+        SERIALIZE_NAMESPACE_BEGIN(ar, name);
+        SERIALIZE(ar, data, total_cycles_);
+        SERIALIZE(ar, data, suspended_);
+        SERIALIZE(ar, data, a_);
+        SERIALIZE(ar, data, x_);
+        SERIALIZE(ar, data, y_);
+        SERIALIZE(ar, data, s_);
+        SERIALIZE(ar, data, p_);
+        SERIALIZE(ar, data, pc_);
+        SERIALIZE(ar, data, wram_);
+        SERIALIZE_NAMESPACE_END(ar);
+    }
 
     // read and write
     void write_byte(uint16_t addr, uint8_t data);
@@ -101,12 +117,7 @@ private:
     // interrupts
     int do_interrupt(uint16_t vector);
     int handle_interrupt();
-
-    friend
-    void Serialize(Archive &ar, const std::string &name, CPU *cpu);
 };
-
-void Serialize(Archive &ar, const std::string &name, CPU *cpu);
 
 } // namespace
 

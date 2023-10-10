@@ -63,14 +63,21 @@ private:
         Stepping,
     } state_ = Running;
 
+    // serialization
+    friend void Serialize(Archive &ar, const std::string &name, NES *data)
+    {
+        SERIALIZE_NAMESPACE_BEGIN(ar, name);
+        SERIALIZE(ar, data, cpu);
+        SERIALIZE(ar, data, ppu);
+        SERIALIZE(ar, data, apu);
+        SERIALIZE(ar, data, dma);
+        SERIALIZE(ar, data, frame_);
+        SERIALIZE_NAMESPACE_END(ar);
+    }
+
     bool need_log() const;
     void print_disassemble() const;
-
-    friend
-    void Serialize(Archive &ar, const std::string &name, NES *nes);
 };
-
-void Serialize(Archive &ar, const std::string &name, NES *nes);
 
 } // namespace
 
