@@ -36,34 +36,34 @@ std::string Property::ToString(int index) const
         return to_hex_string(p_uint8 + index);
 
     case DataType::UInt16:
-        return to_hex_string(p_uint16);
+        return to_hex_string(p_uint16 + index);
 
     case DataType::UInt32:
-        return to_hex_string(p_uint32);
+        return to_hex_string(p_uint32 + index);
 
     case DataType::UInt64:
-        return to_hex_string(p_uint64);
+        return to_hex_string(p_uint64 + index);
 
     case DataType::Int8:
-        return to_hex_string(p_int8);
+        return to_hex_string(p_int8 + index);
 
     case DataType::Int16:
-        return to_hex_string(p_int16);
+        return to_hex_string(p_int16 + index);
 
     case DataType::Int32:
-        return to_hex_string(p_int32);
+        return to_hex_string(p_int32 + index);
 
     case DataType::Int64:
-        return to_hex_string(p_int64);
+        return to_hex_string(p_int64 + index);
 
     case DataType::Bool:
-        return to_hex_string(p_bool);
+        return to_hex_string(p_bool + index);
 
     case DataType::Float:
-        return std::to_string(*p_float);
+        return std::to_string(p_float[index]);
 
     case DataType::Double:
-        return std::to_string(*p_double);
+        return std::to_string(p_double[index]);
 
     case DataType::String:
         return *p_string;
@@ -83,43 +83,43 @@ bool Property::FromString(const std::string &str, int index)
         break;
 
     case DataType::UInt16:
-        from_hex_string(str, p_uint16);
+        from_hex_string(str, p_uint16 + index);
         break;
 
     case DataType::UInt32:
-        from_hex_string(str, p_uint32);
+        from_hex_string(str, p_uint32 + index);
         break;
 
     case DataType::UInt64:
-        from_hex_string(str, p_uint64);
+        from_hex_string(str, p_uint64 + index);
         break;
 
     case DataType::Int8:
-        from_hex_string(str, p_int8);
+        from_hex_string(str, p_int8 + index);
         break;
 
     case DataType::Int16:
-        from_hex_string(str, p_int16);
+        from_hex_string(str, p_int16 + index);
         break;
 
     case DataType::Int32:
-        from_hex_string(str, p_int32);
+        from_hex_string(str, p_int32 + index);
         break;
 
     case DataType::Int64:
-        from_hex_string(str, p_int64);
+        from_hex_string(str, p_int64 + index);
         break;
 
     case DataType::Bool:
-        from_hex_string(str, p_bool);
+        from_hex_string(str, p_bool + index);
         break;
 
     case DataType::Float:
-        *p_float = std::stof(str);
+        p_float[index] = std::stof(str);
         break;
 
     case DataType::Double:
-        *p_double = std::stod(str);
+        p_double[index] = std::stod(str);
         break;
 
     case DataType::String:

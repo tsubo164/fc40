@@ -16,6 +16,13 @@ private:
     bank_map<Size::_16KB,2> prg_;
     bank_map<Size::_8KB,1>  chr_;
 
+    // serialization
+    void do_serialize(Archive &ar) override final
+    {
+        SERIALIZE(ar, this, prg_);
+        SERIALIZE(ar, this, chr_);
+    }
+
     uint8_t do_read_prg(uint16_t addr) const override final;
     uint8_t do_read_chr(uint16_t addr) const override final;
     void do_write_prg(uint16_t addr, uint8_t data) override final;

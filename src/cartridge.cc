@@ -189,6 +189,11 @@ std::string Cartridge::GetBoardName() const
     return mapper_->GetBoardName();
 }
 
+std::string Cartridge::GetFileName() const
+{
+    return ines_filename_;
+}
+
 int Cartridge::save_battery_ram() const
 {
     std::ofstream ofs(sram_filename_, std::ios::binary);

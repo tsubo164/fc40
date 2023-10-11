@@ -37,14 +37,8 @@ void Serialize(Archive &ar, const std::string &name, T *data)
 }
 
 // for array types
-template<size_t COUNT>
-void Serialize(Archive &ar, const std::string &name, std::array<uint8_t, COUNT> *data)
-{
-    ar.Serialize(name, Property(data->data(), COUNT));
-}
-
-template<size_t COUNT>
-void Serialize(Archive &ar, const std::string &name, std::array<int, COUNT> *data)
+template<typename T, size_t COUNT>
+void Serialize(Archive &ar, const std::string &name, std::array<T, COUNT> *data)
 {
     ar.Serialize(name, Property(data->data(), COUNT));
 }

@@ -10,20 +10,30 @@ class Property {
 public:
     Property(uint8_t *data, int count = 1)
         : type_(DataType::UInt8), p_uint8(data), count_(count) {}
-    Property(uint16_t *data) : type_(DataType::UInt16), p_uint16(data) {}
-    Property(uint32_t *data) : type_(DataType::UInt32), p_uint32(data) {}
-    Property(uint64_t *data) : type_(DataType::UInt64), p_uint64(data) {}
+    Property(uint16_t *data, int count = 1)
+        : type_(DataType::UInt16), p_uint16(data), count_(count) {}
+    Property(uint32_t *data, int count = 1)
+        : type_(DataType::UInt32), p_uint32(data), count_(count) {}
+    Property(uint64_t *data, int count = 1)
+        : type_(DataType::UInt64), p_uint64(data), count_(count) {}
 
-    Property(int8_t *data) : type_(DataType::Int8), p_int8(data) {}
-    Property(int16_t *data) : type_(DataType::Int16), p_int16(data) {}
+    Property(int8_t *data, int count = 1)
+        : type_(DataType::Int8), p_int8(data), count_(count) {}
+    Property(int16_t *data, int count = 1)
+        : type_(DataType::Int16), p_int16(data), count_(count) {}
     Property(int32_t *data, int count = 1)
         : type_(DataType::Int32), p_int32(data), count_(count) {}
-    Property(int64_t *data) : type_(DataType::Int64), p_int64(data) {}
+    Property(int64_t *data, int count = 1)
+        : type_(DataType::Int64), p_int64(data), count_(count) {}
 
-    Property(bool *data) : type_(DataType::Bool), p_bool(data) {}
-    Property(float *data) : type_(DataType::Float), p_float(data) {}
-    Property(double *data) : type_(DataType::Double), p_double(data) {}
-    Property(std::string *data) : type_(DataType::String), p_string(data) {}
+    Property(bool *data, int count = 1)
+        : type_(DataType::Bool), p_bool(data), count_(count) {}
+    Property(float *data, int count = 1)
+        : type_(DataType::Float), p_float(data), count_(count) {}
+    Property(double *data, int count = 1)
+        : type_(DataType::Double), p_double(data), count_(count) {}
+    Property(std::string *data, int count = 1)
+        : type_(DataType::String), p_string(data), count_(count) {}
     ~Property() {}
 
     std::string ToString(int index = 0) const;

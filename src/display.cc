@@ -164,10 +164,14 @@ int Display::Open()
                 nes_.Step();
         }
         else if (key.IsPressed(GLFW_KEY_F1)) {
-            save_stat(nes_, "../stat.txt");
+            const Cartridge *cart = nes_.GetCartridge();
+            const std::string stat_filename = cart->GetFileName() + ".stat";
+            save_stat(nes_, stat_filename);
         }
         else if (key.IsPressed(GLFW_KEY_F2)) {
-            load_stat(nes_, "../stat.txt");
+            const Cartridge *cart = nes_.GetCartridge();
+            const std::string stat_filename = cart->GetFileName() + ".stat";
+            load_stat(nes_, stat_filename);
         }
         // Keys reset
         else if (key.IsPressed(GLFW_KEY_R)) {

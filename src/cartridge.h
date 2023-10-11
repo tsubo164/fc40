@@ -42,6 +42,7 @@ public:
     bool IsVerticalMirroring() const;
     bool HasBattery() const;
     std::string GetBoardName() const;
+    std::string GetFileName() const;
 
 private:
     int mapper_id_ = -1;
