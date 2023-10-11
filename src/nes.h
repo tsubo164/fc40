@@ -7,6 +7,7 @@
 #include "dma.h"
 #include "disassemble.h"
 #include "framebuffer.h"
+#include "cartridge.h"
 #include "serialize.h"
 #include <cstdint>
 
@@ -72,6 +73,7 @@ private:
         SERIALIZE(ar, data, apu);
         SERIALIZE(ar, data, dma);
         SERIALIZE(ar, data, frame_);
+        Serialize(ar, "cart_", data->cart_);
         SERIALIZE_NAMESPACE_END(ar);
     }
 

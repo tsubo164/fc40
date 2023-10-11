@@ -261,7 +261,7 @@ public:
     uint8_t GetChannelEnable() const;
 
 private:
-    double audio_time_ = 0.;
+    float audio_time_ = 0.f;
     uint32_t clock_ = 0;
     uint32_t cycle_ = 0;
 

@@ -1,11 +1,14 @@
 #ifndef CARTRIDGE_H
 #define CARTRIDGE_H
 
+#include <algorithm>
+#include <iostream>
 #include <cstdlib>
 #include <cstdint>
 #include <string>
 #include <vector>
 #include "mapper.h"
+#include "serialize.h"
 
 namespace nes {
 
@@ -48,6 +51,18 @@ private:
 
     std::string ines_filename_ = "";
     std::string sram_filename_ = "";
+
+    // serialization
+    friend void Serialize(Archive &ar, const std::string &name, Cartridge *data)
+    {
+        char mapper_name[16] = {'\0'};
+        const int id = std::min(std::max(data->GetMapperID(), 0), 999);
+        sprintf(mapper_name, "mapper_%03d", id);
+
+        SERIALIZE_NAMESPACE_BEGIN(ar, name);
+        Serialize(ar, mapper_name, data->mapper_.get());
+        SERIALIZE_NAMESPACE_END(ar);
+    }
 
     int save_battery_ram() const;
     int load_battery_ram();

@@ -6,6 +6,7 @@
 #include <vector>
 #include <memory>
 #include <array>
+#include "serialize.h"
 
 namespace nes {
 
@@ -87,6 +88,27 @@ private:
     bool prg_ram_protected_ = false;
     bool prg_ram_written_ = false;
 
+    // serialization
+    friend void Serialize(Archive &ar, const std::string &name, Mapper *data)
+    {
+        // base mapper
+        SERIALIZE_NAMESPACE_BEGIN(ar, "mapper_");
+        if (!data->prg_ram_.empty())
+            SERIALIZE(ar, data, prg_ram_);
+        if (!data->chr_ram_.empty())
+            SERIALIZE(ar, data, chr_ram_);
+        SERIALIZE(ar, data, irq_generated_);
+        SERIALIZE(ar, data, prg_ram_protected_);
+        SERIALIZE(ar, data, prg_ram_written_);
+        {
+            // derived mapper
+            SERIALIZE_NAMESPACE_BEGIN(ar, name);
+            data->do_serialize(ar);
+            SERIALIZE_NAMESPACE_END(ar);
+        }
+        SERIALIZE_NAMESPACE_END(ar);
+    }
+
     virtual uint8_t do_read_prg(uint16_t addr) const = 0;
     virtual uint8_t do_read_chr(uint16_t addr) const = 0;
     virtual uint8_t do_read_nametable(uint16_t addr) const;
@@ -96,6 +118,7 @@ private:
 
     virtual void do_ppu_clock(int cycle, int scanline) {}
     virtual void do_cpu_clock() {}
+    virtual void do_serialize(Archive &ar) {}
 
     int nametable_index(uint16_t addr) const;
 };

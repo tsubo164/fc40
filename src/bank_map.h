@@ -1,6 +1,10 @@
 #ifndef BANK_MAP_H
 #define BANK_MAP_H
 
+#include "serialize.h"
+
+namespace nes {
+
 enum class Size {
     _1KB   = 0x400 << 0,
     _2KB   = 0x400 << 1,
@@ -56,6 +60,18 @@ public:
 private:
     std::array<int,WINDOW_COUNT> windows_ = {0};
     int bank_count_ = 1;
+
+    // serialization
+    friend void Serialize(Archive &ar, const std::string &name,
+            bank_map<BANK_SIZE, WINDOW_COUNT> *data)
+    {
+        SERIALIZE_NAMESPACE_BEGIN(ar, name);
+        SERIALIZE(ar, data, windows_);
+        SERIALIZE(ar, data, bank_count_);
+        SERIALIZE_NAMESPACE_END(ar);
+    }
 };
+
+} // namespace
 
 #endif // _H

@@ -924,7 +924,7 @@ void APU::Reset()
     //   2A03E, G, various clones: APU Frame Counter reset.
     //   2A03letterless: APU frame counter retains old value [6]
 
-    audio_time_ = 0.;
+    audio_time_ = 0.f;
     clock_ = 0;
     cycle_ = 0;
 }

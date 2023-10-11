@@ -16,7 +16,8 @@ public:
 
     Property(int8_t *data) : type_(DataType::Int8), p_int8(data) {}
     Property(int16_t *data) : type_(DataType::Int16), p_int16(data) {}
-    Property(int32_t *data) : type_(DataType::Int32), p_int32(data) {}
+    Property(int32_t *data, int count = 1)
+        : type_(DataType::Int32), p_int32(data), count_(count) {}
     Property(int64_t *data) : type_(DataType::Int64), p_int64(data) {}
 
     Property(bool *data) : type_(DataType::Bool), p_bool(data) {}
