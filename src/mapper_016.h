@@ -22,6 +22,17 @@ private:
 
     int submapper_ = 5;
 
+    // serialization
+    void do_serialize(Archive &ar) override final
+    {
+        SERIALIZE(ar, this, prg_);
+        SERIALIZE(ar, this, chr_);
+        SERIALIZE(ar, this, irq_enabled_);
+        SERIALIZE(ar, this, irq_counter_);
+        SERIALIZE(ar, this, irq_latch_);
+        SERIALIZE(ar, this, submapper_);
+    }
+
     uint8_t do_read_prg(uint16_t addr) const override final;
     uint8_t do_read_chr(uint16_t addr) const override final;
     void do_write_prg(uint16_t addr, uint8_t data) override final;

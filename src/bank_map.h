@@ -41,7 +41,7 @@ public:
             windows_[window_index] = bank_index % bank_count_;
     }
 
-    int map(int addr) const
+    int map(uint16_t addr) const
     {
         const int offset = addr % static_cast<int>(BANK_SIZE);
         const int window = addr / static_cast<int>(BANK_SIZE);
