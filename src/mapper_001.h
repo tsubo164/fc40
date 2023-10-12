@@ -25,6 +25,20 @@ private:
     bool prg_ram_disabled_ = false;
     int mmc3_board_ = 0;
 
+    // serialization
+    void do_serialize(Archive &ar) override final
+    {
+        SERIALIZE(ar, this, prg_);
+        SERIALIZE(ar, this, chr_);
+        SERIALIZE(ar, this, prg_ram_bank_);
+        SERIALIZE(ar, this, shift_register_);
+        SERIALIZE(ar, this, control_register_);
+        SERIALIZE(ar, this, prg_mode_);
+        SERIALIZE(ar, this, chr_mode_);
+        SERIALIZE(ar, this, prg_ram_disabled_);
+        SERIALIZE(ar, this, mmc3_board_);
+    }
+
     void select_board();
     void write_chr_bank(int window, uint8_t data);
 
