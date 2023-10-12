@@ -25,6 +25,20 @@ private:
     bool irq_enabled_ = false;
     bool irq_reload_ = true;
 
+    // serialization
+    void do_serialize(Archive &ar) override final
+    {
+        SERIALIZE(ar, this, prg_);
+        SERIALIZE(ar, this, chr_);
+        SERIALIZE(ar, this, bank_select_);
+        SERIALIZE(ar, this, prg_bank_mode_);
+        SERIALIZE(ar, this, chr_bank_mode_);
+        SERIALIZE(ar, this, irq_counter_);
+        SERIALIZE(ar, this, irq_latch_);
+        SERIALIZE(ar, this, irq_enabled_);
+        SERIALIZE(ar, this, irq_reload_);
+    }
+
     void set_bank_select(uint16_t addr, uint8_t data);
     void set_bank_data(uint16_t addr, uint8_t data);
     void set_mirroring(uint8_t data);
