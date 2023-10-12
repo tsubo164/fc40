@@ -17,6 +17,8 @@
 - R -> reset button
 - P -> Show tile pattern
 - G -> Show tile and sprite grid
+- F1 -> Save emulator state
+- F2 -> Load emulator state
 - Five audio channels supoprted
 - No multi player supoprt yet
 
