@@ -29,6 +29,18 @@ private:
     };
     std::array<int,12> bank_select_ = { SELECT_CHR_ROM };
 
+    // serialization
+    void do_serialize(Archive &ar) override final
+    {
+        SERIALIZE(ar, this, prg_);
+        SERIALIZE(ar, this, chr_);
+        SERIALIZE(ar, this, enable_nt_lo_);
+        SERIALIZE(ar, this, enable_nt_hi_);
+        SERIALIZE(ar, this, irq_enabled_);
+        SERIALIZE(ar, this, irq_counter_);
+        SERIALIZE(ar, this, bank_select_);
+    }
+
     uint8_t read_chr(uint16_t addr) const;
     void write_chr(uint16_t addr, uint8_t data);
 
