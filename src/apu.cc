@@ -841,7 +841,8 @@ bool APU::Run(int cpu_cycles)
 
 constexpr int CPU_CLOCK_FREQ = 1789773;
 constexpr float APU_TIME_STEP = 1. / CPU_CLOCK_FREQ;
-constexpr float AUDIO_SAMPLE_STEP = 1. / 44100;
+// sampling at slightly heigher rate to generate 44100/60 = 735 samples
+constexpr float AUDIO_SAMPLE_STEP = 1. / (44100 + 70);
 
 void APU::Clock()
 {
