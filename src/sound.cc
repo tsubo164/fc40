@@ -9,11 +9,11 @@
 #include <alc.h>
 #else
 #include <SDL.h>
-#include <queue>
 #include <deque>
 #endif
 
 #include "sound.h"
+#include "apu.h"
 
 namespace nes {
 
@@ -32,10 +32,11 @@ static ALuint buffer_list[BUFFER_COUNT] = {0};
 static ALuint *pbuffer = buffer_list;
 #else
 static SDL_AudioDeviceID audio_device;
-//static std::queue<float> sample_queue;
-static std::deque<float> sample_queue(1024 * 8, 0);
+static std::deque<float> sample_queue(1024 * 4, 0);
 void fill_audio(void *udata, Uint8 *stream, int len);
 #endif
+
+static APU *apu;
 
 class SampleBuffer {
 public:
@@ -96,7 +97,7 @@ void InitSound()
     audio_spec.freq = SAMPLING_RATE;
     audio_spec.format = AUDIO_S16SYS;
     audio_spec.channels = 1;
-    audio_spec.samples = 1024 / 1;
+    audio_spec.samples = 1024 / 2;
     audio_spec.callback = nullptr;
     if (USE_CALLBACK)
         audio_spec.callback = fill_audio;
@@ -152,6 +153,44 @@ static void switch_buffer()
 #endif
 }
 
+int GetQueuedSamples()
+{
+#if USE_OPENAL
+    int queued = 0;
+    int processed = 0;
+    alGetSourcei(source, AL_BUFFERS_QUEUED, &queued);
+    alGetSourcei(source, AL_BUFFERS_PROCESSED, &processed);
+
+    const int unplayed = queued - processed;
+
+    if (unplayed == 0) {
+        printf("underflow!! queued: %d, processed: %d, unplayed: %d\n",
+                queued, processed, unplayed);
+    }
+
+    int index = pbuffer - buffer_list;
+    int total_count = 0;
+
+    for (int i = 0; i < unplayed; i++) {
+        const int buffer_id = buffer_list[index];
+
+        ALint bytes = 0;
+        alGetBufferi(buffer_id, AL_SIZE, &bytes);
+
+        const int count = bytes / sizeof(int16_t);
+        total_count += count;
+        //printf("         index: %d, count: %d\n", index, count);
+        index = (index - 1 + BUFFER_COUNT) % BUFFER_COUNT;
+    }
+    //printf("         total count: %d => total_count / 735: %g\n",
+    //        total_count, total_count/ 735.);
+    //return unplayed;
+    return total_count;
+#else
+    return sample_queue.size();
+#endif
+}
+
 static void queue_buffer(const SampleBuffer &buff)
 {
 #if USE_OPENAL
@@ -161,6 +200,8 @@ static void queue_buffer(const SampleBuffer &buff)
     // queue buffer
     alSourceQueueBuffers(source, 1, pbuffer);
 #else
+    const int count = GetQueuedSamples();
+    printf("<< queued samples: %d\n", count);
     SDL_QueueAudio(audio_device, buff.Data(), buff.Size());
 #endif
 
@@ -180,10 +221,6 @@ void PushSample(float sample)
     else {
         sample_data.Push(INT16_MAX * sample * .5);
     }
-    //const int16_t data = INT16_MAX * sample * .5;
-    //SDL_QueueAudio(audio_device, &data, sizeof(data));
-    //SDL_LockAudioDevice(audio_device);
-    //SDL_UnlockAudioDevice(audio_device);
 #endif
 }
 
@@ -193,7 +230,7 @@ void SendSamples()
         return;
 
 #if USE_OPENAL
-    printf("OpenAL samples: %d\n", sample_data.Count());
+    //printf("OpenAL samples: %d\n", sample_data.Count());
 #else
     printf("SDL2 samples: %d\n", sample_data.Count());
 #endif
@@ -232,15 +269,9 @@ void PauseSamples()
 #endif
 }
 
-int GetQueuedSamples()
+void SetAPU(APU *apu_)
 {
-#if USE_OPENAL
-    return 0;
-#else
-    const Uint32 count = SDL_GetQueuedAudioSize(audio_device) / sizeof(int16_t);
-    //printf("queued samples: %d\n", count);
-    return count;
-#endif
+    apu = apu_;
 }
 
 #if USE_OPENAL
@@ -250,16 +281,37 @@ int GetQueuedSamples()
 // len:     The length (in bytes) of the audio buffer
 void fill_audio(void *udata, Uint8 *stream, int len)
 {
+#define DEBUG_UNDERFLOW 1
     const int n = sample_queue.size();
     const int N = len / 2;
     int16_t *stream16 = reinterpret_cast<int16_t*>(stream);
     static int16_t sample = 0;
 
+    static bool normal = true;
+    if (n < N * 3 && normal) {
+        apu->SetSpeedFactor(0.995);
+        normal = false;
+        if (DEBUG_UNDERFLOW) {
+            printf("--- audio slow down fill_audio\n");
+        }
+    }
+    else if (n > N * 6 && !normal) {
+        apu->SetSpeedFactor(1);
+        normal = true;
+        if (DEBUG_UNDERFLOW) {
+            printf("+++ audio normal speed fill_audio\n");
+        }
+    }
+
     if (n < N) {
+        // underflow
+        if (DEBUG_UNDERFLOW) {
+            static int i = 0;
+            printf("i: %d, N: %d, n: %d underflow\n", i++, N, n);
+        }
         for (int i = 0; i < N; i++) {
             stream16[i] = sample;
         }
-        SDL_PauseAudioDevice(audio_device, 0);
         return;
     }
 
@@ -268,10 +320,6 @@ void fill_audio(void *udata, Uint8 *stream, int len)
             sample = sample_queue.front() * INT16_MAX * .5;
             sample_queue.pop_front();
         }
-        else {
-            //printf("i: %d, size: %d, N: %d\n", i, n, N);
-        }
-
         stream16[i] = sample;
     }
 }

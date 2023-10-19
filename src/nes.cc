@@ -7,7 +7,7 @@
 
 namespace nes {
 
-constexpr int AUDIO_DELAY_FRAME = 2;
+constexpr int AUDIO_DELAY_FRAME = 1;
 
 static void send_initial_samples();
 
@@ -55,6 +55,7 @@ void NES::PlayGame()
 {
     Display disp(*this);
 
+    SetAPU(&apu);
     InitSound();
     send_initial_samples();
 
@@ -80,6 +81,31 @@ void NES::UpdateFrame()
 {
     if (frame_ % AUDIO_DELAY_FRAME == 0)
         PlaySamples();
+
+    {
+        /*
+#define DEBUG_UNDERFLOW 1
+        const int queued = GetQueuedSamples();
+        const float ratio = queued / 735.f;
+        static bool normal = true;
+        //if (queued <= 3 && normal) {
+        if (ratio < 3.0 && normal) {
+            apu.SetSpeedFactor(0.995);
+            normal = false;
+            if (DEBUG_UNDERFLOW) {
+                printf("--- audio slow down OpenAL\n");
+            }
+        }
+        //else if (queued >= 5 && !normal) {
+        else if (ratio > 5.0 && !normal) {
+            apu.SetSpeedFactor(1);
+            normal = true;
+            if (DEBUG_UNDERFLOW) {
+                printf("+++ audio normal speed OpenAL\n");
+            }
+        }
+        */
+    }
 
     for (;;) {
         if (need_log()) {

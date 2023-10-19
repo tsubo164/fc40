@@ -833,6 +833,12 @@ void APU::clock_sequencer()
 
 bool APU::Run(int cpu_cycles)
 {
+    // update speed factor
+    if (factor_changed_) {
+        speed_factor_ = new_factor_;
+        factor_changed_ = false;
+    }
+
     for (int i = 0; i < cpu_cycles; i++)
         Clock();
 
@@ -854,9 +860,9 @@ void APU::Clock()
 
     audio_time_ += APU_TIME_STEP;
 
-    if (audio_time_ > AUDIO_SAMPLE_STEP) {
+    if (audio_time_ > AUDIO_SAMPLE_STEP * speed_factor_) {
         // generate a sample
-        audio_time_ -= AUDIO_SAMPLE_STEP;
+        audio_time_ -= AUDIO_SAMPLE_STEP * speed_factor_;
 
         const float p1 = (chan_enable_ & 0x01) ? sample_pulse(pulse1_) : 0;
         const float p2 = (chan_enable_ & 0x02) ? sample_pulse(pulse2_) : 0;
@@ -938,6 +944,12 @@ bool APU::IsSetIRQ() const
 void APU::SetCPU(const CPU *cpu)
 {
     dmc_.cpu = cpu;
+}
+
+void APU::SetSpeedFactor(float factor)
+{
+    new_factor_ = factor;
+    factor_changed_ = true;
 }
 
 void APU::SetChannelEnable(uint8_t chan_bits)
