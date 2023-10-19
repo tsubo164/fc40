@@ -264,8 +264,6 @@ public:
 private:
     float audio_time_ = 0.f;
     float speed_factor_ = 1.f;
-    float new_factor_ = 1.f;
-    bool  factor_changed_ = false;
 
     uint32_t clock_ = 0;
     uint32_t cycle_ = 0;

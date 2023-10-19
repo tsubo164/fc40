@@ -833,12 +833,6 @@ void APU::clock_sequencer()
 
 bool APU::Run(int cpu_cycles)
 {
-    // update speed factor
-    if (factor_changed_) {
-        speed_factor_ = new_factor_;
-        factor_changed_ = false;
-    }
-
     for (int i = 0; i < cpu_cycles; i++)
         Clock();
 
@@ -948,8 +942,7 @@ void APU::SetCPU(const CPU *cpu)
 
 void APU::SetSpeedFactor(float factor)
 {
-    new_factor_ = factor;
-    factor_changed_ = true;
+    speed_factor_ = factor;
 }
 
 void APU::SetChannelEnable(uint8_t chan_bits)

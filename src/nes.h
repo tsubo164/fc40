@@ -77,6 +77,7 @@ private:
         SERIALIZE_NAMESPACE_END(ar);
     }
 
+    void update_audio_speed();
     bool need_log() const;
     void print_disassemble() const;
 };
