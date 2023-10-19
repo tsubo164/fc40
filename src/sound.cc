@@ -2,7 +2,7 @@
 #include <iostream>
 #include <cstdint>
 #include <vector>
-
+#include <limits>
 
 #include <al.h>
 #include <alc.h>
@@ -22,40 +22,7 @@ static ALuint source = 0;
 static ALuint buffer_list[BUFFER_COUNT] = {0};
 static ALuint *pbuffer = buffer_list;
 
-class SampleBuffer {
-public:
-    SampleBuffer() {}
-    ~SampleBuffer() {}
-
-    void Resize(int size)
-    {
-        data_.resize(size, 0);
-        count_ = 0;
-    }
-
-    void Push(int32_t sample)
-    {
-        data_[count_++] = sample;
-        if (count_ == data_.size())
-            count_ = 0;
-    }
-
-    void Clear()
-    {
-        std::fill(data_.begin(), data_.end(), 0);
-        count_ = 0;
-    }
-
-    const int16_t *Data() const { return &data_[0]; }
-    int Size() const { return count_ * sizeof(data_[0]); }
-    int Count() const { return count_; }
-
-private:
-    std::vector<int16_t> data_;
-    int count_;
-};
-
-static SampleBuffer sample_data;
+static std::vector<int16_t> sample_data;
 
 void InitSound()
 {
@@ -66,7 +33,7 @@ void InitSound()
     alGenBuffers(BUFFER_COUNT, buffer_list);
     alGenSources(1, &source);
 
-    sample_data.Resize(MAX_SAMPLE_COUNT);
+    sample_data.reserve(MAX_SAMPLE_COUNT);
 }
 
 void FinishSound()
@@ -80,7 +47,7 @@ void FinishSound()
     alcDestroyContext(context);
     alcCloseDevice(device);
 
-    sample_data.Clear();
+    sample_data.clear();
 }
 
 static void unqueue_buffer()
@@ -138,10 +105,11 @@ int GetQueuedSampleCount()
     return total_count;
 }
 
-static void queue_buffer(const SampleBuffer &buff)
+static void queue_buffer(const std::vector<int16_t> &buff)
 {
     // copy sample buff
-    alBufferData(*pbuffer, AL_FORMAT_MONO16, buff.Data(), buff.Size(), SAMPLING_RATE);
+    alBufferData(*pbuffer, AL_FORMAT_MONO16,
+            buff.data(), buff.size() * sizeof(buff[0]), SAMPLING_RATE);
 
     // queue buffer
     alSourceQueueBuffers(source, 1, pbuffer);
@@ -151,18 +119,19 @@ static void queue_buffer(const SampleBuffer &buff)
 
 void PushSample(float sample)
 {
-    sample_data.Push(INT16_MAX * sample);
+    const int value = std::numeric_limits<int16_t>::max() * sample;
+    sample_data.push_back(value);
 }
 
 void SendSamples()
 {
     if (0)
-        printf("samples: %d\n", sample_data.Count());
+        printf("samples: %lu\n", sample_data.size());
 
     unqueue_buffer();
     queue_buffer(sample_data);
 
-    sample_data.Clear();
+    sample_data.clear();
 }
 
 void PlaySamples()
