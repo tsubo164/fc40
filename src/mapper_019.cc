@@ -41,7 +41,7 @@ uint8_t Mapper_019::do_read_prg(uint16_t addr) const
         return ((irq_counter_ >> 8) & 0x007F) | (irq_enabled_ << 7);
     }
     else if (addr >= 0x6000 && addr <= 0x7FFF) {
-        const int index = prg_.map(addr - 0x6000);
+        const int index = addr - 0x6000;
         return read_prg_ram(index);
     }
     else if (addr >= 0x8000 && addr <= 0xFFFF) {
@@ -96,7 +96,7 @@ void Mapper_019::do_write_prg(uint16_t addr, uint8_t data)
         ClearIRQ();
     }
     else if (addr >= 0x6000 && addr <= 0x7FFF) {
-        const int index = prg_.map(addr - 0x6000);
+        const int index = addr - 0x6000;
         write_prg_ram(index, data);
     }
     else if (addr >= 0x8000 && addr <= 0xDFFF) {

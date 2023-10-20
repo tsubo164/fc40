@@ -58,8 +58,10 @@ void Mapper_004::do_write_prg(uint16_t addr, uint8_t data)
     const bool even = addr % 2 == 0;
 
     if (addr >= 0x6000 && addr <= 0x7FFF) {
-        if (!is_prg_ram_protected())
-            write_prg_ram(addr - 0x6000, data);
+        if (is_prg_ram_protected())
+            return;
+        const int index = addr - 0x6000;
+        write_prg_ram(index, data);
     }
     else if (addr >= 0x8000 && addr <= 0x9FFF) {
         if (even)
