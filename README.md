@@ -37,11 +37,6 @@
 ## License
 - MIT License
 
-## Under development
-- Save/load emulator status
-- Switching to SDL2
-- More mappers
-
 <img src ="./image/super_mario_bros.png" width=164> <img src ="./image/dragon_quest_2.png" width=164>
 <img src ="./image/donkey_kong.png" width=164>
 <img src ="./image/ice_climber.png" width=164>
