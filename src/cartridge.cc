@@ -18,7 +18,7 @@ Cartridge::Cartridge()
 
 Cartridge::~Cartridge()
 {
-    if (mapper_->HasPrgRamWritten()) {
+    if (mapper_ && mapper_->HasPrgRamWritten()) {
         const int err = save_battery_ram();
         if (err) {
             // Report an error.
