@@ -68,6 +68,8 @@ struct PulseChannel {
     Sweep sweep;
     Envelope envelope;
 
+    int id = 1;
+
     // serialization
     friend void Serialize(Archive &ar, const std::string &name, PulseChannel *data)
     {

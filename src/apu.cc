@@ -650,13 +650,15 @@ static void calculate_target_period(PulseChannel &pulse)
     const uint16_t current_period = pulse.timer_period;
     const uint16_t change = current_period >> swp.shift;
 
-    if (change == 0)
+    // If the shift count is zero, the pulse channel's period is
+    // never updated, but muting logic still applies.
+    if (change == 0 || swp.shift == 0)
         return;
 
     if (swp.negate) {
         swp.target_period = current_period - change;
-        // XXX dragon quest IV doesn't like two's component for pulse 2
-        swp.target_period--;
+        if (pulse.id == 1)
+            swp.target_period--;
     }
     else {
         swp.target_period = current_period + change;
@@ -909,6 +911,8 @@ void APU::PowerUp()
     // channels
     pulse1_ = {};
     pulse2_ = {};
+    pulse1_.id = 1;
+    pulse2_.id = 2;
     triangle_ = {};
     noise_ = {};
     dmc_ = {};
