@@ -57,6 +57,11 @@ public:
             return 0;
     }
 
+    constexpr int window_count() const
+    {
+        return WINDOW_COUNT;
+    }
+
 private:
     std::array<int,WINDOW_COUNT> windows_ = {0};
     int bank_count_ = 1;

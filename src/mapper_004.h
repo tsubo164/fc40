@@ -3,6 +3,7 @@
 
 #include "mapper.h"
 #include "bank_map.h"
+#include <array>
 
 namespace nes {
 
@@ -16,6 +17,8 @@ private:
     bank_map<Size::_8KB,4> prg_;
     bank_map<Size::_1KB,8> chr_;
 
+    // registers
+    std::array<uint8_t,8> bank_registers_ = {0};
     uint8_t bank_select_ = 0;
     uint8_t prg_bank_mode_ = 0;
     uint8_t chr_bank_mode_ = 0;
@@ -30,6 +33,7 @@ private:
     {
         SERIALIZE(ar, this, prg_);
         SERIALIZE(ar, this, chr_);
+        SERIALIZE(ar, this, bank_registers_);
         SERIALIZE(ar, this, bank_select_);
         SERIALIZE(ar, this, prg_bank_mode_);
         SERIALIZE(ar, this, chr_bank_mode_);
@@ -39,6 +43,8 @@ private:
         SERIALIZE(ar, this, irq_reload_);
     }
 
+    void update_prg_bank_mapping();
+    void update_chr_bank_mapping();
     void set_bank_select(uint16_t addr, uint8_t data);
     void set_bank_data(uint16_t addr, uint8_t data);
     void set_mirroring(uint8_t data);

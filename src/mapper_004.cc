@@ -128,6 +128,9 @@ void Mapper_004::set_bank_select(uint16_t addr, uint8_t data)
     prg_bank_mode_ = (data >> 6) & 0x01;
     chr_bank_mode_ = (data >> 7) & 0x01;
     // TODO CHR A12 inversion
+
+    update_prg_bank_mapping();
+    update_chr_bank_mapping();
 }
 
 void Mapper_004::set_bank_data(uint16_t addr, uint8_t data)
@@ -139,82 +142,61 @@ void Mapper_004::set_bank_data(uint16_t addr, uint8_t data)
     // |||| ||||
     // ++++-++++- New bank value, based on last value written to
     //            Bank select register (mentioned above)
-    if (chr_bank_mode_ == 0) {
-        switch (bank_select_) {
-        case 0:
-            chr_.select(0, (data & 0xFE));
-            chr_.select(1, (data & 0xFE) + 1);
-            break;
-        case 1:
-            chr_.select(2, (data & 0xFE));
-            chr_.select(3, (data & 0xFE) + 1);
-            break;
-        case 2:
-            chr_.select(4, data);
-            break;
-        case 3:
-            chr_.select(5, data);
-            break;
-        case 4:
-            chr_.select(6, data);
-            break;
-        case 5:
-            chr_.select(7, data);
-            break;
-        }
-    }
-    else {
-        switch (bank_select_) {
-        case 0:
-            chr_.select(4, (data & 0xFE));
-            chr_.select(5, (data & 0xFE) + 1);
-            break;
-        case 1:
-            chr_.select(6, (data & 0xFE));
-            chr_.select(7, (data & 0xFE) + 1);
-            break;
-        case 2:
-            chr_.select(0, data);
-            break;
-        case 3:
-            chr_.select(1, data);
-            break;
-        case 4:
-            chr_.select(2, data);
-            break;
-        case 5:
-            chr_.select(3, data);
-            break;
-        }
-    }
-    if (prg_bank_mode_ == 0) {
-        switch (bank_select_) {
-        case 6:
-            prg_.select(0, data);
-            prg_.select(2, -2);
-            prg_.select(3, -1);
-            break;
-        case 7:
-            prg_.select(1, data);
-            prg_.select(2, -2);
-            prg_.select(3, -1);
-            break;
-        }
-    }
-    else {
-        switch (bank_select_) {
-        case 6:
-            prg_.select(2, data);
-            prg_.select(0, -2);
-            prg_.select(3, -1);
-            break;
-        case 7:
-            prg_.select(1, data);
-            prg_.select(0, -2);
-            prg_.select(3, -1);
-            break;
-        }
-    }
+    if (bank_select_ == 0 || bank_select_ == 1)
+        bank_registers_[bank_select_] = data & 0xFE;
+    else
+        bank_registers_[bank_select_] = data;
+
+    update_prg_bank_mapping();
+    update_chr_bank_mapping();
+}
+
+void Mapper_004::update_prg_bank_mapping()
+{
+    // PRG map mode | $8000.D6 = 0 | $8000.D6 = 1
+    // CPU Bank     | Value of MMC3 register
+    // $8000-$9FFF  | R6   | (-2)
+    // $A000-$BFFF  | R7   | R7
+    // $C000-$DFFF  | (-2) | R6
+    // $E000-$FFFF  | (-1) | (-1)
+    const auto &R = bank_registers_;
+    const int bank_value[][2] = {
+        {R[6],   -2},
+        {R[7], R[7]},
+        {  -2, R[6]},
+        {  -1,   -2}
+    };
+
+    for (int i = 0; i < prg_.window_count(); i++)
+        prg_.select(i, bank_value[i][prg_bank_mode_]);
+}
+
+void Mapper_004::update_chr_bank_mapping()
+{
+    // CHR map mode | $8000.D7 = 0 | $8000.D7 = 1
+    // PPU Bank     | Value of MMC3 register
+    // $0000-$03FF  | R0 | R2
+    // $0400-$07FF  |    | R3
+    // $0800-$0BFF  | R1 | R4
+    // $0C00-$0FFF  |    | R5
+    // $1000-$13FF  | R2 | R0
+    // $1400-$17FF  | R3 |
+    // $1800-$1BFF  | R4 | R1
+    // $1C00-$1FFF  | R5 |
+    const auto &R = bank_registers_;
+    const int bank_value[][2] = {
+        {R[0],     R[2]    },
+        {R[0] + 1, R[3]    },
+        {R[1],     R[4]    },
+        {R[1] + 1, R[5]    },
+        {R[2],     R[0]    },
+        {R[3],     R[0] + 1},
+        {R[4],     R[1]    },
+        {R[5],     R[1] + 1}
+    };
+
+    for (int i = 0; i < chr_.window_count(); i++)
+        chr_.select(i, bank_value[i][chr_bank_mode_]);
 }
 
 void Mapper_004::set_mirroring(uint8_t data)
