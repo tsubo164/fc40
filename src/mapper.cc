@@ -4,6 +4,7 @@
 #include "mapper_002.h"
 #include "mapper_003.h"
 #include "mapper_004.h"
+#include "mapper_010.h"
 #include "mapper_016.h"
 #include "mapper_019.h"
 #include "mapper_076.h"
@@ -290,6 +291,10 @@ std::shared_ptr<Mapper> new_mapper(int id,
     case 4:
     case 206:
         m = new Mapper_004(prg_data, chr_data);
+        break;
+
+    case 10:
+        m = new Mapper_010(prg_data, chr_data);
         break;
 
     case 16:
