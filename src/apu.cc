@@ -377,10 +377,10 @@ uint8_t APU::PeekStatus() const
     return data;
 }
 
-static float calculate_pulse_level(float pulse1_, float pulse2_)
+static float calculate_pulse_level(float pulse1, float pulse2)
 {
     // Linear Approximation sounds less cracking/popping
-    return 0.00752 * (pulse1_ + pulse2_);
+    return 0.00752 * (pulse1 + pulse2);
 }
 
 static float calculate_tnd_level(uint8_t triangle, uint8_t noise, uint8_t dmc)
@@ -646,13 +646,16 @@ static void clock_dmc_timer(DmcChannel &dmc)
 
 static void calculate_target_period(PulseChannel &pulse)
 {
-    const uint16_t current_period = pulse.timer_period;
     Sweep &swp = pulse.sweep;
+    const uint16_t current_period = pulse.timer_period;
+    const uint16_t change = current_period >> swp.shift;
 
-    uint16_t change = current_period >> swp.shift;
+    if (change == 0)
+        return;
 
     if (swp.negate) {
         swp.target_period = current_period - change;
+        // XXX dragon quest IV doesn't like two's component for pulse 2
         swp.target_period--;
     }
     else {
@@ -669,17 +672,20 @@ static void clock_sweep(PulseChannel &pulse)
 {
     Sweep &swp = pulse.sweep;
 
-    if (swp.divider == 0 && swp.enabled && !is_sweep_muting(pulse)) {
-        pulse.timer_period = swp.target_period;
-        calculate_target_period(pulse);
-    }
-
+    // When the sweep unit is clocked, the divider is *first* clocked
+    // and then if there was a write to the sweep register since the
+    // last sweep clock, the divider is reset.
     if (swp.divider == 0 || swp.reload) {
         swp.divider = swp.period;
         swp.reload = false;
     }
     else {
         swp.divider--;
+    }
+
+    if (swp.divider == 0 && swp.enabled && !is_sweep_muting(pulse)) {
+        pulse.timer_period = swp.target_period;
+        calculate_target_period(pulse);
     }
 }
 
@@ -900,6 +906,7 @@ void APU::PowerUp()
     frame_interrupt_ = false;
     dmc_interrupt_ = false;
 
+    // channels
     pulse1_ = {};
     pulse2_ = {};
     triangle_ = {};
