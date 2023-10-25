@@ -11,19 +11,20 @@ namespace nes {
 class Cartridge;
 
 struct PatternRow {
-    uint8_t id = 0;
+    uint8_t tile_id = 0;
     uint8_t lo = 0, hi = 0;
     uint8_t palette_lo = 0;
     uint8_t palette_hi = 0;
 };
 
 struct ObjectAttribute {
-    uint8_t id = 0xFF;
+    uint8_t tile_id = 0xFF;
     uint8_t x = 0xFF, y = 0xFF;
     uint8_t palette = 0xFF;
     uint8_t priority = 0xFF;
     uint8_t flipped_h = 0xFF;
     uint8_t flipped_v = 0xFF;
+    uint8_t oam_index = 0xFF;
 };
 
 struct Pixel {
@@ -192,7 +193,6 @@ private:
     Pixel get_pixel_bg() const;
     Pixel get_pixel_fg() const;
     bool is_clipping_left() const;
-    bool is_sprite_zero(ObjectAttribute obj) const;
     bool has_hit_sprite_zero(Pixel bg, Pixel fg, int x) const;
     Color lookup_pixel_color(Pixel pix) const;
     void render_pixel(int x, int y);

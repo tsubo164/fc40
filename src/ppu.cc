@@ -405,7 +405,7 @@ void PPU::fetch_tile_data()
     switch (cycle_ % 8) {
     case 1:
         // NT byte
-        next.id = fetch_tile_id();
+        next.tile_id = fetch_tile_id();
         break;
 
     case 3:
@@ -415,12 +415,12 @@ void PPU::fetch_tile_data()
 
     case 5:
         // Low BG tile byte
-        next.lo = fetch_tile_row(next.id, 0);
+        next.lo = fetch_tile_row(next.tile_id, 0);
         break;
 
     case 7:
         // High BG tile byte
-        next.hi = fetch_tile_row(next.id, 8);
+        next.hi = fetch_tile_row(next.tile_id, 8);
         break;
 
     default:
@@ -449,15 +449,17 @@ ObjectAttribute PPU::get_sprite(int index) const
     if (index < 0 || index > 63)
         return obj;
 
-    obj.y  = oam_[4 * index + 0];
-    obj.id = oam_[4 * index + 1];
-    attr   = oam_[4 * index + 2];
-    obj.x  = oam_[4 * index + 3];
+    obj.y       = oam_[4 * index + 0];
+    obj.tile_id = oam_[4 * index + 1];
+    attr        = oam_[4 * index + 2];
+    obj.x       = oam_[4 * index + 3];
 
     obj.palette   = (attr & 0x03);
     obj.priority  = (attr & 0x20) > 0;
     obj.flipped_h = (attr & 0x40) > 0;
     obj.flipped_v = (attr & 0x80) > 0;
+
+    obj.oam_index = index;
 
     return obj;
 }
@@ -471,7 +473,7 @@ static int is_sprite_visible(ObjectAttribute obj, int scanline, int height)
 
 void PPU::evaluate_sprite()
 {
-    // secondary oam crear occurs cycle 65 - 256
+    // secondary oam clear occurs cycle 65 - 256
     // index = 0 .. 191
     const int index = cycle_ - 65;
     const int sprite_height = is_sprite8x16() ? 16 : 8;
@@ -568,7 +570,7 @@ void PPU::fetch_sprite_data()
     // index = (0 .. 63) / 8 => 0 .. 7
     const int index = (cycle_ - 257) / 8;
     const int is_visible = index < sprite_count_;
-    const int sprite_id = secondary_oam_[index].id;
+    const int tile_id = secondary_oam_[index].tile_id;
     int sprite_y = scanline_ - secondary_oam_[index].y;
     PatternRow &patt = rendering_sprite_[index];
     const ObjectAttribute obj = rendering_oam_[index];
@@ -587,7 +589,7 @@ void PPU::fetch_sprite_data()
     case 5:
         // Low sprite byte
         if (is_visible)
-            patt.lo = fetch_sprite_row(sprite_id, sprite_y, 0, obj.flipped_v);
+            patt.lo = fetch_sprite_row(tile_id, sprite_y, 0, obj.flipped_v);
         else
             patt.lo = 0x00;
 
@@ -598,7 +600,7 @@ void PPU::fetch_sprite_data()
     case 7:
         // High sprite byte
         if (is_visible)
-            patt.hi = fetch_sprite_row(sprite_id, sprite_y, 8, obj.flipped_v);
+            patt.hi = fetch_sprite_row(tile_id, sprite_y, 8, obj.flipped_v);
         else
             patt.hi = 0x00;
 
@@ -651,13 +653,6 @@ static Pixel get_pixel(PatternRow patt, uint8_t fine_x)
     return pix;
 }
 
-bool PPU::is_sprite_zero(ObjectAttribute obj) const
-{
-    const int sprite_zero_id = oam_[1];
-
-    return obj.id == sprite_zero_id;
-}
-
 Pixel PPU::get_pixel_bg() const
 {
     return get_pixel(tile_queue_[2], fine_x_);
@@ -673,7 +668,7 @@ Pixel PPU::get_pixel_fg() const
 
             pix.palette += 4;
             pix.priority = obj.priority;
-            pix.sprite_zero = is_sprite_zero(obj);
+            pix.sprite_zero = obj.oam_index == 0;
 
             if (pix.value > 0)
                 return pix;
