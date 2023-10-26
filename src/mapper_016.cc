@@ -105,16 +105,16 @@ void Mapper_016::do_write_prg(uint16_t addr, uint8_t data)
         //              3: One-screen, page 1
         switch (data & 0x3) {
         case 0:
-            SetMirroring(Mirroring::VERTICAL);
+            SetMirroring(MIRRORING_VERTICAL);
             break;
         case 1:
-            SetMirroring(Mirroring::HORIZONTAL);
+            SetMirroring(MIRRORING_HORIZONTAL);
             break;
         case 2:
-            SetMirroring(Mirroring::SINGLE_SCREEN_0);
+            SetMirroring(MIRRORING_SINGLE_SCREEN_0);
             break;
         case 3:
-            SetMirroring(Mirroring::SINGLE_SCREEN_1);
+            SetMirroring(MIRRORING_SINGLE_SCREEN_1);
             break;
         default:
             break;

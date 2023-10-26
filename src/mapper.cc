@@ -245,19 +245,19 @@ void Mapper::do_write_nametable(uint16_t addr, uint8_t data)
 
 int Mapper::nametable_index(uint16_t addr) const
 {
-    if (GetMirroring() == Mirroring::VERTICAL) {
+    if (GetMirroring() == MIRRORING_VERTICAL) {
         return addr & 0x07FF;
     }
-    else if (GetMirroring() == Mirroring::HORIZONTAL) {
+    else if (GetMirroring() == MIRRORING_HORIZONTAL) {
         if (addr >= 0x2000 && addr <= 0x27FF)
             return addr & 0x03FF;
         if (addr >= 0x2800 && addr <= 0x2FFF)
             return 0x400 | (addr & 0x03FF);
     }
-    else if (GetMirroring() == Mirroring::SINGLE_SCREEN_0) {
+    else if (GetMirroring() == MIRRORING_SINGLE_SCREEN_0) {
         return addr & 0x03FF;
     }
-    else if (GetMirroring() == Mirroring::SINGLE_SCREEN_1) {
+    else if (GetMirroring() == MIRRORING_SINGLE_SCREEN_1) {
         return 0x400 | (addr & 0x03FF);
     }
 

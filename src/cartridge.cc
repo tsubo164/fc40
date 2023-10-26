@@ -81,9 +81,9 @@ bool Cartridge::Open(const char *filename)
         return true;
 
     if (mirroring_ == 0)
-        mapper_->SetMirroring(Mirroring::HORIZONTAL);
+        mapper_->SetMirroring(MIRRORING_HORIZONTAL);
     else if (mirroring_ == 1)
-        mapper_->SetMirroring(Mirroring::VERTICAL);
+        mapper_->SetMirroring(MIRRORING_VERTICAL);
 
     if (HasBattery()) {
         sram_filename_ = ines_filename_ + ".sram";
@@ -176,7 +176,7 @@ bool Cartridge::IsMapperSupported() const
 
 bool Cartridge::IsVerticalMirroring() const
 {
-    return mapper_->GetMirroring() == Mirroring::VERTICAL;
+    return mapper_->GetMirroring() == MIRRORING_VERTICAL;
 }
 
 bool Cartridge::HasBattery() const

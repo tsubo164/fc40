@@ -208,9 +208,9 @@ void Mapper_004::set_mirroring(uint8_t data)
     //         |
     //         +- Nametable mirroring (0: vertical; 1: horizontal)
     if ((data & 0x01) == 0)
-        SetMirroring(Mirroring::VERTICAL);
+        SetMirroring(MIRRORING_VERTICAL);
     else
-        SetMirroring(Mirroring::HORIZONTAL);
+        SetMirroring(MIRRORING_HORIZONTAL);
 }
 
 void Mapper_004::set_protection(uint8_t data)

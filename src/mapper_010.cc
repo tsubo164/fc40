@@ -141,9 +141,9 @@ void Mapper_010::do_write_prg(uint16_t addr, uint8_t data)
         //         |
         //         +- Select nametable mirroring (0: vertical; 1: horizontal)
         if ((data & 0x1) == 0)
-            SetMirroring(Mirroring::VERTICAL);
+            SetMirroring(MIRRORING_VERTICAL);
         else
-            SetMirroring(Mirroring::HORIZONTAL);
+            SetMirroring(MIRRORING_HORIZONTAL);
     }
 }
 

@@ -11,11 +11,11 @@
 namespace nes {
 
 enum Mirroring {
-    HORIZONTAL,
-    VERTICAL,
-    SINGLE_SCREEN_0,
-    SINGLE_SCREEN_1,
-    FOUR_SCREEN,
+    MIRRORING_HORIZONTAL,
+    MIRRORING_VERTICAL,
+    MIRRORING_SINGLE_SCREEN_0,
+    MIRRORING_SINGLE_SCREEN_1,
+    MIRRORING_FOUR_SCREEN,
 };
 
 class Mapper {
@@ -83,7 +83,7 @@ private:
     std::vector<uint8_t> chr_ram_;
     std::array<uint8_t,2048> *nametable_ = nullptr;
 
-    uint8_t mirroring_ = Mirroring::HORIZONTAL;
+    uint8_t mirroring_ = MIRRORING_HORIZONTAL;
     bool irq_generated_ = false;
     bool prg_ram_protected_ = false;
     bool prg_ram_written_ = false;

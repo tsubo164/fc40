@@ -167,16 +167,16 @@ void Mapper_001::write_control(uint8_t data)
 
     switch (data & 0x03) {
     case 0:
-        SetMirroring(Mirroring::SINGLE_SCREEN_0);
+        SetMirroring(MIRRORING_SINGLE_SCREEN_0);
         break;
     case 1:
-        SetMirroring(Mirroring::SINGLE_SCREEN_1);
+        SetMirroring(MIRRORING_SINGLE_SCREEN_1);
         break;
     case 2:
-        SetMirroring(Mirroring::VERTICAL);
+        SetMirroring(MIRRORING_VERTICAL);
         break;
     case 3:
-        SetMirroring(Mirroring::HORIZONTAL);
+        SetMirroring(MIRRORING_HORIZONTAL);
         break;
     default:
         break;
