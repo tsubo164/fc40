@@ -10,7 +10,7 @@
 
 namespace nes {
 
-enum class Mirroring {
+enum Mirroring {
     HORIZONTAL,
     VERTICAL,
     SINGLE_SCREEN_0,
@@ -48,8 +48,8 @@ public:
     void PpuClock(int cycle, int scanline);
     void CpuClock();
 
-    Mirroring GetMirroring() const;
-    void SetMirroring(Mirroring mirroring);
+    int GetMirroring() const;
+    void SetMirroring(int mirroring);
 
     std::string GetBoardName() const;
 
@@ -83,7 +83,7 @@ private:
     std::vector<uint8_t> chr_ram_;
     std::array<uint8_t,2048> *nametable_ = nullptr;
 
-    Mirroring mirroring_ = Mirroring::HORIZONTAL;
+    uint8_t mirroring_ = Mirroring::HORIZONTAL;
     bool irq_generated_ = false;
     bool prg_ram_protected_ = false;
     bool prg_ram_written_ = false;
@@ -97,6 +97,7 @@ private:
             SERIALIZE(ar, data, prg_ram_);
         if (!data->chr_ram_.empty())
             SERIALIZE(ar, data, chr_ram_);
+        SERIALIZE(ar, data, mirroring_);
         SERIALIZE(ar, data, irq_generated_);
         SERIALIZE(ar, data, prg_ram_protected_);
         SERIALIZE(ar, data, prg_ram_written_);

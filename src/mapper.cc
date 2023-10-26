@@ -120,12 +120,12 @@ void Mapper::CpuClock()
     do_cpu_clock();
 }
 
-Mirroring Mapper::GetMirroring() const
+int Mapper::GetMirroring() const
 {
     return mirroring_;
 }
 
-void Mapper::SetMirroring(Mirroring mirroring)
+void Mapper::SetMirroring(int mirroring)
 {
     mirroring_ = mirroring;
 }
