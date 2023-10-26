@@ -7,7 +7,7 @@
 - A NES Emulator
 - Written in C++
 - Requires GLFW and OpenAL
-- Supports mapper 0, 1, 2, 3, 4, 16, 19 (200+ games)
+- Supports mapper 0, 1, 2, 3, 4, 10, 16, 19 (200+ games)
 
 ## Features
 - Game pad support
