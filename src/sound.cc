@@ -53,14 +53,19 @@ void FinishSound()
 static void unqueue_buffer()
 {
     for (;;) {
-        ALuint unqueued_buff[8] = {0};
         ALint processed_count = 0;
         alGetSourceiv(source, AL_BUFFERS_PROCESSED, &processed_count);
 
-        if (processed_count > 0)
-            alSourceUnqueueBuffers(source, processed_count, unqueued_buff);
-        else
+        if (processed_count > 0) {
+            ALuint unqueued_buff[16] = {0};
+            static const ALint MAX_COUNT = sizeof(unqueued_buff) / sizeof(unqueued_buff[0]);
+            const ALint UNQUEUED_COUNT = std::min(MAX_COUNT, processed_count);
+
+            alSourceUnqueueBuffers(source, UNQUEUED_COUNT, unqueued_buff);
+        }
+        else {
             break;
+        }
     }
 }
 
