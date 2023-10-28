@@ -1,8 +1,10 @@
 #include <iostream>
 #include <fstream>
+#include <chrono>
 #include <GLFW/glfw3.h>
 #include "display.h"
 #include "framebuffer.h"
+#include "draw_text.h"
 #include "serialize.h"
 #include "debug.h"
 #include "nes.h"
@@ -27,6 +29,7 @@ static void resize(GLFWwindow *window, int width, int height);
 static void render_grid(const PPU &ppu, int width, int height);
 static void render_pattern_table(const FrameBuffer &patt);
 static void render_sprite_box(const PPU &ppu, int width, int height);
+static void render_frame_rate(double elapsed);
 static bool save_stat(NES &nes, const std::string &filename);
 static bool load_stat(NES &nes, const std::string &filename);
 
@@ -37,6 +40,9 @@ static void print_channel_status(uint8_t chan_bits);
 static const GLuint main_screen = 0;
 static GLuint pattern_table_id = 0;
 
+static int screen_w = 0;
+static int screen_h = 0;
+
 int Display::Open()
 {
     // MacOS Retina display has twice res
@@ -45,6 +51,9 @@ int Display::Open()
     const int WINY = RESY * SCALE + 2 * WIN_MARGIN;
     uint64_t f = 0;
     KeyState key;
+
+    // Init bitmap fonts
+    InitBitmapFont();
 
     // Initialize the library
     if (!glfwInit())
@@ -67,20 +76,19 @@ int Display::Open()
 
     // Loop until the user closes the window
     while (!glfwWindowShouldClose(window)) {
-        const double time = glfwGetTime();
-        if (time > 1.) {
-            static char title[64] = {'\0'};
-            sprintf(title, "Famicom Emulator  FPS: %5.2f\n", f/time);
-            glfwSetWindowTitle(window, title);
-            glfwSetTime(0.);
-            f = 0;
-        }
+        const auto start = std::chrono::high_resolution_clock::now();
 
         // Update framebuffer
         nes_.UpdateFrame();
 
         // Render here
         render();
+
+        // Render FPS
+        render_frame_rate(
+                std::chrono::duration<double>(
+                    std::chrono::high_resolution_clock::now() - start
+                    ).count());
 
         // Swap front and back buffers
         glfwSwapBuffers(window);
@@ -290,6 +298,8 @@ static void resize(GLFWwindow *window, int width, int height)
         win_w = RESX;
         win_h = RESX / aspect;
     }
+    screen_w = width;
+    screen_h = height;
 
     glViewport(0, 0, fb_w, fb_h);
 
@@ -429,6 +439,36 @@ static void render_sprite_box(const PPU &ppu, int width, int height)
     }
 
     glPopAttrib();
+}
+
+static void render_frame_rate(double elapsed)
+{
+    static std::string text;
+    static int count = 0;
+    static double sum = 0;
+
+    sum += elapsed;
+    count++;
+
+    if (count == 60) {
+        const double fps = 1.0 / (sum / 60);
+        static char buff[16] = {'\0'};
+        sprintf(buff, "FPS: %.2lf", fps);
+        text = buff;
+
+        sum = 0;
+        count = 0;
+    }
+
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+
+    glLoadIdentity();
+    glOrtho(-8, screen_w, -screen_h, 8, -1., 1.);
+    glColor3f(1.f, 1.f, 1.f);
+    DrawText(text, 0, 0);
+
+    glPopMatrix();
 }
 
 // Keys
