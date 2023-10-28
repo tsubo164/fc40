@@ -102,6 +102,9 @@ void NES::update_audio_speed()
 
 void NES::UpdateFrame()
 {
+    if (state_ == Stopped)
+        return;
+
     if (frame_ % AUDIO_DELAY_FRAME == 0)
         PlaySamples();
 
@@ -143,6 +146,7 @@ void NES::Stop()
 {
     PauseSamples();
     Step();
+    state_ = Stopped;
 }
 
 bool NES::IsRunning() const
