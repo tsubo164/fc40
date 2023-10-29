@@ -25,7 +25,6 @@ struct KeyState {
 static void transfer_texture(const FrameBuffer &fb);
 static void resize(GLFWwindow *window, int width, int height);
 static void render_grid(const PPU &ppu, int width, int height);
-static void render_pattern_table(const FrameBuffer &patt);
 static void render_sprite_box(const PPU &ppu, int width, int height);
 static bool save_stat(NES &nes, const std::string &filename);
 static bool load_stat(NES &nes, const std::string &filename);
@@ -34,7 +33,6 @@ static bool load_stat(NES &nes, const std::string &filename);
 static uint8_t toggle_bits(uint8_t chan_bits, uint8_t toggle_bit);
 
 static const GLuint main_screen = 0;
-static GLuint pattern_table_id = 0;
 
 static int screen_w = 0;
 static int screen_h = 0;
@@ -225,9 +223,6 @@ void Display::init_video()
     // bg color
     constexpr float bg = .25;
     glClearColor(bg, bg, bg, 0);
-
-    // XXX TEMP
-    pattern_table_id = pattern_table_id_;
 }
 
 void Display::render() const
@@ -259,7 +254,7 @@ void Display::render() const
 
     if (show_patt_) {
         LoadPatternTable(nes_.patt, nes_.GetCartridge());
-        render_pattern_table(nes_.patt);
+        render_pattern_table();
     }
 
     glFlush();
@@ -301,7 +296,7 @@ void Display::render_frame_rate(double elapsed) const
 
 void Display::render_channel_status() const
 {
-    static char text[32] = {'\0'};
+    char text[32] = {'\0'};
     const uint8_t chan_bits = nes_.GetChannelEnable();
     const char c[] = "/ ";
 
@@ -321,6 +316,52 @@ void Display::render_channel_status() const
     glColor3f(1.f, 0.f, 0.f);
     DrawText(text, x, 0);
 
+    glPopAttrib();
+}
+
+void Display::render_pattern_table() const
+{
+    const int W = nes_.patt.Width();
+    const int H = nes_.patt.Height();
+
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, pattern_table_id_);
+    transfer_texture(nes_.patt);
+
+    glBegin(GL_QUADS);
+        glTexCoord2f(0, 0); glVertex2f(-W/2,  H/2);
+        glTexCoord2f(1, 0); glVertex2f( W/2,  H/2);
+        glTexCoord2f(1, 1); glVertex2f( W/2, -H/2);
+        glTexCoord2f(0, 1); glVertex2f(-W/2, -H/2);
+    glEnd();
+    glDisable(GL_TEXTURE_2D);
+
+    glPushAttrib(GL_CURRENT_BIT);
+
+    glBegin(GL_LINES);
+    glColor3f(0, .5, .5);
+    for (int i = 0; i <= W / 8; i++) {
+        glVertex3f(-W/2 + i * 8,  H/2, 0);
+        glVertex3f(-W/2 + i * 8, -H/2, 0);
+    }
+    for (int i = 0; i <= H / 8; i++) {
+        glVertex3f( W/2, -H/2 + i * 8, 0);
+        glVertex3f(-W/2, -H/2 + i * 8, 0);
+    }
+    glEnd();
+
+    glColor3f(0, 1, 1);
+    glBegin(GL_LINE_LOOP);
+        glVertex2f(-W/2,  H/2);
+        glVertex2f( W/2,  H/2);
+        glVertex2f( W/2, -H/2);
+        glVertex2f(-W/2, -H/2);
+    glEnd();
+    glBegin(GL_LINES);
+        glVertex2f(0,  H/2);
+        glVertex2f(0, -H/2);
+
+    glEnd();
     glPopAttrib();
 }
 
@@ -411,52 +452,6 @@ static void render_grid(const PPU &ppu, int width, int height)
     glVertex3f(-W/2, -H/2, 0);
     glEnd();
 
-    glPopAttrib();
-}
-
-static void render_pattern_table(const FrameBuffer &patt)
-{
-    const int W = patt.Width();
-    const int H = patt.Height();
-
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, pattern_table_id);
-    transfer_texture(patt);
-
-    glBegin(GL_QUADS);
-        glTexCoord2f(0, 0); glVertex2f(-W/2,  H/2);
-        glTexCoord2f(1, 0); glVertex2f( W/2,  H/2);
-        glTexCoord2f(1, 1); glVertex2f( W/2, -H/2);
-        glTexCoord2f(0, 1); glVertex2f(-W/2, -H/2);
-    glEnd();
-    glDisable(GL_TEXTURE_2D);
-
-    glPushAttrib(GL_CURRENT_BIT);
-
-    glBegin(GL_LINES);
-    glColor3f(0, .5, .5);
-    for (int i = 0; i <= W / 8; i++) {
-        glVertex3f(-W/2 + i * 8,  H/2, 0);
-        glVertex3f(-W/2 + i * 8, -H/2, 0);
-    }
-    for (int i = 0; i <= H / 8; i++) {
-        glVertex3f( W/2, -H/2 + i * 8, 0);
-        glVertex3f(-W/2, -H/2 + i * 8, 0);
-    }
-    glEnd();
-
-    glColor3f(0, 1, 1);
-    glBegin(GL_LINE_LOOP);
-        glVertex2f(-W/2,  H/2);
-        glVertex2f( W/2,  H/2);
-        glVertex2f( W/2, -H/2);
-        glVertex2f(-W/2, -H/2);
-    glEnd();
-    glBegin(GL_LINES);
-        glVertex2f(0,  H/2);
-        glVertex2f(0, -H/2);
-
-    glEnd();
     glPopAttrib();
 }
 

@@ -27,6 +27,8 @@ private:
     void render_overlay(double elapsed) const;
     void render_frame_rate(double elapsed) const;
     void render_channel_status() const;
+
+    void render_pattern_table() const;
 };
 
 } // namespace
