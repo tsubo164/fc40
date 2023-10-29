@@ -652,12 +652,13 @@ static void calculate_target_period(PulseChannel &pulse)
 
     // If the shift count is zero, the pulse channel's period is
     // never updated, but muting logic still applies.
-    if (change == 0 || swp.shift == 0)
+    //if (change == 0 || swp.shift == 0)
+    if (change == 0)
         return;
 
     if (swp.negate) {
         swp.target_period = current_period - change;
-        if (pulse.id == 1)
+        //if (pulse.id == 1)
             swp.target_period--;
     }
     else {
