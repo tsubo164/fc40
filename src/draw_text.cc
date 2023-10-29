@@ -156,7 +156,7 @@ void DrawText(const std::string &text, int x, int y)
 {
     const int FONT_W = 8 * FONT_SCALE;
     const int FONT_H = 8 * FONT_SCALE;
-    const int OFFSET_X = 7 * FONT_SCALE;
+    const int OFFSET_X = 8 * FONT_SCALE - 1;
     const int OFFSET_Y = 0;
 
     glRasterPos2i(x, -8 - y);

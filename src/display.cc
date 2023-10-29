@@ -38,7 +38,6 @@ int Display::Open()
     const int WIN_MARGIN = 2 * MARGIN;
     const int WINX = RESX * SCALE + 2 * WIN_MARGIN;
     const int WINY = RESY * SCALE + 2 * WIN_MARGIN;
-    uint64_t f = 0;
     KeyState key;
 
     // Init bitmap fonts
@@ -142,10 +141,14 @@ int Display::Open()
         }
         // Keys debug
         else if (key.IsPressed(GLFW_KEY_SPACE)) {
-            if (nes_.IsRunning())
+            if (nes_.IsRunning()) {
                 nes_.Stop();
-            else
+                set_status_message("Emulator paused.");
+            }
+            else {
                 nes_.Run();
+                set_status_message("Emulator resumed.");
+            }
         }
         else if (key.IsPressed(GLFW_KEY_TAB)) {
             if (!nes_.IsRunning())
@@ -194,7 +197,7 @@ int Display::Open()
                 nes_.InputController(0, input);
         }
 
-        f++;
+        frame_++;
     }
 
     glfwTerminate();
@@ -265,6 +268,7 @@ void Display::render_overlay(double elapsed) const
 
     render_frame_rate(elapsed);
     render_channel_status();
+    render_status_message();
 
     glPopMatrix();
 }
@@ -286,7 +290,7 @@ void Display::render_frame_rate(double elapsed) const
         count = 0;
     }
 
-    DrawText(text, 0, 0);
+    DrawText(text, 8, 0);
 }
 
 void Display::render_channel_status() const
@@ -310,6 +314,23 @@ void Display::render_channel_status() const
 
     glColor3f(1.f, 0.f, 0.f);
     DrawText(text, x, 0);
+
+    glPopAttrib();
+}
+
+void Display::render_status_message() const
+{
+    if (frame_ - status_frame_ > 4 * 60)
+        return;
+
+    const int H = screen_h;
+    const int x = 8;
+    const int y = H - 16;
+
+    glPushAttrib(GL_CURRENT_BIT);
+    glColor3f(0.f, 1.f, 0.f);
+
+    DrawText(status_message_, x, y);
 
     glPopAttrib();
 }
@@ -443,6 +464,12 @@ void Display::render_sprite_box(int width, int height) const
     }
 
     glPopAttrib();
+}
+
+void Display::set_status_message(const std::string &message)
+{
+    status_frame_ = frame_;
+    status_message_ = message;
 }
 
 static void transfer_texture(const FrameBuffer &fb)
