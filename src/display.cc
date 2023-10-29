@@ -1,11 +1,11 @@
 #include <iostream>
-#include <fstream>
 #include <GLFW/glfw3.h>
 #include "display.h"
 #include "framebuffer.h"
 #include "draw_text.h"
 #include "serialize.h"
 #include "debug.h"
+#include "state.h"
 #include "nes.h"
 #include "ppu.h"
 
@@ -24,13 +24,10 @@ struct KeyState {
 
 static void transfer_texture(const FrameBuffer &fb);
 static void resize(GLFWwindow *window, int width, int height);
-static bool save_stat(NES &nes, const std::string &filename);
-static bool load_stat(NES &nes, const std::string &filename);
-
-// Audio channels
 static uint8_t toggle_bits(uint8_t chan_bits, uint8_t toggle_bit);
 
 static const GLuint main_screen = 0;
+static GLuint pattern_table_id = 0;
 
 static int screen_w = 0;
 static int screen_h = 0;
@@ -157,12 +154,12 @@ int Display::Open()
         else if (key.IsPressed(GLFW_KEY_F1)) {
             const Cartridge *cart = nes_.GetCartridge();
             const std::string stat_filename = cart->GetFileName() + ".stat";
-            save_stat(nes_, stat_filename);
+            SaveState(nes_, stat_filename);
         }
         else if (key.IsPressed(GLFW_KEY_F2)) {
             const Cartridge *cart = nes_.GetCartridge();
             const std::string stat_filename = cart->GetFileName() + ".stat";
-            load_stat(nes_, stat_filename);
+            LoadState(nes_, stat_filename);
         }
         // Keys reset
         else if (key.IsPressed(GLFW_KEY_R)) {
@@ -212,8 +209,8 @@ void Display::init_video()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
     // pattern table
-    glGenTextures(1, &pattern_table_id_);
-    glBindTexture(GL_TEXTURE_2D, pattern_table_id_);
+    glGenTextures(1, &pattern_table_id);
+    glBindTexture(GL_TEXTURE_2D, pattern_table_id);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
@@ -323,7 +320,7 @@ void Display::render_pattern_table() const
     const int H = nes_.patt.Height();
 
     glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, pattern_table_id_);
+    glBindTexture(GL_TEXTURE_2D, pattern_table_id);
     transfer_texture(nes_.patt);
 
     glBegin(GL_QUADS);
@@ -500,43 +497,12 @@ bool KeyState::IsPressed(int key)
     return false;
 }
 
-// Audio channels
 static uint8_t toggle_bits(uint8_t chan_bits, uint8_t toggle_bit)
 {
     if (chan_bits & toggle_bit)
         return chan_bits & ~toggle_bit;
     else
         return chan_bits | toggle_bit;
-}
-
-static bool save_stat(NES &nes, const std::string &filename)
-{
-    std::ofstream ofs(filename);
-    if (!ofs)
-        return false;
-
-    Archive ar;
-
-    Serialize(ar, "nes", &nes);
-    ar.Write(ofs);
-
-    std::cout << filename << ": saved successfully" << std::endl;
-    return true;
-}
-
-static bool load_stat(NES &nes, const std::string &filename)
-{
-    std::ifstream ifs(filename);
-    if (!ifs)
-        return false;
-
-    Archive ar;
-
-    Serialize(ar, "nes", &nes);
-    ar.Read(ifs);
-
-    std::cout << filename << ": loaded successfully" << std::endl;
-    return true;
 }
 
 } // namespace
