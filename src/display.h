@@ -29,6 +29,8 @@ private:
     void render_channel_status() const;
 
     void render_pattern_table() const;
+    void render_grid(int width, int height) const;
+    void render_sprite_box(int width, int height) const;
 };
 
 } // namespace

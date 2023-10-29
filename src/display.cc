@@ -24,8 +24,6 @@ struct KeyState {
 
 static void transfer_texture(const FrameBuffer &fb);
 static void resize(GLFWwindow *window, int width, int height);
-static void render_grid(const PPU &ppu, int width, int height);
-static void render_sprite_box(const PPU &ppu, int width, int height);
 static bool save_stat(NES &nes, const std::string &filename);
 static bool load_stat(NES &nes, const std::string &filename);
 
@@ -248,8 +246,8 @@ void Display::render() const
     glDisable(GL_TEXTURE_2D);
 
     if (show_guide_) {
-        render_grid(nes_.ppu, W, H);
-        render_sprite_box(nes_.ppu, W, H);
+        render_grid(W, H);
+        render_sprite_box(W, H);
     }
 
     if (show_patt_) {
@@ -365,42 +363,7 @@ void Display::render_pattern_table() const
     glPopAttrib();
 }
 
-static void transfer_texture(const FrameBuffer &fb)
-{
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, fb.Width(), fb.Height(),
-            0, GL_RGB, GL_UNSIGNED_BYTE, fb.GetData());
-}
-
-static void resize(GLFWwindow *window, int width, int height)
-{
-    float win_w = 0., win_h = 0.;
-    int fb_w = 0, fb_h = 0;
-
-    // MacOS Retina display has different fb size than window size
-    glfwGetFramebufferSize(window, &fb_w, &fb_h);
-    const float aspect = static_cast<float>(fb_w) / fb_h;
-
-    if (aspect > static_cast<float>(RESX) / RESY) {
-        win_w = RESY * aspect;
-        win_h = RESY;
-    } else {
-        win_w = RESX;
-        win_h = RESX / aspect;
-    }
-    screen_w = width;
-    screen_h = height;
-
-    glViewport(0, 0, fb_w, fb_h);
-
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-
-    glOrtho(-win_w/2 - MARGIN, win_w/2 + MARGIN,
-            -win_h/2 - MARGIN, win_h/2 + MARGIN, -1., 1.);
-}
-
-static void render_grid(const PPU &ppu, int width, int height)
+void Display::render_grid(int width, int height) const
 {
     const int W = width;
     const int H = height;
@@ -410,7 +373,7 @@ static void render_grid(const PPU &ppu, int width, int height)
     // grid
     glBegin(GL_LINES);
     for (int y = 0; y < H; y++) {
-        const Scroll scroll = ppu.GetScroll(y);
+        const Scroll scroll = nes_.ppu.GetScroll(y);
         const int Y = (y + 8 * scroll.coarse_y + scroll.fine_y) % 240;
 
         if (Y % 32 == 0)
@@ -455,16 +418,16 @@ static void render_grid(const PPU &ppu, int width, int height)
     glPopAttrib();
 }
 
-static void render_sprite_box(const PPU &ppu, int width, int height)
+void Display::render_sprite_box(int width, int height) const
 {
-    const int sprite_h = ppu.IsSprite8x16() ? 16 : 8;
+    const int sprite_h = nes_.ppu.IsSprite8x16() ? 16 : 8;
 
     glPushAttrib(GL_CURRENT_BIT);
 
     for (int i = 0; i < 64; i++) {
         // draw sprite zero last
         const int index = 63 - i;
-        const ObjectAttribute obj = ppu.ReadOam(index);
+        const ObjectAttribute obj = nes_.ppu.ReadOam(index);
         const int x = obj.x - width / 2;
         const int y = height / 2 - obj.y - 1;
 
@@ -483,6 +446,41 @@ static void render_sprite_box(const PPU &ppu, int width, int height)
     }
 
     glPopAttrib();
+}
+
+static void transfer_texture(const FrameBuffer &fb)
+{
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, fb.Width(), fb.Height(),
+            0, GL_RGB, GL_UNSIGNED_BYTE, fb.GetData());
+}
+
+static void resize(GLFWwindow *window, int width, int height)
+{
+    float win_w = 0., win_h = 0.;
+    int fb_w = 0, fb_h = 0;
+
+    // MacOS Retina display has different fb size than window size
+    glfwGetFramebufferSize(window, &fb_w, &fb_h);
+    const float aspect = static_cast<float>(fb_w) / fb_h;
+
+    if (aspect > static_cast<float>(RESX) / RESY) {
+        win_w = RESY * aspect;
+        win_h = RESY;
+    } else {
+        win_w = RESX;
+        win_h = RESX / aspect;
+    }
+    screen_w = width;
+    screen_h = height;
+
+    glViewport(0, 0, fb_w, fb_h);
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+
+    glOrtho(-win_w/2 - MARGIN, win_w/2 + MARGIN,
+            -win_h/2 - MARGIN, win_h/2 + MARGIN, -1., 1.);
 }
 
 // Keys
