@@ -22,7 +22,6 @@ struct KeyState {
     bool IsPressed(int key);
 };
 
-static void init_gl();
 static void transfer_texture(const FrameBuffer &fb);
 static void resize(GLFWwindow *window, int width, int height);
 static void render_grid(const PPU &ppu, int width, int height);
@@ -67,7 +66,7 @@ int Display::Open()
     glfwMakeContextCurrent(window);
     glfwSetWindowSizeCallback(window, resize);
 
-    init_gl();
+    init_video();
     resize(window, WINX, WINY);
     key.window = window;
 
@@ -209,6 +208,28 @@ int Display::Open()
     return 0;
 }
 
+void Display::init_video()
+{
+    // main screen
+    glBindTexture(GL_TEXTURE_2D, main_screen);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+    // pattern table
+    glGenTextures(1, &pattern_table_id_);
+    glBindTexture(GL_TEXTURE_2D, pattern_table_id_);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+    glBindTexture(GL_TEXTURE_2D, main_screen);
+    // bg color
+    constexpr float bg = .25;
+    glClearColor(bg, bg, bg, 0);
+
+    // XXX TEMP
+    pattern_table_id = pattern_table_id_;
+}
+
 void Display::render() const
 {
     const int W = nes_.fbuf.Width();
@@ -301,25 +322,6 @@ void Display::render_channel_status() const
     DrawText(text, x, 0);
 
     glPopAttrib();
-}
-
-static void init_gl()
-{
-    // main screen
-    glBindTexture(GL_TEXTURE_2D, main_screen);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-    // pattern table
-    glGenTextures(1, &pattern_table_id);
-    glBindTexture(GL_TEXTURE_2D, pattern_table_id);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-    glBindTexture(GL_TEXTURE_2D, main_screen);
-    // bg color
-    constexpr float bg = .25;
-    glClearColor(bg, bg, bg, 0);
 }
 
 static void transfer_texture(const FrameBuffer &fb)
