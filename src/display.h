@@ -20,6 +20,9 @@ private:
     bool show_patt_ = 0;
 
     void render() const;
+    void render_overlay(double elapsed) const;
+    void render_frame_rate(double elapsed) const;
+    void render_channel_status() const;
 };
 
 } // namespace

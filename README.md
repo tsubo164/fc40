@@ -17,8 +17,10 @@
 - R -> reset button
 - P -> Show tile pattern
 - G -> Show tile and sprite grid
+- Space -> Start/Pause emulator
 - F1 -> Save emulator state
 - F2 -> Load emulator state
+- Audio On/Off -> '`', 1, 2, 3, 4, 5 (ALL, pulse1, pulse2, triangle, noise, DMC)
 - Five audio channels supoprted
 - No multi player supoprt yet
 

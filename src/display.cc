@@ -28,9 +28,6 @@ static void resize(GLFWwindow *window, int width, int height);
 static void render_grid(const PPU &ppu, int width, int height);
 static void render_pattern_table(const FrameBuffer &patt);
 static void render_sprite_box(const PPU &ppu, int width, int height);
-static void render_overlay(double elapsed, uint8_t chan_bits);
-static void render_frame_rate(double elapsed);
-static void render_channel_status(uint8_t chan_bits);
 static bool save_stat(NES &nes, const std::string &filename);
 static bool load_stat(NES &nes, const std::string &filename);
 
@@ -85,7 +82,7 @@ int Display::Open()
         render();
 
         // Render overlay
-        render_overlay(glfwGetTime(), nes_.GetChannelEnable());
+        render_overlay(glfwGetTime());
 
         // Swap front and back buffers
         glfwSwapBuffers(window);
@@ -146,7 +143,7 @@ int Display::Open()
             bits = toggle_bits(bits, 0x10);
             nes_.SetChannelEnable(bits);
         }
-        else if (key.IsPressed(GLFW_KEY_6)) {
+        else if (key.IsPressed(GLFW_KEY_GRAVE_ACCENT)) {
             uint8_t bits = nes_.GetChannelEnable();
             bits = (bits == 0x1F) ? 0x00 : 0x1F;
             nes_.SetChannelEnable(bits);
@@ -245,6 +242,65 @@ void Display::render() const
     }
 
     glFlush();
+}
+
+void Display::render_overlay(double elapsed) const
+{
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+
+    glLoadIdentity();
+    glOrtho(-8, screen_w, -screen_h, 8, -1., 1.);
+
+    render_frame_rate(elapsed);
+    render_channel_status();
+
+    glPopMatrix();
+}
+
+void Display::render_frame_rate(double elapsed) const
+{
+    static char text[16] = {'\0'};
+    static int count = 0;
+    static double sum = 0;
+
+    sum += elapsed;
+    count++;
+
+    if (count == 60) {
+        const double fps = 1.0 / (sum / 60);
+        sprintf(text, "FPS: %.2lf", fps);
+
+        sum = 0;
+        count = 0;
+    }
+
+    DrawText(text, 0, 0);
+}
+
+void Display::render_channel_status() const
+{
+    static char text[32] = {'\0'};
+    const uint8_t chan_bits = nes_.GetChannelEnable();
+    const char c[] = "/ ";
+
+    sprintf(text, "          %c %c %c %c %c",
+            c[(chan_bits & 0x01) > 0],
+            c[(chan_bits & 0x02) > 0],
+            c[(chan_bits & 0x04) > 0],
+            c[(chan_bits & 0x08) > 0],
+            c[(chan_bits & 0x10) > 0]);
+
+    glPushAttrib(GL_CURRENT_BIT);
+
+    const int x = 8 * 16;
+    glColor3f(1.f, 1.f, 1.f);
+    DrawText("Channels: 1 2 T N D", x, 0);
+
+    glColor3f(1.f, 0.f, 0.f);
+    DrawText(text, x, 0);
+
+    glPopAttrib();
 }
 
 static void init_gl()
@@ -428,64 +484,6 @@ static void render_sprite_box(const PPU &ppu, int width, int height)
             glVertex3f(x + 0, y - sprite_h, 0);
         glEnd();
     }
-
-    glPopAttrib();
-}
-
-static void render_overlay(double elapsed, uint8_t chan_bits)
-{
-    glMatrixMode(GL_PROJECTION);
-    glPushMatrix();
-
-    glLoadIdentity();
-    glOrtho(-8, screen_w, -screen_h, 8, -1., 1.);
-
-    render_frame_rate(elapsed);
-    render_channel_status(chan_bits);
-
-    glPopMatrix();
-}
-
-static void render_frame_rate(double elapsed)
-{
-    static char text[16] = {'\0'};
-    static int count = 0;
-    static double sum = 0;
-
-    sum += elapsed;
-    count++;
-
-    if (count == 60) {
-        const double fps = 1.0 / (sum / 60);
-        sprintf(text, "FPS: %.2lf", fps);
-
-        sum = 0;
-        count = 0;
-    }
-
-    DrawText(text, 0, 0);
-}
-
-static void render_channel_status(uint8_t chan_bits)
-{
-    const char c[] = "/ ";
-    static char text[32] = {'\0'};
-
-    sprintf(text, "          %c %c %c %c %c",
-            c[(chan_bits & 0x01) > 0],
-            c[(chan_bits & 0x02) > 0],
-            c[(chan_bits & 0x04) > 0],
-            c[(chan_bits & 0x08) > 0],
-            c[(chan_bits & 0x10) > 0]);
-
-    glPushAttrib(GL_CURRENT_BIT);
-
-    const int x = 8 * 16;
-    glColor3f(1.f, 1.f, 1.f);
-    DrawText("Channels: 1 2 T N D", x, 0);
-
-    glColor3f(1.f, 0.f, 0.f);
-    DrawText(text, x, 0);
 
     glPopAttrib();
 }
