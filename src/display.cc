@@ -1,6 +1,5 @@
 #include <iostream>
 #include <fstream>
-#include <chrono>
 #include <GLFW/glfw3.h>
 #include "display.h"
 #include "framebuffer.h"
@@ -29,13 +28,14 @@ static void resize(GLFWwindow *window, int width, int height);
 static void render_grid(const PPU &ppu, int width, int height);
 static void render_pattern_table(const FrameBuffer &patt);
 static void render_sprite_box(const PPU &ppu, int width, int height);
+static void render_overlay(double elapsed, uint8_t chan_bits);
 static void render_frame_rate(double elapsed);
+static void render_channel_status(uint8_t chan_bits);
 static bool save_stat(NES &nes, const std::string &filename);
 static bool load_stat(NES &nes, const std::string &filename);
 
 // Audio channels
 static uint8_t toggle_bits(uint8_t chan_bits, uint8_t toggle_bit);
-static void print_channel_status(uint8_t chan_bits);
 
 static const GLuint main_screen = 0;
 static GLuint pattern_table_id = 0;
@@ -76,7 +76,7 @@ int Display::Open()
 
     // Loop until the user closes the window
     while (!glfwWindowShouldClose(window)) {
-        const auto start = std::chrono::high_resolution_clock::now();
+        glfwSetTime(0.0);
 
         // Update framebuffer
         nes_.UpdateFrame();
@@ -84,11 +84,8 @@ int Display::Open()
         // Render here
         render();
 
-        // Render FPS
-        render_frame_rate(
-                std::chrono::duration<double>(
-                    std::chrono::high_resolution_clock::now() - start
-                    ).count());
+        // Render overlay
+        render_overlay(glfwGetTime(), nes_.GetChannelEnable());
 
         // Swap front and back buffers
         glfwSwapBuffers(window);
@@ -128,37 +125,31 @@ int Display::Open()
             uint8_t bits = nes_.GetChannelEnable();
             bits = toggle_bits(bits, 0x01);
             nes_.SetChannelEnable(bits);
-            print_channel_status(bits);
         }
         else if (key.IsPressed(GLFW_KEY_2)) {
             uint8_t bits = nes_.GetChannelEnable();
             bits = toggle_bits(bits, 0x02);
             nes_.SetChannelEnable(bits);
-            print_channel_status(bits);
         }
         else if (key.IsPressed(GLFW_KEY_3)) {
             uint8_t bits = nes_.GetChannelEnable();
             bits = toggle_bits(bits, 0x04);
             nes_.SetChannelEnable(bits);
-            print_channel_status(bits);
         }
         else if (key.IsPressed(GLFW_KEY_4)) {
             uint8_t bits = nes_.GetChannelEnable();
             bits = toggle_bits(bits, 0x08);
             nes_.SetChannelEnable(bits);
-            print_channel_status(bits);
         }
         else if (key.IsPressed(GLFW_KEY_5)) {
             uint8_t bits = nes_.GetChannelEnable();
             bits = toggle_bits(bits, 0x10);
             nes_.SetChannelEnable(bits);
-            print_channel_status(bits);
         }
         else if (key.IsPressed(GLFW_KEY_6)) {
             uint8_t bits = nes_.GetChannelEnable();
             bits = (bits == 0x1F) ? 0x00 : 0x1F;
             nes_.SetChannelEnable(bits);
-            print_channel_status(bits);
         }
         // Keys debug
         else if (key.IsPressed(GLFW_KEY_SPACE)) {
@@ -441,9 +432,23 @@ static void render_sprite_box(const PPU &ppu, int width, int height)
     glPopAttrib();
 }
 
+static void render_overlay(double elapsed, uint8_t chan_bits)
+{
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+
+    glLoadIdentity();
+    glOrtho(-8, screen_w, -screen_h, 8, -1., 1.);
+
+    render_frame_rate(elapsed);
+    render_channel_status(chan_bits);
+
+    glPopMatrix();
+}
+
 static void render_frame_rate(double elapsed)
 {
-    static std::string text;
+    static char text[16] = {'\0'};
     static int count = 0;
     static double sum = 0;
 
@@ -452,23 +457,37 @@ static void render_frame_rate(double elapsed)
 
     if (count == 60) {
         const double fps = 1.0 / (sum / 60);
-        static char buff[16] = {'\0'};
-        sprintf(buff, "FPS: %.2lf", fps);
-        text = buff;
+        sprintf(text, "FPS: %.2lf", fps);
 
         sum = 0;
         count = 0;
     }
 
-    glMatrixMode(GL_PROJECTION);
-    glPushMatrix();
-
-    glLoadIdentity();
-    glOrtho(-8, screen_w, -screen_h, 8, -1., 1.);
-    glColor3f(1.f, 1.f, 1.f);
     DrawText(text, 0, 0);
+}
 
-    glPopMatrix();
+static void render_channel_status(uint8_t chan_bits)
+{
+    const char c[] = "/ ";
+    static char text[32] = {'\0'};
+
+    sprintf(text, "          %c %c %c %c %c",
+            c[(chan_bits & 0x01) > 0],
+            c[(chan_bits & 0x02) > 0],
+            c[(chan_bits & 0x04) > 0],
+            c[(chan_bits & 0x08) > 0],
+            c[(chan_bits & 0x10) > 0]);
+
+    glPushAttrib(GL_CURRENT_BIT);
+
+    const int x = 8 * 16;
+    glColor3f(1.f, 1.f, 1.f);
+    DrawText("Channels: 1 2 T N D", x, 0);
+
+    glColor3f(1.f, 0.f, 0.f);
+    DrawText(text, x, 0);
+
+    glPopAttrib();
 }
 
 // Keys
@@ -495,19 +514,6 @@ static uint8_t toggle_bits(uint8_t chan_bits, uint8_t toggle_bit)
         return chan_bits & ~toggle_bit;
     else
         return chan_bits | toggle_bit;
-}
-
-static void print_channel_status(uint8_t chan_bits)
-{
-    const char c[] = "-+";
-    printf("====================\n");
-    printf("Channels | 1 2 T N D\n");
-    printf("ON/OFF   | %c %c %c %c %c\n",
-            c[(chan_bits & 0x01) > 0],
-            c[(chan_bits & 0x02) > 0],
-            c[(chan_bits & 0x04) > 0],
-            c[(chan_bits & 0x08) > 0],
-            c[(chan_bits & 0x10) > 0]);
 }
 
 static bool save_stat(NES &nes, const std::string &filename)
