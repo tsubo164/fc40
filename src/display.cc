@@ -24,7 +24,6 @@ struct KeyState {
 
 static void transfer_texture(const FrameBuffer &fb);
 static void resize(GLFWwindow *window, int width, int height);
-static uint8_t toggle_bits(uint8_t chan_bits, uint8_t toggle_bit);
 
 static const GLuint main_screen = 0;
 static GLuint pattern_table_id = 0;
@@ -110,34 +109,22 @@ int Display::Open()
         }
         // Keys sound channels
         else if (key.IsPressed(GLFW_KEY_1)) {
-            uint8_t bits = nes_.GetChannelEnable();
-            bits = toggle_bits(bits, 0x01);
-            nes_.SetChannelEnable(bits);
+            toggle_channel_bits(0x01);
         }
         else if (key.IsPressed(GLFW_KEY_2)) {
-            uint8_t bits = nes_.GetChannelEnable();
-            bits = toggle_bits(bits, 0x02);
-            nes_.SetChannelEnable(bits);
+            toggle_channel_bits(0x02);
         }
         else if (key.IsPressed(GLFW_KEY_3)) {
-            uint8_t bits = nes_.GetChannelEnable();
-            bits = toggle_bits(bits, 0x04);
-            nes_.SetChannelEnable(bits);
+            toggle_channel_bits(0x04);
         }
         else if (key.IsPressed(GLFW_KEY_4)) {
-            uint8_t bits = nes_.GetChannelEnable();
-            bits = toggle_bits(bits, 0x08);
-            nes_.SetChannelEnable(bits);
+            toggle_channel_bits(0x08);
         }
         else if (key.IsPressed(GLFW_KEY_5)) {
-            uint8_t bits = nes_.GetChannelEnable();
-            bits = toggle_bits(bits, 0x10);
-            nes_.SetChannelEnable(bits);
+            toggle_channel_bits(0x10);
         }
         else if (key.IsPressed(GLFW_KEY_GRAVE_ACCENT)) {
-            uint8_t bits = nes_.GetChannelEnable();
-            bits = (bits == 0x1F) ? 0x00 : 0x1F;
-            nes_.SetChannelEnable(bits);
+            toggle_channel_bits(0x1F);
         }
         // Keys debug
         else if (key.IsPressed(GLFW_KEY_SPACE)) {
@@ -295,6 +282,11 @@ void Display::render_frame_rate(double elapsed) const
 
 void Display::render_channel_status() const
 {
+    const bool all_channels_on = nes_.GetChannelEnable() == 0x1F;
+    const bool timed_out = frame_ - channel_frame_ > 4 * 60;
+    if (all_channels_on && timed_out)
+        return;
+
     char text[32] = {'\0'};
     const uint8_t chan_bits = nes_.GetChannelEnable();
     const char c[] = "/ ";
@@ -309,7 +301,10 @@ void Display::render_channel_status() const
     glPushAttrib(GL_CURRENT_BIT);
 
     const int x = 8 * 16;
-    glColor3f(1.f, 1.f, 1.f);
+    if (all_channels_on)
+        glColor3f(0.f, 1.f, 0.f);
+    else
+        glColor3f(1.f, 1.f, 1.f);
     DrawText("Channels: 1 2 T N D", x, 0);
 
     glColor3f(1.f, 0.f, 0.f);
@@ -472,6 +467,27 @@ void Display::set_status_message(const std::string &message)
     status_message_ = message;
 }
 
+void Display::toggle_channel_bits(uint8_t toggle_bits)
+{
+    uint8_t chan_bits = nes_.GetChannelEnable();
+
+    if (toggle_bits == 0x1F) {
+        if (chan_bits == 0x1F)
+            chan_bits = 0x00;
+        else
+            chan_bits = 0x1F;
+    }
+    else {
+        if (chan_bits & toggle_bits)
+            chan_bits &= ~toggle_bits;
+        else
+            chan_bits |= toggle_bits;
+    }
+
+    nes_.SetChannelEnable(chan_bits);
+    channel_frame_ = frame_;
+}
+
 static void transfer_texture(const FrameBuffer &fb)
 {
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -522,14 +538,6 @@ bool KeyState::IsPressed(int key)
     }
 
     return false;
-}
-
-static uint8_t toggle_bits(uint8_t chan_bits, uint8_t toggle_bit)
-{
-    if (chan_bits & toggle_bit)
-        return chan_bits & ~toggle_bit;
-    else
-        return chan_bits | toggle_bit;
 }
 
 } // namespace

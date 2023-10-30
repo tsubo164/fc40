@@ -24,6 +24,7 @@ private:
 
     std::string status_message_;
     uint64_t status_frame_ = 0;
+    uint64_t channel_frame_ = 0;
 
     void init_video();
 
@@ -38,6 +39,7 @@ private:
     void render_sprite_box(int width, int height) const;
 
     void set_status_message(const std::string &message);
+    void toggle_channel_bits(uint8_t toggle_bits);
 };
 
 } // namespace
