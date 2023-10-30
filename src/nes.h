@@ -23,6 +23,7 @@ public:
 
     FrameBuffer fbuf;
     FrameBuffer patt;
+    FrameBuffer oam;
     PPU ppu = {fbuf};
     APU apu = {};
     CPU cpu = {ppu, apu};

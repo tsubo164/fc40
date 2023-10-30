@@ -107,6 +107,9 @@ int Display::Open()
         else if (key.IsPressed(GLFW_KEY_P)) {
             show_patt_ = !show_patt_;
         }
+        else if (key.IsPressed(GLFW_KEY_O)) {
+            show_oam_ = !show_oam_;
+        }
         // Keys sound channels
         else if (key.IsPressed(GLFW_KEY_1)) {
             toggle_channel_bits(0x01);
@@ -250,6 +253,11 @@ void Display::render() const
         render_pattern_table();
     }
 
+    if (show_oam_) {
+        LoadOamTable(nes_.oam, nes_.GetCartridge(), &nes_.ppu);
+        render_oam_table();
+    }
+
     glFlush();
 }
 
@@ -379,9 +387,54 @@ void Display::render_pattern_table() const
     glBegin(GL_LINES);
         glVertex2f(0,  H/2);
         glVertex2f(0, -H/2);
-
     glEnd();
     glPopAttrib();
+}
+
+void Display::render_oam_table() const
+{
+    const int W = nes_.oam.Width();
+    const int H = nes_.oam.Height();
+
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, pattern_table_id);
+    transfer_texture(nes_.oam);
+
+    glPushMatrix();
+    glTranslatef(0, 8 * 10, 0);
+
+    glBegin(GL_QUADS);
+        glTexCoord2f(0, 0); glVertex2f(-W/2,  H/2);
+        glTexCoord2f(1, 0); glVertex2f( W/2,  H/2);
+        glTexCoord2f(1, 1); glVertex2f( W/2, -H/2);
+        glTexCoord2f(0, 1); glVertex2f(-W/2, -H/2);
+    glEnd();
+    glDisable(GL_TEXTURE_2D);
+
+    glPushAttrib(GL_CURRENT_BIT);
+
+    glBegin(GL_LINES);
+    glColor3f(.5, 0, .5);
+    for (int i = 0; i <= W / 8; i++) {
+        glVertex3f(-W/2 + i * 8,  H/2, 0);
+        glVertex3f(-W/2 + i * 8, -H/2, 0);
+    }
+    for (int i = 0; i <= H / 8; i++) {
+        glVertex3f( W/2, -H/2 + i * 8, 0);
+        glVertex3f(-W/2, -H/2 + i * 8, 0);
+    }
+    glEnd();
+
+    glColor3f(1, 0, 1);
+    glBegin(GL_LINE_LOOP);
+        glVertex2f(-W/2,  H/2);
+        glVertex2f( W/2,  H/2);
+        glVertex2f( W/2, -H/2);
+        glVertex2f(-W/2, -H/2);
+    glEnd();
+    glPopAttrib();
+
+    glPopMatrix();
 }
 
 void Display::render_grid(int width, int height) const

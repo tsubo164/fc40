@@ -21,7 +21,9 @@ void NES::PowerUp()
 
     // pattern table
     patt.Resize(16 * 8 * 2, 16 * 8);
-    LoadPatternTable(patt, cart_);
+
+    // OAM table
+    oam.Resize(16 * 8, 4 * 8);
 
     // CPU and PPU
     cpu.PowerUp();

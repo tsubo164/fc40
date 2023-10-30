@@ -95,10 +95,10 @@ void LogCpuStatus(NES &nes, int max_lines)
     }
 }
 
-static void load_pattern(FrameBuffer &fb, const Cartridge *cart, int id)
+static void load_pattern(FrameBuffer &fb, const Cartridge *cart, int tile_id, int table_cell)
 {
-    const int tile_x = id < 256 ? id % 16 : id % 16 + 16;
-    const int tile_y = id < 256 ? id / 16 : id / 16 - 16;
+    const int tile_x = table_cell < 256 ? table_cell % 16 : table_cell % 16 + 16;
+    const int tile_y = table_cell < 256 ? table_cell / 16 : table_cell / 16 - 16;
 
     const int X0 = tile_x * 8;
     const int X1 = X0 + 8;
@@ -107,8 +107,8 @@ static void load_pattern(FrameBuffer &fb, const Cartridge *cart, int id)
 
     for (int y = Y0; y < Y1; y++) {
         const uint8_t fine_y = y - Y0;
-        const uint8_t lo = cart->ReadChr(id * 16 + fine_y + 0);
-        const uint8_t hi = cart->ReadChr(id * 16 + fine_y + 8);
+        const uint8_t lo = cart->ReadChr(tile_id * 16 + fine_y + 0);
+        const uint8_t hi = cart->ReadChr(tile_id * 16 + fine_y + 8);
         int mask = 1 << 7;
 
         for (int x = X0; x < X1; x++) {
@@ -131,7 +131,15 @@ static void load_pattern(FrameBuffer &fb, const Cartridge *cart, int id)
 void LoadPatternTable(FrameBuffer &fb, const Cartridge *cart)
 {
     for (int i = 0; i < 256 * 2; i++)
-        load_pattern(fb, cart, i);
+        load_pattern(fb, cart, i, i);
+}
+
+void LoadOamTable(FrameBuffer &fb, const Cartridge *cart, const PPU *ppu)
+{
+    for (int i = 0; i < 64; i++) {
+        const ObjectAttribute obj = ppu->ReadOam(i);
+        load_pattern(fb, cart, obj.tile_id, i);
+    }
 }
 
 } // namespace
