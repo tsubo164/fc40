@@ -16,7 +16,6 @@ bool SaveState(NES &nes, const std::string &filename)
     Serialize(ar, "nes", &nes);
     ar.Write(ofs);
 
-    std::cout << filename << ": saved successfully" << std::endl;
     return true;
 }
 
@@ -31,7 +30,6 @@ bool LoadState(NES &nes, const std::string &filename)
     Serialize(ar, "nes", &nes);
     ar.Read(ifs);
 
-    std::cout << filename << ": loaded successfully" << std::endl;
     return true;
 }
 

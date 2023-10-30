@@ -130,11 +130,11 @@ int Display::Open()
         else if (key.IsPressed(GLFW_KEY_SPACE)) {
             if (nes_.IsRunning()) {
                 nes_.Stop();
-                set_status_message("Emulator paused.");
+                set_status_message("Emulator paused");
             }
             else {
                 nes_.Run();
-                set_status_message("Emulator resumed.");
+                set_status_message("Emulator resumed");
             }
         }
         else if (key.IsPressed(GLFW_KEY_TAB)) {
@@ -144,12 +144,20 @@ int Display::Open()
         else if (key.IsPressed(GLFW_KEY_F1)) {
             const Cartridge *cart = nes_.GetCartridge();
             const std::string stat_filename = cart->GetFileName() + ".stat";
-            SaveState(nes_, stat_filename);
+            const bool ok = SaveState(nes_, stat_filename);
+            if (ok)
+                set_status_message(stat_filename + ": saved successfully");
+            else
+                set_status_message(stat_filename + ": failed to save");
         }
         else if (key.IsPressed(GLFW_KEY_F2)) {
             const Cartridge *cart = nes_.GetCartridge();
             const std::string stat_filename = cart->GetFileName() + ".stat";
-            LoadState(nes_, stat_filename);
+            const bool ok = LoadState(nes_, stat_filename);
+            if (ok)
+                set_status_message(stat_filename + ": loaded successfully");
+            else
+                set_status_message(stat_filename + ": failed to load");
         }
         // Keys reset
         else if (key.IsPressed(GLFW_KEY_R)) {
