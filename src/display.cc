@@ -31,6 +31,8 @@ static GLuint pattern_table_id = 0;
 
 static int screen_w = 0;
 static int screen_h = 0;
+static int cursor_video_x = 0;
+static int cursor_video_y = 0;
 
 int Display::Open()
 {
@@ -496,6 +498,10 @@ void Display::render_grid(int width, int height) const
 
 void Display::render_sprite_box(int width, int height) const
 {
+    const int focus_x = cursor_video_x;
+    const int focus_y = cursor_video_y;
+    int focus_index = -1;
+
     const int sprite_h = nes_.ppu.IsSprite8x16() ? 16 : 8;
 
     glPushAttrib(GL_CURRENT_BIT);
@@ -506,6 +512,11 @@ void Display::render_sprite_box(int width, int height) const
         const ObjectAttribute obj = nes_.ppu.ReadOam(index);
         const int x = obj.x - width / 2;
         const int y = height / 2 - obj.y - 1;
+
+        if (obj.x <= focus_x && obj.x + 8 >= focus_x &&
+            obj.y <= focus_y && obj.y + 8 >= focus_y) {
+            focus_index = index;
+        }
 
         // sprite zero
         if (index == 0)
@@ -519,6 +530,43 @@ void Display::render_sprite_box(int width, int height) const
             glVertex3f(x + 8, y - sprite_h, 0);
             glVertex3f(x + 0, y - sprite_h, 0);
         glEnd();
+    }
+
+    // focused sprite
+    if (focus_index >= 0) {
+        const ObjectAttribute obj = nes_.ppu.ReadOam(focus_index);
+        const int x = obj.x - width / 2;
+        const int y = height / 2 - obj.y - 1;
+        glColor3f(1, 1, 1);
+
+        glBegin(GL_LINE_LOOP);
+            glVertex3f(x + 0, y - 0, 0);
+            glVertex3f(x + 8, y - 0, 0);
+            glVertex3f(x + 8, y - sprite_h, 0);
+            glVertex3f(x + 0, y - sprite_h, 0);
+        glEnd();
+
+        int offset = 0;
+        const int X = x + 8 + 4;
+        const int Y = obj.y - height / 2;
+        std::string text =
+            std::string("oam index: ") + std::to_string(obj.oam_index);
+        glColor3f(0, 0, 0);
+        DrawText(text, X + 1, Y + 8 * offset + 1);
+        glColor3f(1, 1, 1);
+        DrawText(text, X, Y + 8 * offset++);
+
+        text = std::string("oam x: ") + std::to_string(obj.x);
+        glColor3f(0, 0, 0);
+        DrawText(text, X + 1, Y + 8 * offset + 1);
+        glColor3f(1, 1, 1);
+        DrawText(text, X, Y + 8 * offset++);
+
+        text = std::string("oam y: ") + std::to_string(obj.y);
+        glColor3f(0, 0, 0);
+        DrawText(text, X + 1, Y + 8 * offset + 1);
+        glColor3f(1, 1, 1);
+        DrawText(text, X, Y + 8 * offset++);
     }
 
     glPopAttrib();
@@ -616,9 +664,8 @@ static void cursor_position(GLFWwindow *window, double xpos, double ypos)
         video_x = xpos / screen_w * video_w - margin_x;
     }
 
-    const int x = video_x;
-    const int y = video_y;
-    printf("video: (%d, %d)\n", x, y);
+    cursor_video_x = video_x;
+    cursor_video_y = video_y;
 }
 
 // Keys
