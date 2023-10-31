@@ -24,6 +24,7 @@ struct KeyState {
 
 static void transfer_texture(const FrameBuffer &fb);
 static void resize(GLFWwindow *window, int width, int height);
+static void cursor_position(GLFWwindow *window, double xpos, double ypos);
 
 static const GLuint main_screen = 0;
 static GLuint pattern_table_id = 0;
@@ -56,6 +57,7 @@ int Display::Open()
     // Make the window's context current
     glfwMakeContextCurrent(window);
     glfwSetWindowSizeCallback(window, resize);
+    glfwSetCursorPosCallback(window, cursor_position);
 
     init_video();
     resize(window, WINX, WINY);
@@ -558,30 +560,65 @@ static void transfer_texture(const FrameBuffer &fb)
 
 static void resize(GLFWwindow *window, int width, int height)
 {
-    float win_w = 0., win_h = 0.;
-    int fb_w = 0, fb_h = 0;
-
-    // MacOS Retina display has different fb size than window size
-    glfwGetFramebufferSize(window, &fb_w, &fb_h);
-    const float aspect = static_cast<float>(fb_w) / fb_h;
-
-    if (aspect > static_cast<float>(RESX) / RESY) {
-        win_w = RESY * aspect;
-        win_h = RESY;
-    } else {
-        win_w = RESX;
-        win_h = RESX / aspect;
-    }
     screen_w = width;
     screen_h = height;
 
-    glViewport(0, 0, fb_w, fb_h);
+    float video_w = 0.f, video_h = 0.f;
+
+    {
+        const float aspect = static_cast<float>(screen_w) / screen_h;
+
+        if (aspect > static_cast<float>(RESX + 2 * MARGIN) / (RESY + 2 * MARGIN)) {
+            video_h = RESY + 2 * MARGIN;
+            video_w = video_h * aspect;
+        }
+        else {
+            video_w = RESX + 2 * MARGIN;
+            video_h = video_w / aspect;
+        }
+    }
+    {
+        int fb_w = 0, fb_h = 0;
+        // MacOS Retina display has different fb size than window size
+        glfwGetFramebufferSize(window, &fb_w, &fb_h);
+        glViewport(0, 0, fb_w, fb_h);
+    }
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 
-    glOrtho(-win_w/2 - MARGIN, win_w/2 + MARGIN,
-            -win_h/2 - MARGIN, win_h/2 + MARGIN, -1., 1.);
+    glOrtho(-video_w/2, video_w/2,
+            -video_h/2, video_h/2, -1., 1.);
+}
+
+static void cursor_position(GLFWwindow *window, double xpos, double ypos)
+{
+    const float aspect = static_cast<float>(screen_w) / screen_h;
+
+    float video_x = 0;
+    float video_y = 0;
+
+    if (aspect > static_cast<float>(RESX + 2 * MARGIN) / (RESY + 2 * MARGIN)) {
+        const float video_h = RESY + 2 * MARGIN;
+        const float video_w = video_h * aspect;
+        const float margin_y = MARGIN;
+        const float margin_x = (video_w - RESX) / 2;
+        video_y = ypos / screen_h * video_h - margin_y;
+        video_x = xpos / screen_w * video_w - margin_x;
+
+    }
+    else {
+        const float video_w = RESX + 2 * MARGIN;
+        const float video_h = video_w / aspect;
+        const float margin_x = MARGIN;
+        const float margin_y = (video_h - RESY) / 2;
+        video_y = ypos / screen_h * video_h - margin_y;
+        video_x = xpos / screen_w * video_w - margin_x;
+    }
+
+    const int x = video_x;
+    const int y = video_y;
+    printf("video: (%d, %d)\n", x, y);
 }
 
 // Keys
