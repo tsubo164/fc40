@@ -12,9 +12,11 @@
 namespace nes {
 
 const int MARGIN = 8;
-const int SCALE = 2;
+const int SCREEN_MARGIN = 16;
+const int VIDEO_SCALE = 2;
 const int RESX = 256;
 const int RESY = 240;
+const float VIDEO_ASPECT = static_cast<float>(RESX + 2 * MARGIN) / (RESY + 2 * MARGIN);
 
 struct KeyState {
     GLFWwindow *window = nullptr;
@@ -29,17 +31,31 @@ static void cursor_position(GLFWwindow *window, double xpos, double ypos);
 static const GLuint main_screen = 0;
 static GLuint pattern_table_id = 0;
 
+struct Coord {
+    float x = 0.f, y = 0.f;
+};
+
+static float video_w = 0.f;
+static float video_h = 0.f;
+
 static int screen_w = 0;
 static int screen_h = 0;
+static float screen_aspect = 1.0f;
+// how many display screen pixels per NES video res
+static float screen_per_video = 1.0;
+
+
+static float video_margin_x = 8.0f;
+static float video_margin_y = 8.0f;
+
 static int cursor_video_x = 0;
 static int cursor_video_y = 0;
 
 int Display::Open()
 {
     // MacOS Retina display has twice res
-    const int WIN_MARGIN = 2 * MARGIN;
-    const int WINX = RESX * SCALE + 2 * WIN_MARGIN;
-    const int WINY = RESY * SCALE + 2 * WIN_MARGIN;
+    const int WINX = RESX * VIDEO_SCALE + 2 * SCREEN_MARGIN;
+    const int WINY = RESY * VIDEO_SCALE + 2 * SCREEN_MARGIN;
     KeyState key;
 
     // Init bitmap fonts
@@ -239,11 +255,12 @@ void Display::render() const
     glBindTexture(GL_TEXTURE_2D, main_screen);
     transfer_texture(nes_.fbuf);
 
+    glTranslatef(video_margin_x, video_margin_y, 0);
     glBegin(GL_QUADS);
-        glTexCoord2f(0, 0); glVertex2f(-W/2,  H/2);
-        glTexCoord2f(1, 0); glVertex2f( W/2,  H/2);
-        glTexCoord2f(1, 1); glVertex2f( W/2, -H/2);
-        glTexCoord2f(0, 1); glVertex2f(-W/2, -H/2);
+        glTexCoord2f(0, 0); glVertex2f(0, 0);
+        glTexCoord2f(1, 0); glVertex2f(W, 0);
+        glTexCoord2f(1, 1); glVertex2f(W, H);
+        glTexCoord2f(0, 1); glVertex2f(0, H);
     glEnd();
     glDisable(GL_TEXTURE_2D);
 
@@ -271,12 +288,19 @@ void Display::render_overlay(double elapsed) const
     glPushMatrix();
 
     glLoadIdentity();
-    glOrtho(-8, screen_w, -screen_h, 8, -1., 1.);
+    glOrtho(0, screen_w, screen_h, 0, -1., 1.);
+    {
+        glMatrixMode(GL_MODELVIEW);
+        glPushMatrix();
+        glLoadIdentity();
 
-    render_frame_rate(elapsed);
-    render_channel_status();
-    render_status_message();
+        render_frame_rate(elapsed);
+        render_channel_status();
+        render_status_message();
 
+        glPopMatrix();
+    }
+    glMatrixMode(GL_PROJECTION);
     glPopMatrix();
 }
 
@@ -297,7 +321,7 @@ void Display::render_frame_rate(double elapsed) const
         count = 0;
     }
 
-    DrawText(text, 8, 0);
+    DrawText(text, 16, 16);
 }
 
 void Display::render_channel_status() const
@@ -321,14 +345,15 @@ void Display::render_channel_status() const
     glPushAttrib(GL_CURRENT_BIT);
 
     const int x = 8 * 16;
+    const int y = 16;
     if (all_channels_on)
         glColor3f(0.f, 1.f, 0.f);
     else
         glColor3f(1.f, 1.f, 1.f);
-    DrawText("Channels: 1 2 T N D", x, 0);
+    DrawText("Channels: 1 2 T N D", x, y);
 
     glColor3f(1.f, 0.f, 0.f);
-    DrawText(text, x, 0);
+    DrawText(text, x, y);
 
     glPopAttrib();
 }
@@ -338,9 +363,8 @@ void Display::render_status_message() const
     if (frame_ - status_frame_ > 4 * 60)
         return;
 
-    const int H = screen_h;
-    const int x = 8;
-    const int y = H - 16;
+    const int x = 16;
+    const int y = screen_h - 8;
 
     glPushAttrib(GL_CURRENT_BIT);
     glColor3f(0.f, 1.f, 0.f);
@@ -610,33 +634,28 @@ static void resize(GLFWwindow *window, int width, int height)
 {
     screen_w = width;
     screen_h = height;
+    screen_aspect = static_cast<float>(screen_w) / screen_h;
 
-    float video_w = 0.f, video_h = 0.f;
+    if (screen_aspect > VIDEO_ASPECT)
+        screen_per_video = static_cast<float>(screen_h - 2 * SCREEN_MARGIN) / RESY;
+    else
+        screen_per_video = static_cast<float>(screen_w - 2 * SCREEN_MARGIN) / RESX;
 
-    {
-        const float aspect = static_cast<float>(screen_w) / screen_h;
+    video_margin_x = (screen_w / screen_per_video - RESX) / 2;
+    video_margin_y = (screen_h / screen_per_video - RESY) / 2;
 
-        if (aspect > static_cast<float>(RESX + 2 * MARGIN) / (RESY + 2 * MARGIN)) {
-            video_h = RESY + 2 * MARGIN;
-            video_w = video_h * aspect;
-        }
-        else {
-            video_w = RESX + 2 * MARGIN;
-            video_h = video_w / aspect;
-        }
-    }
-    {
-        int fb_w = 0, fb_h = 0;
-        // MacOS Retina display has different fb size than window size
-        glfwGetFramebufferSize(window, &fb_w, &fb_h);
-        glViewport(0, 0, fb_w, fb_h);
-    }
+    video_w = RESX + 2 * video_margin_x;
+    video_h = RESY + 2 * video_margin_y;
+
+    int fb_w = 0, fb_h = 0;
+    // MacOS Retina display has different fb size than window size
+    glfwGetFramebufferSize(window, &fb_w, &fb_h);
+    glViewport(0, 0, fb_w, fb_h);
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 
-    glOrtho(-video_w/2, video_w/2,
-            -video_h/2, video_h/2, -1., 1.);
+    glOrtho(0, video_w, video_h, 0, -1., 1.);
 }
 
 static void cursor_position(GLFWwindow *window, double xpos, double ypos)
