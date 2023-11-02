@@ -397,11 +397,14 @@ void Display::render_pattern_table() const
     glBindTexture(GL_TEXTURE_2D, pattern_table_id);
     transfer_texture(nes_.patt);
 
+    glPushMatrix();
+    glTranslatef(0, RESY / 2.0 - H / 2.0, 0);
+
     glBegin(GL_QUADS);
-        glTexCoord2f(0, 0); glVertex2f(-W/2,  H/2);
-        glTexCoord2f(1, 0); glVertex2f( W/2,  H/2);
-        glTexCoord2f(1, 1); glVertex2f( W/2, -H/2);
-        glTexCoord2f(0, 1); glVertex2f(-W/2, -H/2);
+        glTexCoord2f(0, 1); glVertex2f(0, H);
+        glTexCoord2f(1, 1); glVertex2f(W, H);
+        glTexCoord2f(1, 0); glVertex2f(W, 0);
+        glTexCoord2f(0, 0); glVertex2f(0, 0);
     glEnd();
     glDisable(GL_TEXTURE_2D);
 
@@ -410,27 +413,29 @@ void Display::render_pattern_table() const
     glBegin(GL_LINES);
     glColor3f(0, .5, .5);
     for (int i = 0; i <= W / 8; i++) {
-        glVertex3f(-W/2 + i * 8,  H/2, 0);
-        glVertex3f(-W/2 + i * 8, -H/2, 0);
+        glVertex3f(0 + i * 8, 0, 0);
+        glVertex3f(0 + i * 8, H, 0);
     }
     for (int i = 0; i <= H / 8; i++) {
-        glVertex3f( W/2, -H/2 + i * 8, 0);
-        glVertex3f(-W/2, -H/2 + i * 8, 0);
+        glVertex3f(0, 0 + i * 8, 0);
+        glVertex3f(W, 0 + i * 8, 0);
     }
     glEnd();
 
     glColor3f(0, 1, 1);
     glBegin(GL_LINE_LOOP);
-        glVertex2f(-W/2,  H/2);
-        glVertex2f( W/2,  H/2);
-        glVertex2f( W/2, -H/2);
-        glVertex2f(-W/2, -H/2);
+        glVertex2f(0, H);
+        glVertex2f(W, H);
+        glVertex2f(W, 0);
+        glVertex2f(0, 0);
     glEnd();
     glBegin(GL_LINES);
-        glVertex2f(0,  H/2);
-        glVertex2f(0, -H/2);
+        glVertex2f(W/2, 0);
+        glVertex2f(W/2, H);
     glEnd();
     glPopAttrib();
+
+    glPopMatrix();
 }
 
 void Display::render_oam_table() const
@@ -443,13 +448,14 @@ void Display::render_oam_table() const
     transfer_texture(nes_.oam);
 
     glPushMatrix();
-    glTranslatef(0, 8 * 10, 0);
+    glTranslatef(RESX / 2.0 - W / 2.0, -8 * 10, 0);
+    glTranslatef(0, RESY / 2.0 - H / 2.0, 0);
 
     glBegin(GL_QUADS);
-        glTexCoord2f(0, 0); glVertex2f(-W/2,  H/2);
-        glTexCoord2f(1, 0); glVertex2f( W/2,  H/2);
-        glTexCoord2f(1, 1); glVertex2f( W/2, -H/2);
-        glTexCoord2f(0, 1); glVertex2f(-W/2, -H/2);
+        glTexCoord2f(0, 1); glVertex2f(0, H);
+        glTexCoord2f(1, 1); glVertex2f(W, H);
+        glTexCoord2f(1, 0); glVertex2f(W, 0);
+        glTexCoord2f(0, 0); glVertex2f(0, 0);
     glEnd();
     glDisable(GL_TEXTURE_2D);
 
@@ -458,21 +464,21 @@ void Display::render_oam_table() const
     glBegin(GL_LINES);
     glColor3f(.5, 0, .5);
     for (int i = 0; i <= W / 8; i++) {
-        glVertex3f(-W/2 + i * 8,  H/2, 0);
-        glVertex3f(-W/2 + i * 8, -H/2, 0);
+        glVertex3f(0 + i * 8, 0, 0);
+        glVertex3f(0 + i * 8, H, 0);
     }
     for (int i = 0; i <= H / 8; i++) {
-        glVertex3f( W/2, -H/2 + i * 8, 0);
-        glVertex3f(-W/2, -H/2 + i * 8, 0);
+        glVertex3f(0, 0 + i * 8, 0);
+        glVertex3f(W, 0 + i * 8, 0);
     }
     glEnd();
 
     glColor3f(1, 0, 1);
     glBegin(GL_LINE_LOOP);
-        glVertex2f(-W/2,  H/2);
-        glVertex2f( W/2,  H/2);
-        glVertex2f( W/2, -H/2);
-        glVertex2f(-W/2, -H/2);
+        glVertex2f(0, H);
+        glVertex2f(W, H);
+        glVertex2f(W, 0);
+        glVertex2f(0, 0);
     glEnd();
     glPopAttrib();
 
