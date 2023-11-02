@@ -8,6 +8,12 @@ namespace nes {
 
 class NES;
 
+enum class MessageColor {
+    White,
+    Green,
+    Red,
+};
+
 class Display {
 public:
     Display(NES &nes) : nes_(nes) {}
@@ -24,6 +30,8 @@ private:
     bool show_oam_ = false;
 
     std::string status_message_;
+    int message_duration_ = 0;
+    MessageColor message_color_ = MessageColor::White;
     uint64_t status_frame_ = 0;
     uint64_t channel_frame_ = 0;
 
@@ -41,6 +49,7 @@ private:
     void render_sprite_box(int width, int height) const;
 
     void set_status_message(const std::string &message);
+    void set_status_message(const std::string &message, MessageColor color, int duration);
     void toggle_channel_bits(uint8_t toggle_bits);
 };
 

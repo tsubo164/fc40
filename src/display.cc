@@ -153,11 +153,11 @@ int Display::Open()
         else if (key.IsPressed(GLFW_KEY_SPACE)) {
             if (nes_.IsRunning()) {
                 nes_.Stop();
-                set_status_message("Emulator paused");
+                set_status_message("Emulator paused", MessageColor::Red, -1);
             }
             else {
                 nes_.Run();
-                set_status_message("Emulator resumed");
+                set_status_message("Emulator resumed", MessageColor::Green, 4 * 60);
             }
         }
         else if (key.IsPressed(GLFW_KEY_TAB)) {
@@ -360,14 +360,28 @@ void Display::render_channel_status() const
 
 void Display::render_status_message() const
 {
-    if (frame_ - status_frame_ > 4 * 60)
+    if (frame_ - status_frame_ > message_duration_)
         return;
 
     const int x = 16;
     const int y = screen_h - 8;
 
     glPushAttrib(GL_CURRENT_BIT);
-    glColor3f(0.f, 1.f, 0.f);
+
+    switch (message_color_) {
+    case MessageColor::Red:
+        glColor3f(1.f, 0.25f, 0.25f);
+        break;
+
+    case MessageColor::Green:
+        glColor3f(0.25f, 1.f, 0.25f);
+        break;
+
+    case MessageColor::White:
+    default:
+        glColor3f(1.f, 1.f, 1.f);
+        break;
+    }
 
     DrawText(status_message_, x, y);
 
@@ -598,8 +612,15 @@ void Display::render_sprite_box(int width, int height) const
 
 void Display::set_status_message(const std::string &message)
 {
+    set_status_message(message, MessageColor::White, 4 * 60);
+}
+
+void Display::set_status_message(const std::string &message, MessageColor color, int duration)
+{
     status_frame_ = frame_;
     status_message_ = message;
+    message_color_ = color;
+    message_duration_ = duration < 0 ? ~0u : duration;
 }
 
 void Display::toggle_channel_bits(uint8_t toggle_bits)
