@@ -266,7 +266,7 @@ void Display::render() const
 
     if (show_guide_) {
         render_grid(W, H);
-        render_sprite_box(W, H);
+        render_sprite_box();
     }
 
     if (show_patt_) {
@@ -506,8 +506,8 @@ void Display::render_grid(int width, int height) const
             glColor3f(0, .25, 0);
 
         if (Y % 8 == 0) {
-            glVertex3f( W/2, H/2 - y, 0);
-            glVertex3f(-W/2, H/2 - y, 0);
+            glVertex3f(W, y, 0);
+            glVertex3f(0, y, 0);
         }
 
         for (int x = 0; x < W; x++) {
@@ -521,8 +521,8 @@ void Display::render_grid(int width, int height) const
                 glColor3f(0, .25, 0);
 
             if (X % 8 == 0) {
-                glVertex3f(-W/2 + x, H/2 - y, 0);
-                glVertex3f(-W/2 + x, H/2 - y - 1, 0);
+                glVertex3f(x, y, 0);
+                glVertex3f(x, y + 1, 0);
             }
         }
     }
@@ -531,16 +531,16 @@ void Display::render_grid(int width, int height) const
     // outer frame
     glBegin(GL_LINE_LOOP);
     glColor3f(0, 1, 0);
-    glVertex3f(-W/2,  H/2, 0);
-    glVertex3f( W/2,  H/2, 0);
-    glVertex3f( W/2, -H/2, 0);
-    glVertex3f(-W/2, -H/2, 0);
+    glVertex3f(0, H, 0);
+    glVertex3f(W, H, 0);
+    glVertex3f(W, 0, 0);
+    glVertex3f(0, 0, 0);
     glEnd();
 
     glPopAttrib();
 }
 
-void Display::render_sprite_box(int width, int height) const
+void Display::render_sprite_box() const
 {
     const int focus_x = cursor_video_x;
     const int focus_y = cursor_video_y;
@@ -554,8 +554,8 @@ void Display::render_sprite_box(int width, int height) const
         // draw sprite zero last
         const int index = 63 - i;
         const ObjectAttribute obj = nes_.ppu.ReadOam(index);
-        const int x = obj.x - width / 2;
-        const int y = height / 2 - obj.y - 1;
+        const int x = obj.x;
+        const int y = obj.y + 1;
 
         if (obj.x <= focus_x && obj.x + 8 >= focus_x &&
             obj.y <= focus_y && obj.y + 8 >= focus_y) {
@@ -569,30 +569,30 @@ void Display::render_sprite_box(int width, int height) const
             glColor3f(1, 0, 1);
 
         glBegin(GL_LINE_LOOP);
-            glVertex3f(x + 0, y - 0, 0);
-            glVertex3f(x + 8, y - 0, 0);
-            glVertex3f(x + 8, y - sprite_h, 0);
-            glVertex3f(x + 0, y - sprite_h, 0);
+            glVertex3f(x + 0, y + 0, 0);
+            glVertex3f(x + 8, y + 0, 0);
+            glVertex3f(x + 8, y + sprite_h, 0);
+            glVertex3f(x + 0, y + sprite_h, 0);
         glEnd();
     }
 
     // focused sprite
     if (focus_index >= 0) {
         const ObjectAttribute obj = nes_.ppu.ReadOam(focus_index);
-        const int x = obj.x - width / 2;
-        const int y = height / 2 - obj.y - 1;
+        const int x = obj.x;
+        const int y = obj.y + 1;
         glColor3f(1, 1, 1);
 
         glBegin(GL_LINE_LOOP);
-            glVertex3f(x + 0, y - 0, 0);
-            glVertex3f(x + 8, y - 0, 0);
-            glVertex3f(x + 8, y - sprite_h, 0);
-            glVertex3f(x + 0, y - sprite_h, 0);
+            glVertex3f(x + 0, y + 0, 0);
+            glVertex3f(x + 8, y + 0, 0);
+            glVertex3f(x + 8, y + sprite_h, 0);
+            glVertex3f(x + 0, y + sprite_h, 0);
         glEnd();
 
         int offset = 0;
         const int X = x + 8 + 4;
-        const int Y = obj.y - height / 2;
+        const int Y = obj.y + 1 + 4;
         std::string text =
             std::string("oam index: ") + std::to_string(obj.oam_index);
         glColor3f(0, 0, 0);

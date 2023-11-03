@@ -46,7 +46,7 @@ private:
     void render_pattern_table() const;
     void render_oam_table() const;
     void render_grid(int width, int height) const;
-    void render_sprite_box(int width, int height) const;
+    void render_sprite_box() const;
 
     void set_status_message(const std::string &message);
     void set_status_message(const std::string &message, MessageColor color, int duration);
