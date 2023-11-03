@@ -16,8 +16,8 @@ enum class MessageColor {
 
 class Display {
 public:
-    Display(NES &nes) : nes_(nes) {}
-    ~Display() {}
+    Display(NES &nes);
+    ~Display();
 
     int Open();
 

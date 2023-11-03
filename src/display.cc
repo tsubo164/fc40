@@ -2,8 +2,8 @@
 #include <GLFW/glfw3.h>
 #include "display.h"
 #include "framebuffer.h"
-#include "draw_text.h"
 #include "serialize.h"
+#include "bitmap.h"
 #include "debug.h"
 #include "state.h"
 #include "nes.h"
@@ -23,10 +23,6 @@ struct KeyState {
     bool pressed[GLFW_KEY_LAST] = {0};
     bool IsPressed(int key);
 };
-
-static void transfer_texture(const FrameBuffer &fb);
-static void resize(GLFWwindow *window, int width, int height);
-static void cursor_position(GLFWwindow *window, double xpos, double ypos);
 
 static const GLuint main_screen = 0;
 static GLuint pattern_table_id = 0;
@@ -51,8 +47,34 @@ static int cursor_video_x = 0;
 static int cursor_video_y = 0;
 static int focused_oam_index = -1;
 
+static int font_w = 8;
+static int font_h = 8;
+
+static void transfer_texture(const FrameBuffer &fb);
+static void resize(GLFWwindow *window, int width, int height);
+static void cursor_position(GLFWwindow *window, double xpos, double ypos);
+
 static Coord screen_to_video(float screen_x, float screen_y);
 static Coord video_to_screen(float video_x, float video_y);
+
+enum TextDecoration {
+    TEXT_FLAT,
+    TEXT_OUTLINE,
+};
+
+static void draw_text(const std::string &text, int x, int y);
+static void draw_text(const std::string &text, int x, int y, TextDecoration deco);
+
+Display::Display(NES &nes) : nes_(nes)
+{
+    // Init bitmap fonts
+    InitBitmapFont();
+    GetBitmapFontSize(font_w, font_h);
+}
+
+Display::~Display()
+{
+}
 
 int Display::Open()
 {
@@ -60,9 +82,6 @@ int Display::Open()
     const int WINX = RESX * VIDEO_SCALE + 2 * SCREEN_MARGIN;
     const int WINY = RESY * VIDEO_SCALE + 2 * SCREEN_MARGIN;
     KeyState key;
-
-    // Init bitmap fonts
-    InitBitmapFont();
 
     // Initialize the library
     if (!glfwInit())
@@ -325,7 +344,7 @@ void Display::render_frame_rate(double elapsed) const
         count = 0;
     }
 
-    DrawText(text, 16, 8);
+    draw_text(text, 16, 8);
 }
 
 void Display::render_channel_status() const
@@ -354,10 +373,10 @@ void Display::render_channel_status() const
         glColor3f(0.f, 1.f, 0.f);
     else
         glColor3f(1.f, 1.f, 1.f);
-    DrawText("Channels: 1 2 T N D", x, y);
+    draw_text("Channels: 1 2 T N D", x, y);
 
     glColor3f(1.f, 0.f, 0.f);
-    DrawText(text, x, y);
+    draw_text(text, x, y);
 
     glPopAttrib();
 }
@@ -387,7 +406,7 @@ void Display::render_status_message() const
         break;
     }
 
-    DrawText(status_message_, x, y);
+    draw_text(status_message_, x, y);
 
     glPopAttrib();
 }
@@ -410,22 +429,13 @@ void Display::render_sprite_info() const
 
     std::string text =
         std::string("oam index: ") + std::to_string(obj.oam_index);
-    glColor3f(0, 0, 0);
-    DrawText(text, X + 1, Y + 8 * offset + 1);
-    glColor3f(1, 1, 1);
-    DrawText(text, X, Y + 8 * offset++);
+    draw_text(text, X, Y + 8 * offset++, TEXT_OUTLINE);
 
     text = std::string("oam x: ") + std::to_string(obj.x);
-    glColor3f(0, 0, 0);
-    DrawText(text, X + 1, Y + 8 * offset + 1);
-    glColor3f(1, 1, 1);
-    DrawText(text, X, Y + 8 * offset++);
+    draw_text(text, X, Y + 8 * offset++, TEXT_OUTLINE);
 
     text = std::string("oam y: ") + std::to_string(obj.y);
-    glColor3f(0, 0, 0);
-    DrawText(text, X + 1, Y + 8 * offset + 1);
-    glColor3f(1, 1, 1);
-    DrawText(text, X, Y + 8 * offset++);
+    draw_text(text, X, Y + 8 * offset++, TEXT_OUTLINE);
 }
 
 void Display::render_pattern_table() const
@@ -728,6 +738,43 @@ static Coord video_to_screen(float video_x, float video_y)
     screen.y = (video_y + video_margin_y) * screen_per_video;
 
     return screen;
+}
+
+static void draw_text(const std::string &text, int x, int y)
+{
+    glRasterPos2i(x, y + 8);
+
+    const int w = font_w;
+    const int h = font_h;
+    const int offset_x = w - 1;
+    const int offset_y = 0;
+
+    for (const auto ch: text) {
+        const uint8_t *bits = GetBitmapChar(ch);
+
+        glBitmap(w, h, 0, 0, offset_x, offset_y, bits);
+    }
+}
+
+static void draw_text(const std::string &text, int x, int y, TextDecoration deco)
+{
+    if (deco == TEXT_OUTLINE) {
+        glPushAttrib(GL_CURRENT_BIT);
+        glColor3f(0., 0., 0.);
+        draw_text(text, x - 1, y + 1);
+        draw_text(text, x + 1, y + 1);
+        draw_text(text, x - 1, y - 1);
+        draw_text(text, x + 1, y - 1);
+
+        draw_text(text, x, y + 1);
+        draw_text(text, x + 1, y);
+        draw_text(text, x - 1, y);
+        draw_text(text, x, y - 1);
+
+        glPopAttrib();
+    }
+
+    draw_text(text, x, y);
 }
 
 // Keys

@@ -1,6 +1,4 @@
-#include "draw_text.h"
-#include <GLFW/glfw3.h>
-#include <cstdint>
+#include "bitmap.h"
 #include <array>
 
 namespace nes {
@@ -105,6 +103,7 @@ static const uint8_t fonts8x8[] = {
 };
 
 static constexpr int FONT_BYTES = sizeof(fonts8x8) / sizeof(fonts8x8[0]);
+static constexpr int FONT_COUNT = FONT_BYTES / 8;
 static constexpr int FONT_SCALE = 2;
 static constexpr int FONT_SCALE_2 = FONT_SCALE * FONT_SCALE;
 
@@ -152,18 +151,20 @@ void InitBitmapFont()
     }
 }
 
-void DrawText(const std::string &text, int x, int y)
+void GetBitmapFontSize(int &width, int &height)
 {
-    const int FONT_W = 8 * FONT_SCALE;
-    const int FONT_H = 8 * FONT_SCALE;
-    const int OFFSET_X = 8 * FONT_SCALE - 1;
-    const int OFFSET_Y = 0;
+    width  = 8 * FONT_SCALE;
+    height = 8 * FONT_SCALE;
+}
 
-    glRasterPos2i(x, y + 8);
+uint8_t *GetBitmapChar(int ch)
+{
+    int index = ch - ' ';
 
-    for (const auto ch: text)
-        glBitmap(FONT_W, FONT_H, 0, 0, OFFSET_X, OFFSET_Y,
-                &fonts[8 * FONT_SCALE_2 * (ch - ' ')]);
+    if (index < 0 || index >= FONT_COUNT)
+        index = '?';
+
+    return &fonts[8 * FONT_SCALE_2 * index];
 }
 
 } // namespace
