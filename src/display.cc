@@ -44,12 +44,15 @@ static float screen_aspect = 1.0f;
 // how many display screen pixels per NES video res
 static float screen_per_video = 1.0;
 
-
 static float video_margin_x = 8.0f;
 static float video_margin_y = 8.0f;
 
 static int cursor_video_x = 0;
 static int cursor_video_y = 0;
+static int focused_oam_index = -1;
+
+static Coord screen_to_video(float screen_x, float screen_y);
+static Coord video_to_screen(float video_x, float video_y);
 
 int Display::Open()
 {
@@ -297,6 +300,7 @@ void Display::render_overlay(double elapsed) const
         render_frame_rate(elapsed);
         render_channel_status();
         render_status_message();
+        render_sprite_info();
 
         glPopMatrix();
     }
@@ -321,7 +325,7 @@ void Display::render_frame_rate(double elapsed) const
         count = 0;
     }
 
-    DrawText(text, 16, 16);
+    DrawText(text, 16, 8);
 }
 
 void Display::render_channel_status() const
@@ -345,7 +349,7 @@ void Display::render_channel_status() const
     glPushAttrib(GL_CURRENT_BIT);
 
     const int x = 8 * 16;
-    const int y = 16;
+    const int y = 8;
     if (all_channels_on)
         glColor3f(0.f, 1.f, 0.f);
     else
@@ -364,7 +368,7 @@ void Display::render_status_message() const
         return;
 
     const int x = 16;
-    const int y = screen_h - 8;
+    const int y = screen_h - 16 + 4;
 
     glPushAttrib(GL_CURRENT_BIT);
 
@@ -386,6 +390,42 @@ void Display::render_status_message() const
     DrawText(status_message_, x, y);
 
     glPopAttrib();
+}
+
+void Display::render_sprite_info() const
+{
+    if (focused_oam_index < 0)
+        return;
+
+    // focused sprite
+    const ObjectAttribute obj = nes_.ppu.ReadOam(focused_oam_index);
+    const int x = obj.x + 8;
+    const int y = obj.y + 1;
+
+    const Coord screen = video_to_screen(x, y);
+
+    int offset = 0;
+    const int X = screen.x + 4;
+    const int Y = screen.y;
+
+    std::string text =
+        std::string("oam index: ") + std::to_string(obj.oam_index);
+    glColor3f(0, 0, 0);
+    DrawText(text, X + 1, Y + 8 * offset + 1);
+    glColor3f(1, 1, 1);
+    DrawText(text, X, Y + 8 * offset++);
+
+    text = std::string("oam x: ") + std::to_string(obj.x);
+    glColor3f(0, 0, 0);
+    DrawText(text, X + 1, Y + 8 * offset + 1);
+    glColor3f(1, 1, 1);
+    DrawText(text, X, Y + 8 * offset++);
+
+    text = std::string("oam y: ") + std::to_string(obj.y);
+    glColor3f(0, 0, 0);
+    DrawText(text, X + 1, Y + 8 * offset + 1);
+    glColor3f(1, 1, 1);
+    DrawText(text, X, Y + 8 * offset++);
 }
 
 void Display::render_pattern_table() const
@@ -544,12 +584,11 @@ void Display::render_sprite_box() const
 {
     const int focus_x = cursor_video_x;
     const int focus_y = cursor_video_y;
-    int focus_index = -1;
-
     const int sprite_h = nes_.ppu.IsSprite8x16() ? 16 : 8;
 
     glPushAttrib(GL_CURRENT_BIT);
 
+    focused_oam_index = -1;
     for (int i = 0; i < 64; i++) {
         // draw sprite zero last
         const int index = 63 - i;
@@ -559,7 +598,7 @@ void Display::render_sprite_box() const
 
         if (obj.x <= focus_x && obj.x + 8 >= focus_x &&
             obj.y <= focus_y && obj.y + 8 >= focus_y) {
-            focus_index = index;
+            focused_oam_index = index;
         }
 
         // sprite zero
@@ -577,8 +616,8 @@ void Display::render_sprite_box() const
     }
 
     // focused sprite
-    if (focus_index >= 0) {
-        const ObjectAttribute obj = nes_.ppu.ReadOam(focus_index);
+    if (focused_oam_index >= 0) {
+        const ObjectAttribute obj = nes_.ppu.ReadOam(focused_oam_index);
         const int x = obj.x;
         const int y = obj.y + 1;
         glColor3f(1, 1, 1);
@@ -589,28 +628,6 @@ void Display::render_sprite_box() const
             glVertex3f(x + 8, y + sprite_h, 0);
             glVertex3f(x + 0, y + sprite_h, 0);
         glEnd();
-
-        int offset = 0;
-        const int X = x + 8 + 4;
-        const int Y = obj.y + 1 + 4;
-        std::string text =
-            std::string("oam index: ") + std::to_string(obj.oam_index);
-        glColor3f(0, 0, 0);
-        DrawText(text, X + 1, Y + 8 * offset + 1);
-        glColor3f(1, 1, 1);
-        DrawText(text, X, Y + 8 * offset++);
-
-        text = std::string("oam x: ") + std::to_string(obj.x);
-        glColor3f(0, 0, 0);
-        DrawText(text, X + 1, Y + 8 * offset + 1);
-        glColor3f(1, 1, 1);
-        DrawText(text, X, Y + 8 * offset++);
-
-        text = std::string("oam y: ") + std::to_string(obj.y);
-        glColor3f(0, 0, 0);
-        DrawText(text, X + 1, Y + 8 * offset + 1);
-        glColor3f(1, 1, 1);
-        DrawText(text, X, Y + 8 * offset++);
     }
 
     glPopAttrib();
@@ -687,31 +704,30 @@ static void resize(GLFWwindow *window, int width, int height)
 
 static void cursor_position(GLFWwindow *window, double xpos, double ypos)
 {
-    const float aspect = static_cast<float>(screen_w) / screen_h;
+    const Coord video = screen_to_video(xpos, ypos);
 
-    float video_x = 0;
-    float video_y = 0;
+    cursor_video_x = video.x;
+    cursor_video_y = video.y;
+}
 
-    if (aspect > static_cast<float>(RESX + 2 * MARGIN) / (RESY + 2 * MARGIN)) {
-        const float video_h = RESY + 2 * MARGIN;
-        const float video_w = video_h * aspect;
-        const float margin_y = MARGIN;
-        const float margin_x = (video_w - RESX) / 2;
-        video_y = ypos / screen_h * video_h - margin_y;
-        video_x = xpos / screen_w * video_w - margin_x;
+static Coord screen_to_video(float screen_x, float screen_y)
+{
+    Coord video;
 
-    }
-    else {
-        const float video_w = RESX + 2 * MARGIN;
-        const float video_h = video_w / aspect;
-        const float margin_x = MARGIN;
-        const float margin_y = (video_h - RESY) / 2;
-        video_y = ypos / screen_h * video_h - margin_y;
-        video_x = xpos / screen_w * video_w - margin_x;
-    }
+    video.x = screen_x / screen_per_video - video_margin_x;
+    video.y = screen_y / screen_per_video - video_margin_y;
 
-    cursor_video_x = video_x;
-    cursor_video_y = video_y;
+    return video;
+}
+
+static Coord video_to_screen(float video_x, float video_y)
+{
+    Coord screen;
+
+    screen.x = (video_x + video_margin_x) * screen_per_video;
+    screen.y = (video_y + video_margin_y) * screen_per_video;
+
+    return screen;
 }
 
 // Keys

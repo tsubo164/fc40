@@ -42,6 +42,7 @@ private:
     void render_frame_rate(double elapsed) const;
     void render_channel_status() const;
     void render_status_message() const;
+    void render_sprite_info() const;
 
     void render_pattern_table() const;
     void render_oam_table() const;

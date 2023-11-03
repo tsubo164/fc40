@@ -159,7 +159,7 @@ void DrawText(const std::string &text, int x, int y)
     const int OFFSET_X = 8 * FONT_SCALE - 1;
     const int OFFSET_Y = 0;
 
-    glRasterPos2i(x, y);
+    glRasterPos2i(x, y + 8);
 
     for (const auto ch: text)
         glBitmap(FONT_W, FONT_H, 0, 0, OFFSET_X, OFFSET_Y,
