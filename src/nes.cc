@@ -125,12 +125,19 @@ void NES::UpdateFrame()
         cart_->Run(cpu_cycles);
 
         // break conditions
-        if (stepto_ == StepTo::NextInstruction) {
+        if (stepto_ == NEXT_INSTRUCTION) {
             Pause();
             break;
         }
-        else if (stepto_ == StepTo::NextScanline1 || stepto_ == StepTo::NextScanline8) {
+        else if (stepto_ == NEXT_SCANLINE1 || stepto_ == NEXT_SCANLINE8) {
             if (stepto_scanline_ == ppu.GetScanline()) {
+                Pause();
+                break;
+            }
+        }
+        else if (stepto_ == NEXT_FRAME) {
+            // finish the current frame and pause
+            if (frame_ready) {
                 Pause();
                 break;
             }
@@ -156,14 +163,14 @@ void NES::Run()
 {
     PlaySamples();
     is_running_ = true;
-    stepto_ = StepTo::None;
+    stepto_ = NOWHERE;
 }
 
 void NES::Pause()
 {
     PauseSamples();
     is_running_ = false;
-    stepto_ = StepTo::None;
+    stepto_ = NOWHERE;
 }
 
 bool NES::IsRunning() const
@@ -171,22 +178,27 @@ bool NES::IsRunning() const
     return is_running_;
 }
 
-void NES::Step(StepTo stepto)
+void NES::StepTo(BreakAt stepto)
 {
     is_running_ = true;
     stepto_ = stepto;
 
-    if (stepto_ == StepTo::NextScanline1) {
-        stepto_scanline_ = ppu.GetScanline() + 1;
+    if (stepto_ == NEXT_INSTRUCTION) {
+        stepto_scanline_ = -1;
     }
-    else if (stepto_ == StepTo::NextScanline8) {
+    else if (stepto_ == NEXT_SCANLINE1) {
+        stepto_scanline_ = ppu.GetScanline() + 1;
+        if (stepto_scanline_ > 261)
+            stepto_scanline_ = 0;
+    }
+    else if (stepto_ == NEXT_SCANLINE8) {
         const int frac = ppu.GetScanline() % 8;
         stepto_scanline_ = ppu.GetScanline() - frac + 8;
         if (stepto_scanline_ > 261)
             stepto_scanline_ = 0;
     }
-    else {
-        stepto_scanline_ = 0;
+    else if (stepto_ == NEXT_FRAME) {
+        stepto_scanline_ = -1;
     }
 }
 

@@ -183,6 +183,22 @@ int Display::Open()
                 set_status_message("Emulator resumed", MessageColor::Green, 4 * 60);
             }
         }
+        else if (key.IsPressed(GLFW_KEY_7)) {
+            if (!nes_.IsRunning())
+                nes_.StepTo(NEXT_INSTRUCTION);
+        }
+        else if (key.IsPressed(GLFW_KEY_8)) {
+            if (!nes_.IsRunning())
+                nes_.StepTo(NEXT_SCANLINE1);
+        }
+        else if (key.IsPressed(GLFW_KEY_9)) {
+            if (!nes_.IsRunning())
+                nes_.StepTo(NEXT_SCANLINE8);
+        }
+        else if (key.IsPressed(GLFW_KEY_0)) {
+            if (!nes_.IsRunning())
+                nes_.StepTo(NEXT_FRAME);
+        }
         else if (key.IsPressed(GLFW_KEY_F1)) {
             const Cartridge *cart = nes_.GetCartridge();
             const std::string stat_filename = cart->GetFileName() + ".stat";
@@ -200,10 +216,6 @@ int Display::Open()
                 set_status_message(stat_filename + ": loaded successfully");
             else
                 set_status_message(stat_filename + ": failed to load");
-        }
-        else if (key.IsPressed(GLFW_KEY_F7)) {
-            if (!nes_.IsRunning())
-                nes_.Step(StepTo::NextScanline8);
         }
         // Keys reset
         else if (key.IsPressed(GLFW_KEY_R)) {

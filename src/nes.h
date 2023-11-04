@@ -16,12 +16,12 @@ namespace nes {
 class Cartridge;
 class FrameBuffer;
 
-enum class StepTo {
-    None = 0,
-    NextInstruction,
-    NextScanline1,
-    NextScanline8,
-    NextFrame,
+enum BreakAt {
+    NOWHERE = 0,
+    NEXT_INSTRUCTION,
+    NEXT_SCANLINE1,
+    NEXT_SCANLINE8,
+    NEXT_FRAME,
 };
 
 class NES {
@@ -53,7 +53,7 @@ public:
     void Run();
     void Pause();
     bool IsRunning() const;
-    void Step(StepTo stepto);
+    void StepTo(BreakAt stepto);
 
     // debug
     uint64_t GetLogLineCount() const;
@@ -68,7 +68,7 @@ private:
 
     // state
     bool is_running_ = true;
-    StepTo stepto_ = StepTo::None;
+    BreakAt stepto_ = NOWHERE;
     int stepto_scanline_ = 0;
 
     // serialization
