@@ -128,17 +128,50 @@ static void load_pattern(FrameBuffer &fb, const Cartridge *cart, int tile_id, in
     }
 }
 
+static void load_sprite(FrameBuffer &fb, const PPU &ppu, int tile_id, int table_cell)
+{
+    const int tile_x = table_cell < 256 ? table_cell % 16 : table_cell % 16 + 16;
+    const int tile_y = table_cell < 256 ? table_cell / 16 : table_cell / 16 - 16;
+
+    const int X0 = tile_x * 8;
+    const int X1 = X0 + 8;
+    const int Y0 = tile_y * 8;
+    const int Y1 = Y0 + 8;
+
+    for (int y = Y0; y < Y1; y++) {
+        const uint8_t fine_y = y - Y0;
+        const uint8_t lo = ppu.GetSpriteRow(tile_id, fine_y, 0);
+        const uint8_t hi = ppu.GetSpriteRow(tile_id, fine_y, 8);
+        int mask = 1 << 7;
+
+        for (int x = X0; x < X1; x++) {
+            const uint8_t l = (lo & mask) > 0;
+            const uint8_t h = (hi & mask) > 0;
+            const uint8_t val = (h << 1) | l;
+            const Color col = {
+                static_cast<uint8_t>(val / 3. * 255),
+                static_cast<uint8_t>(val / 3. * 255),
+                static_cast<uint8_t>(val / 3. * 255)
+            };
+
+            fb.SetColor(x, y, col);
+
+            mask >>= 1;
+        }
+    }
+}
+
 void LoadPatternTable(FrameBuffer &fb, const Cartridge *cart)
 {
     for (int i = 0; i < 256 * 2; i++)
         load_pattern(fb, cart, i, i);
 }
 
-void LoadOamTable(FrameBuffer &fb, const Cartridge *cart, const PPU *ppu)
+void LoadOamTable(FrameBuffer &fb, const PPU &ppu)
 {
     for (int i = 0; i < 64; i++) {
-        const ObjectAttribute obj = ppu->ReadOam(i);
-        load_pattern(fb, cart, obj.tile_id, i);
+        const ObjectAttribute obj = ppu.ReadOam(i);
+        load_sprite(fb, ppu, obj.tile_id, i);
     }
 }
 

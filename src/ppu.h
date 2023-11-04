@@ -88,6 +88,7 @@ public:
 
     // debug
     ObjectAttribute ReadOam(int index) const;
+    uint8_t GetSpriteRow(uint8_t tile_id, int sprite_y, uint8_t plane) const;
     int GetCycle() const;
     int GetScanline() const;
     bool IsSprite8x16() const;

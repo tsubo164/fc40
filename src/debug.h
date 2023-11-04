@@ -13,7 +13,7 @@ void PrintCpuStatus(const CPU &cpu, const PPU &ppu);
 void LogCpuStatus(NES &nes, int max_lines);
 
 void LoadPatternTable(FrameBuffer &fb, const Cartridge *cart);
-void LoadOamTable(FrameBuffer &fb, const Cartridge *cart, const PPU *ppu);
+void LoadOamTable(FrameBuffer &fb, const PPU &ppu);
 
 } // namespace
 

@@ -1097,6 +1097,11 @@ ObjectAttribute PPU::ReadOam(int index) const
     return get_sprite(index);
 }
 
+uint8_t PPU::GetSpriteRow(uint8_t tile_id, int sprite_y, uint8_t plane) const
+{
+    return fetch_sprite_row(tile_id, sprite_y, plane, false);
+}
+
 int PPU::GetCycle() const
 {
     return cycle_;

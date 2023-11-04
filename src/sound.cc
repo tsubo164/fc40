@@ -87,6 +87,7 @@ int GetQueuedSampleCount()
     const int unplayed = queued - processed;
 
     if (unplayed == 0) {
+        if (0)
         printf("underflow!! queued: %d, processed: %d, unplayed: %d\n",
                 queued, processed, unplayed);
     }

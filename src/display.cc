@@ -26,6 +26,7 @@ struct KeyState {
 
 static const GLuint main_screen = 0;
 static GLuint pattern_table_id = 0;
+static GLuint oam_table_id = 0;
 
 struct Coord {
     float x = 0.f, y = 0.f;
@@ -257,6 +258,12 @@ void Display::init_video()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
+    // oam table
+    glGenTextures(1, &oam_table_id);
+    glBindTexture(GL_TEXTURE_2D, oam_table_id);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
     glBindTexture(GL_TEXTURE_2D, main_screen);
     // bg color
     constexpr float bg = .25;
@@ -297,7 +304,7 @@ void Display::render() const
     }
 
     if (show_oam_) {
-        LoadOamTable(nes_.oam, nes_.GetCartridge(), &nes_.ppu);
+        LoadOamTable(nes_.oam, nes_.ppu);
         render_oam_table();
     }
 
@@ -494,7 +501,7 @@ void Display::render_oam_table() const
     const int H = nes_.oam.Height();
 
     glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, pattern_table_id);
+    glBindTexture(GL_TEXTURE_2D, oam_table_id);
     transfer_texture(nes_.oam);
 
     glPushMatrix();
