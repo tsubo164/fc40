@@ -60,12 +60,12 @@ void NES::PlayGame()
     InitSound();
     send_initial_samples();
 
-    state_ = Running;
+    is_running_ = true;
 
     disp.Open();
     FinishSound();
 
-    state_ = Stopped;
+    is_running_ = false;
 }
 
 void NES::StartLog()
@@ -104,7 +104,7 @@ void NES::update_audio_speed()
 
 void NES::UpdateFrame()
 {
-    if (state_ == Stopped)
+    if (!IsRunning())
         return;
 
     if (frame_ % AUDIO_DELAY_FRAME == 0)
@@ -118,13 +118,27 @@ void NES::UpdateFrame()
             log_line_count_++;
         }
 
+        // run components
         const int cpu_cycles = cpu.IsSuspended() ? dma.Run() : cpu.Run();
         const bool frame_ready = ppu.Run(cpu_cycles);
         apu.Run(cpu_cycles);
         cart_->Run(cpu_cycles);
 
-        if (frame_ready)
+        // break conditions
+        if (stepto_ == StepTo::NextInstruction) {
+            Pause();
             break;
+        }
+        else if (stepto_ == StepTo::NextScanline1 || stepto_ == StepTo::NextScanline8) {
+            if (stepto_scanline_ == ppu.GetScanline()) {
+                Pause();
+                break;
+            }
+        }
+        else {
+            if (frame_ready)
+                break;
+        }
     }
 
     if (frame_ % AUDIO_DELAY_FRAME == 0)
@@ -141,24 +155,39 @@ void NES::InputController(uint8_t id, uint8_t input)
 void NES::Run()
 {
     PlaySamples();
-    state_ = Running;
+    is_running_ = true;
+    stepto_ = StepTo::None;
 }
 
-void NES::Stop()
+void NES::Pause()
 {
     PauseSamples();
-    Step();
-    state_ = Stopped;
+    is_running_ = false;
+    stepto_ = StepTo::None;
 }
 
 bool NES::IsRunning() const
 {
-    return state_ == Running;
+    return is_running_;
 }
 
-void NES::Step()
+void NES::Step(StepTo stepto)
 {
-    state_ = Stepping;
+    is_running_ = true;
+    stepto_ = stepto;
+
+    if (stepto_ == StepTo::NextScanline1) {
+        stepto_scanline_ = ppu.GetScanline() + 1;
+    }
+    else if (stepto_ == StepTo::NextScanline8) {
+        const int frac = ppu.GetScanline() % 8;
+        stepto_scanline_ = ppu.GetScanline() - frac + 8;
+        if (stepto_scanline_ > 261)
+            stepto_scanline_ = 0;
+    }
+    else {
+        stepto_scanline_ = 0;
+    }
 }
 
 uint64_t NES::GetLogLineCount() const

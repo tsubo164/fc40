@@ -175,17 +175,13 @@ int Display::Open()
         // Keys debug
         else if (key.IsPressed(GLFW_KEY_SPACE)) {
             if (nes_.IsRunning()) {
-                nes_.Stop();
+                nes_.Pause();
                 set_status_message("Emulator paused", MessageColor::Red, -1);
             }
             else {
                 nes_.Run();
                 set_status_message("Emulator resumed", MessageColor::Green, 4 * 60);
             }
-        }
-        else if (key.IsPressed(GLFW_KEY_TAB)) {
-            if (!nes_.IsRunning())
-                nes_.Step();
         }
         else if (key.IsPressed(GLFW_KEY_F1)) {
             const Cartridge *cart = nes_.GetCartridge();
@@ -204,6 +200,10 @@ int Display::Open()
                 set_status_message(stat_filename + ": loaded successfully");
             else
                 set_status_message(stat_filename + ": failed to load");
+        }
+        else if (key.IsPressed(GLFW_KEY_F7)) {
+            if (!nes_.IsRunning())
+                nes_.Step(StepTo::NextScanline8);
         }
         // Keys reset
         else if (key.IsPressed(GLFW_KEY_R)) {
@@ -306,6 +306,18 @@ void Display::render() const
     if (show_oam_) {
         LoadOamTable(nes_.oam, nes_.ppu);
         render_oam_table();
+    }
+
+    if (!nes_.IsRunning()) {
+        const int scanline = nes_.ppu.GetScanline();
+
+        glPushAttrib(GL_CURRENT_BIT);
+        glColor3f(0, 1, 1);
+        glBegin(GL_LINES);
+            glVertex2f(0, scanline);
+            glVertex2f(W, scanline);
+        glEnd();
+        glPopAttrib();
     }
 
     glFlush();

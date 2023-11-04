@@ -16,6 +16,14 @@ namespace nes {
 class Cartridge;
 class FrameBuffer;
 
+enum class StepTo {
+    None = 0,
+    NextInstruction,
+    NextScanline1,
+    NextScanline8,
+    NextFrame,
+};
+
 class NES {
 public:
     NES() {}
@@ -43,9 +51,9 @@ public:
     const Cartridge *GetCartridge() const { return cart_; }
 
     void Run();
-    void Stop();
+    void Pause();
     bool IsRunning() const;
-    void Step();
+    void Step(StepTo stepto);
 
     // debug
     uint64_t GetLogLineCount() const;
@@ -59,11 +67,9 @@ private:
     uint64_t log_line_count_ = 0;
 
     // state
-    enum EmulatorState {
-        Running = 0,
-        Stopped,
-        Stepping,
-    } state_ = Running;
+    bool is_running_ = true;
+    StepTo stepto_ = StepTo::None;
+    int stepto_scanline_ = 0;
 
     // serialization
     friend void Serialize(Archive &ar, const std::string &name, NES *data)
