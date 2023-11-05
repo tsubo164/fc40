@@ -321,11 +321,14 @@ void Display::render() const
     }
 
     if (!nes_.IsRunning()) {
+        const int cycle = nes_.ppu.GetCycle();
         const int scanline = nes_.ppu.GetScanline();
 
         glPushAttrib(GL_CURRENT_BIT);
         glColor3f(0, 1, 1);
         glBegin(GL_LINES);
+            glVertex2f(cycle, 0);
+            glVertex2f(cycle, H);
             glVertex2f(0, scanline);
             glVertex2f(W, scanline);
         glEnd();
@@ -351,6 +354,7 @@ void Display::render_overlay(double elapsed) const
         render_channel_status();
         render_status_message();
         render_sprite_info();
+        render_ppu_info();
 
         glPopMatrix();
     }
@@ -467,6 +471,54 @@ void Display::render_sprite_info() const
 
     text = std::string("oam y: ") + std::to_string(obj.y);
     draw_text(text, X, Y + 8 * offset++, TEXT_OUTLINE);
+}
+
+void Display::render_ppu_info() const
+{
+    if (nes_.IsRunning())
+        return;
+
+    const PpuStatus stat = nes_.ppu.GetPpuStatus();
+
+    const int STEP_Y = 10;
+    int offset = 0;
+    int x = 16;
+    int y = 32;
+
+    std::string text = "PPU";
+    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+
+    text = std::string("cycle: ") + std::to_string(nes_.ppu.GetCycle());
+    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+
+    text = std::string("scanlin: ") + std::to_string(nes_.ppu.GetScanline());
+    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+
+    char buf[16] = {'\0'};
+
+    sprintf(buf, "$%02X", stat.ctrl);
+    text = std::string("ctrl: ") + buf;
+    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+
+    sprintf(buf, "$%02X", stat.mask);
+    text = std::string("mask: ") + buf;
+    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+
+    sprintf(buf, "$%02X", stat.stat);
+    text = std::string("stat: ") + buf;
+    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+
+    sprintf(buf, "$%02X", stat.fine_x);
+    text = std::string("fine_x: ") + buf;
+    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+
+    sprintf(buf, "$%04X", stat.vram_addr);
+    text = std::string("vram_addr: ") + buf;
+    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+
+    sprintf(buf, "$%04X", stat.temp_addr);
+    text = std::string("temp_addr: ") + buf;
+    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
 }
 
 void Display::render_pattern_table() const

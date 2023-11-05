@@ -102,6 +102,33 @@ void NES::update_audio_speed()
     }
 }
 
+bool NES::handle_break_condition(bool frame_rendered)
+{
+    if (breakat_ == NEXT_INSTRUCTION) {
+        Pause();
+        return true;
+    }
+    else if (breakat_ == NEXT_SCANLINE1 || breakat_ == NEXT_SCANLINE8) {
+        if (stepto_scanline_ == ppu.GetScanline()) {
+            Pause();
+            return true;
+        }
+    }
+    else if (breakat_ == NEXT_FRAME) {
+        // finish the current frame and pause
+        if (frame_rendered) {
+            Pause();
+            return true;
+        }
+    }
+    else {
+        if (frame_rendered)
+            return true;
+    }
+
+    return false;
+}
+
 void NES::UpdateFrame()
 {
     if (!IsRunning())
@@ -120,32 +147,14 @@ void NES::UpdateFrame()
 
         // run components
         const int cpu_cycles = cpu.IsSuspended() ? dma.Run() : cpu.Run();
-        const bool frame_ready = ppu.Run(cpu_cycles);
+        const bool frame_rendered = ppu.Run(cpu_cycles);
         apu.Run(cpu_cycles);
         cart_->Run(cpu_cycles);
 
         // break conditions
-        if (stepto_ == NEXT_INSTRUCTION) {
-            Pause();
+        const bool finish_update = handle_break_condition(frame_rendered);
+        if (finish_update)
             break;
-        }
-        else if (stepto_ == NEXT_SCANLINE1 || stepto_ == NEXT_SCANLINE8) {
-            if (stepto_scanline_ == ppu.GetScanline()) {
-                Pause();
-                break;
-            }
-        }
-        else if (stepto_ == NEXT_FRAME) {
-            // finish the current frame and pause
-            if (frame_ready) {
-                Pause();
-                break;
-            }
-        }
-        else {
-            if (frame_ready)
-                break;
-        }
     }
 
     if (frame_ % AUDIO_DELAY_FRAME == 0)
@@ -163,14 +172,14 @@ void NES::Run()
 {
     PlaySamples();
     is_running_ = true;
-    stepto_ = NOWHERE;
+    breakat_ = NOWHERE;
 }
 
 void NES::Pause()
 {
     PauseSamples();
     is_running_ = false;
-    stepto_ = NOWHERE;
+    breakat_ = NOWHERE;
 }
 
 bool NES::IsRunning() const
@@ -178,27 +187,32 @@ bool NES::IsRunning() const
     return is_running_;
 }
 
-void NES::StepTo(BreakAt stepto)
+void NES::StepTo(BreakAt breakat)
 {
     is_running_ = true;
-    stepto_ = stepto;
+    breakat_ = breakat;
 
-    if (stepto_ == NEXT_INSTRUCTION) {
+    switch (breakat_) {
+    case NEXT_INSTRUCTION:
         stepto_scanline_ = -1;
-    }
-    else if (stepto_ == NEXT_SCANLINE1) {
+        break;
+
+    case NEXT_SCANLINE1:
         stepto_scanline_ = ppu.GetScanline() + 1;
         if (stepto_scanline_ > 261)
             stepto_scanline_ = 0;
-    }
-    else if (stepto_ == NEXT_SCANLINE8) {
-        const int frac = ppu.GetScanline() % 8;
-        stepto_scanline_ = ppu.GetScanline() - frac + 8;
+        break;
+
+    case NEXT_SCANLINE8:
+        stepto_scanline_ = (ppu.GetScanline() / 8) * 8 + 8;
         if (stepto_scanline_ > 261)
             stepto_scanline_ = 0;
-    }
-    else if (stepto_ == NEXT_FRAME) {
+        break;
+
+    case NEXT_FRAME:
+    case NOWHERE:
         stepto_scanline_ = -1;
+        break;
     }
 }
 

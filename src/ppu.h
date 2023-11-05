@@ -45,6 +45,15 @@ struct Scroll {
     uint8_t fine_y = 0;
 };
 
+struct PpuStatus {
+    uint8_t ctrl = 0;
+    uint8_t mask = 0;
+    uint8_t stat = 0;
+    uint8_t fine_x = 0;
+    uint16_t vram_addr = 0;
+    uint16_t temp_addr = 0;
+};
+
 class PPU {
 public:
     PPU(FrameBuffer &fb) : fbuf_(fb) {}
@@ -93,6 +102,7 @@ public:
     int GetScanline() const;
     bool IsSprite8x16() const;
     Scroll GetScroll(int scanline) const;
+    PpuStatus GetPpuStatus() const;
 
 private:
     Cartridge *cart_ = nullptr;

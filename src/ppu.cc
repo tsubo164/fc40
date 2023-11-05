@@ -1122,4 +1122,18 @@ Scroll PPU::GetScroll(int scanline) const
     return scrolls_[scanline];
 }
 
+PpuStatus PPU::GetPpuStatus() const
+{
+    PpuStatus stat;
+
+    stat.ctrl = ctrl_;
+    stat.mask = mask_;
+    stat.stat = stat_;
+    stat.fine_x = fine_x_;
+    stat.vram_addr = vram_addr_;
+    stat.temp_addr = temp_addr_;
+
+    return stat;
+}
+
 } // namespace

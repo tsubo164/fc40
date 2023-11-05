@@ -53,7 +53,7 @@ public:
     void Run();
     void Pause();
     bool IsRunning() const;
-    void StepTo(BreakAt stepto);
+    void StepTo(BreakAt breakat);
 
     // debug
     uint64_t GetLogLineCount() const;
@@ -68,7 +68,7 @@ private:
 
     // state
     bool is_running_ = true;
-    BreakAt stepto_ = NOWHERE;
+    BreakAt breakat_ = NOWHERE;
     int stepto_scanline_ = 0;
 
     // serialization
@@ -85,6 +85,7 @@ private:
     }
 
     void update_audio_speed();
+    bool handle_break_condition(bool frame_rendered);
     bool need_log() const;
     void print_disassemble() const;
 };
