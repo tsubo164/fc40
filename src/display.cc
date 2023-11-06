@@ -321,18 +321,7 @@ void Display::render() const
     }
 
     if (!nes_.IsRunning()) {
-        const int cycle = nes_.ppu.GetCycle();
-        const int scanline = nes_.ppu.GetScanline();
-
-        glPushAttrib(GL_CURRENT_BIT);
-        glColor3f(0, 1, 1);
-        glBegin(GL_LINES);
-            glVertex2f(cycle, 0);
-            glVertex2f(cycle, H);
-            glVertex2f(0, scanline);
-            glVertex2f(W, scanline);
-        glEnd();
-        glPopAttrib();
+        render_scanline_guide(W, H);
     }
 
     glFlush();
@@ -723,6 +712,25 @@ void Display::render_sprite_box() const
         glEnd();
     }
 
+    glPopAttrib();
+}
+
+void Display::render_scanline_guide(int width, int height) const
+{
+    const int W = width;
+    const int H = height;
+
+    const int cycle = nes_.ppu.GetCycle();
+    const int scanline = nes_.ppu.GetScanline();
+
+    glPushAttrib(GL_CURRENT_BIT);
+    glColor3f(0, 1, 1);
+    glBegin(GL_LINES);
+        glVertex2f(cycle, 0);
+        glVertex2f(cycle, H);
+        glVertex2f(0, scanline);
+        glVertex2f(W, scanline);
+    glEnd();
     glPopAttrib();
 }
 

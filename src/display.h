@@ -49,6 +49,7 @@ private:
     void render_oam_table() const;
     void render_grid(int width, int height) const;
     void render_sprite_box() const;
+    void render_scanline_guide(int width, int height) const;
 
     void set_status_message(const std::string &message);
     void set_status_message(const std::string &message, MessageColor color, int duration);
