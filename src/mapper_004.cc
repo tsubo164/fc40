@@ -164,7 +164,7 @@ void Mapper_004::update_prg_bank_mapping()
         {R[6],   -2},
         {R[7], R[7]},
         {  -2, R[6]},
-        {  -1,   -2}
+        {  -1,   -1}
     };
 
     for (int i = 0; i < prg_.window_count(); i++)
