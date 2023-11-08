@@ -11,6 +11,9 @@ Mapper_010::Mapper_010(const std::vector<uint8_t> &prg_rom,
     prg_.select(1, -1);
 
     use_prg_ram(0x2000);
+
+    latch_0_ = 0xFE;
+    latch_1_ = 0xFE;
 }
 
 Mapper_010::~Mapper_010()
