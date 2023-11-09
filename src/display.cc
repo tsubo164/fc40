@@ -343,6 +343,7 @@ void Display::render_overlay(double elapsed) const
         render_channel_status();
         render_status_message();
         render_sprite_info();
+        render_cpu_info();
         render_ppu_info();
 
         glPopMatrix();
@@ -462,20 +463,68 @@ void Display::render_sprite_info() const
     draw_text(text, X, Y + 8 * offset++, TEXT_OUTLINE);
 }
 
-void Display::render_ppu_info() const
+void Display::render_cpu_info() const
 {
     if (nes_.IsRunning())
         return;
 
-    const PpuStatus stat = nes_.ppu.GetPpuStatus();
+    const CpuStatus stat = nes_.cpu.GetStatus();
 
     const int STEP_Y = 10;
     int offset = 0;
     int x = 16;
     int y = 32;
 
-    std::string text = "PPU";
+    glPushAttrib(GL_CURRENT_BIT);
+    glColor3f(0.5f, 1.0f, 0.5f);
+        std::string text = "CPU";
+        draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+    glPopAttrib();
+
+    char buf[16] = {'\0'};
+
+    sprintf(buf, "$%04X", stat.pc);
+    text = std::string("PC: ") + buf;
     draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+
+    sprintf(buf, "$%02X", stat.a);
+    text = std::string("A: ") + buf;
+    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+
+    sprintf(buf, "$%02X", stat.x);
+    text = std::string("X: ") + buf;
+    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+
+    sprintf(buf, "$%02X", stat.y);
+    text = std::string("Y: ") + buf;
+    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+
+    sprintf(buf, "$%02X", stat.p);
+    text = std::string("P: ") + buf;
+    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+
+    sprintf(buf, "$%02X", stat.s);
+    text = std::string("S: ") + buf;
+    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+}
+
+void Display::render_ppu_info() const
+{
+    if (nes_.IsRunning())
+        return;
+
+    const PpuStatus stat = nes_.ppu.GetStatus();
+
+    const int STEP_Y = 10;
+    int offset = 0;
+    int x = 16;
+    int y = 32 + 64 + 16;
+
+    glPushAttrib(GL_CURRENT_BIT);
+    glColor3f(0.5f, 1.0f, 0.5f);
+        std::string text = "PPU";
+        draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+    glPopAttrib();
 
     text = std::string("cycle: ") + std::to_string(nes_.ppu.GetCycle());
     draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);

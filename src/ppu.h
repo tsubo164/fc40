@@ -102,7 +102,7 @@ public:
     int GetScanline() const;
     bool IsSprite8x16() const;
     Scroll GetScroll(int scanline) const;
-    PpuStatus GetPpuStatus() const;
+    PpuStatus GetStatus() const;
 
 private:
     Cartridge *cart_ = nullptr;

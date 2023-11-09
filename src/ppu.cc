@@ -1122,7 +1122,7 @@ Scroll PPU::GetScroll(int scanline) const
     return scrolls_[scanline];
 }
 
-PpuStatus PPU::GetPpuStatus() const
+PpuStatus PPU::GetStatus() const
 {
     PpuStatus stat;
 
