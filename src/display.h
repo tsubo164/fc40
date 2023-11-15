@@ -43,8 +43,9 @@ private:
     void render_channel_status() const;
     void render_status_message() const;
     void render_sprite_info() const;
-    void render_cpu_info() const;
-    void render_ppu_info() const;
+    int render_cpu_info(int x, int y, int step_y) const;
+    int render_ppu_info(int x, int y, int step_y) const;
+    int render_cart_info(int x, int y, int step_y) const;
 
     void render_pattern_table() const;
     void render_oam_table() const;

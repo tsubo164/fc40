@@ -6,6 +6,7 @@
 #include <vector>
 #include <memory>
 #include <array>
+#include "bank_map.h"
 #include "serialize.h"
 
 namespace nes {
@@ -37,6 +38,8 @@ public:
     size_t GetChrRomSize() const;
     size_t GetPrgRamSize() const;
     size_t GetChrRamSize() const;
+    void GetPrgBankInfo(BankInfo &info) const;
+    void GetChrBankInfo(BankInfo &ifno) const;
 
     std::vector<uint8_t> GetPrgRam() const;
     void SetPrgRam(const std::vector<uint8_t> &sram);
@@ -120,6 +123,9 @@ private:
     virtual void do_ppu_clock(int cycle, int scanline) {}
     virtual void do_cpu_clock() {}
     virtual void do_serialize(Archive &ar) {}
+
+    virtual void do_get_prg_bank_info(BankInfo &info) const {}
+    virtual void do_get_chr_bank_info(BankInfo &ifno) const {}
 
     int nametable_index(uint16_t addr) const;
 };

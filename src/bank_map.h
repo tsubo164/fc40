@@ -57,6 +57,11 @@ public:
             return 0;
     }
 
+    int bank_count() const
+    {
+        return bank_count_;
+    }
+
     constexpr int window_count() const
     {
         return WINDOW_COUNT;
@@ -76,6 +81,24 @@ private:
         SERIALIZE_NAMESPACE_END(ar);
     }
 };
+
+struct BankInfo {
+    std::vector<int> selected;
+    int bank_count;
+};
+
+template<Size BANK_SIZE, int WINDOW_COUNT>
+void GetBankInfo(const bank_map<BANK_SIZE, WINDOW_COUNT> &map, BankInfo &info)
+{
+    const int N = map.window_count();
+    info.selected.resize(N);
+
+    for (int i = 0; i < N; i++) {
+        info.selected[i] = map.bank(i);
+    }
+
+    info.bank_count = map.bank_count();
+}
 
 } // namespace
 

@@ -80,6 +80,16 @@ size_t Mapper::GetChrRamSize() const
     return chr_ram_.size();
 }
 
+void Mapper::GetPrgBankInfo(BankInfo &info) const
+{
+    do_get_prg_bank_info(info);
+}
+
+void Mapper::GetChrBankInfo(BankInfo &info) const
+{
+    do_get_chr_bank_info(info);
+}
+
 std::vector<uint8_t> Mapper::GetPrgRam() const
 {
     return prg_ram_;

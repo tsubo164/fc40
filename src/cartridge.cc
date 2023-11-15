@@ -1,7 +1,6 @@
 #include <iostream>
 #include <fstream>
 #include "cartridge.h"
-#include "mapper.h"
 
 namespace nes {
 
@@ -141,6 +140,26 @@ size_t Cartridge::GetPrgSize() const
 size_t Cartridge::GetChrSize() const
 {
     return mapper_->GetChrRomSize();
+}
+
+void Cartridge::GetCartridgeStatus(CartridgeStatus &stat) const
+{
+    stat.mapper_id = GetMapperID();
+    stat.mirroring = mapper_->GetMirroring();
+    stat.has_battery = HasBattery();
+
+    stat.prg_size = GetPrgSize();
+    stat.chr_size = GetChrSize();
+
+    BankInfo info;
+
+    mapper_->GetPrgBankInfo(info);
+    stat.prg_bank_count = info.bank_count;
+    stat.prg_selected = info.selected;
+
+    mapper_->GetChrBankInfo(info);
+    stat.chr_bank_count = info.bank_count;
+    stat.chr_selected = info.selected;
 }
 
 void Cartridge::SetNameTable(std::array<uint8_t,2048> *nt)

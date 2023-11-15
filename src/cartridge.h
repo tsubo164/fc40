@@ -12,6 +12,20 @@
 
 namespace nes {
 
+struct CartridgeStatus {
+    int mapper_id = 0;
+    int mirroring = 0;
+    bool has_battery = false;
+
+    size_t prg_size = 0;
+    size_t chr_size = 0;
+
+    int prg_bank_count = 0;
+    int chr_bank_count = 0;
+    std::vector<int> prg_selected;
+    std::vector<int> chr_selected;
+};
+
 class Cartridge {
 public:
     Cartridge();
@@ -31,6 +45,7 @@ public:
     int GetMapperID() const;
     size_t GetPrgSize() const;
     size_t GetChrSize() const;
+    void GetCartridgeStatus(CartridgeStatus &stat) const;
     void SetNameTable(std::array<uint8_t,2048> *nt);
 
     bool IsSetIRQ() const;

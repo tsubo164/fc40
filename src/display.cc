@@ -343,8 +343,16 @@ void Display::render_overlay(double elapsed) const
         render_channel_status();
         render_status_message();
         render_sprite_info();
-        render_cpu_info();
-        render_ppu_info();
+
+        if (!nes_.IsRunning()) {
+            const int STEP_Y = 10;
+            int next_y = 32;
+            const int x = 16;
+
+            next_y = render_cpu_info(x, next_y, STEP_Y);
+            next_y = render_ppu_info(x, next_y + STEP_Y, STEP_Y);
+            next_y = render_cart_info(x, next_y + STEP_Y, STEP_Y);
+        }
 
         glPopMatrix();
     }
@@ -463,100 +471,148 @@ void Display::render_sprite_info() const
     draw_text(text, X, Y + 8 * offset++, TEXT_OUTLINE);
 }
 
-void Display::render_cpu_info() const
+int Display::render_cpu_info(int x, int y, int step_y) const
 {
-    if (nes_.IsRunning())
-        return;
-
     const CpuStatus stat = nes_.cpu.GetStatus();
-
-    const int STEP_Y = 10;
+    char buf[16] = {'\0'};
     int offset = 0;
-    int x = 16;
-    int y = 32;
 
     glPushAttrib(GL_CURRENT_BIT);
     glColor3f(0.5f, 1.0f, 0.5f);
         std::string text = "CPU";
-        draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+        draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
     glPopAttrib();
-
-    char buf[16] = {'\0'};
 
     sprintf(buf, "$%04X", stat.pc);
     text = std::string("PC: ") + buf;
-    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+    draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
 
     sprintf(buf, "$%02X", stat.a);
     text = std::string("A: ") + buf;
-    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+    draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
 
     sprintf(buf, "$%02X", stat.x);
     text = std::string("X: ") + buf;
-    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+    draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
 
     sprintf(buf, "$%02X", stat.y);
     text = std::string("Y: ") + buf;
-    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+    draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
 
     sprintf(buf, "$%02X", stat.p);
     text = std::string("P: ") + buf;
-    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+    draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
 
     sprintf(buf, "$%02X", stat.s);
     text = std::string("S: ") + buf;
-    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+    draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
+
+    return y + step_y * offset;
 }
 
-void Display::render_ppu_info() const
+int Display::render_ppu_info(int x, int y, int step_y) const
 {
-    if (nes_.IsRunning())
-        return;
-
     const PpuStatus stat = nes_.ppu.GetStatus();
-
-    const int STEP_Y = 10;
+    char buf[16] = {'\0'};
     int offset = 0;
-    int x = 16;
-    int y = 32 + 64 + 16;
 
     glPushAttrib(GL_CURRENT_BIT);
     glColor3f(0.5f, 1.0f, 0.5f);
         std::string text = "PPU";
-        draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+        draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
     glPopAttrib();
 
     text = std::string("cycle: ") + std::to_string(nes_.ppu.GetCycle());
-    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+    draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
 
     text = std::string("scanlin: ") + std::to_string(nes_.ppu.GetScanline());
-    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
-
-    char buf[16] = {'\0'};
+    draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
 
     sprintf(buf, "$%02X", stat.ctrl);
     text = std::string("ctrl: ") + buf;
-    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+    draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
 
     sprintf(buf, "$%02X", stat.mask);
     text = std::string("mask: ") + buf;
-    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+    draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
 
     sprintf(buf, "$%02X", stat.stat);
     text = std::string("stat: ") + buf;
-    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+    draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
 
     sprintf(buf, "$%02X", stat.fine_x);
     text = std::string("fine_x: ") + buf;
-    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+    draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
 
     sprintf(buf, "$%04X", stat.vram_addr);
     text = std::string("vram_addr: ") + buf;
-    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+    draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
 
     sprintf(buf, "$%04X", stat.temp_addr);
     text = std::string("temp_addr: ") + buf;
-    draw_text(text, x, y + STEP_Y * offset++, TEXT_OUTLINE);
+    draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
+
+    return y + step_y * offset;
+}
+
+int Display::render_cart_info(int x, int y, int step_y) const
+{
+    const Cartridge *cart = nes_.GetCartridge();
+    char buf[16] = {'\0'};
+    int offset = 0;
+
+    CartridgeStatus stat;
+    cart->GetCartridgeStatus(stat);
+
+    glPushAttrib(GL_CURRENT_BIT);
+    glColor3f(0.5f, 1.0f, 0.5f);
+        std::string text = "Cartridge";
+        draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
+    glPopAttrib();
+
+    sprintf(buf, "%03d", stat.mapper_id);
+    text = std::string("iNES Mapper: ") + buf;
+    draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
+
+    sprintf(buf, "%luKB", stat.prg_size / 1024);
+    text = std::string("PRG: ") + buf;
+    draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
+
+    sprintf(buf, "%luKB", stat.chr_size / 1024);
+    text = std::string("CHR: ") + buf;
+    draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
+
+    sprintf(buf, "%d", stat.has_battery);
+    text = std::string("Battery Present: ") + buf;
+    draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
+
+    sprintf(buf, "%d", stat.mirroring);
+    text = std::string("Mirroring: ") + buf;
+    draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
+
+    offset++;
+
+    sprintf(buf, "%d", stat.prg_bank_count);
+    text = std::string("PRG bank count: ") + buf;
+    draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
+
+    for (int i = 0; i < stat.prg_selected.size(); i++) {
+        sprintf(buf, "[%d]: %d", i, stat.prg_selected[i]);
+        text = std::string("  PRG") + buf;
+        draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
+    }
+
+    sprintf(buf, "%d", stat.chr_bank_count);
+    text = std::string("CHR bank count: ") + buf;
+    draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
+
+    for (int i = 0; i < stat.chr_selected.size(); i++) {
+        sprintf(buf, "[%d]: %d", i, stat.chr_selected[i]);
+        text = std::string("  CHR") + buf;
+        draw_text(text, x, y + step_y * offset++, TEXT_OUTLINE);
+    }
+
+    return y + step_y * offset;
 }
 
 void Display::render_pattern_table() const

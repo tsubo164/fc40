@@ -58,4 +58,14 @@ void Mapper_003::do_write_chr(uint16_t addr, uint8_t data)
 {
 }
 
+void Mapper_003::do_get_prg_bank_info(BankInfo &info) const
+{
+    GetBankInfo(prg_, info);
+}
+
+void Mapper_003::do_get_chr_bank_info(BankInfo &info) const
+{
+    GetBankInfo(chr_, info);
+}
+
 } // namespace
