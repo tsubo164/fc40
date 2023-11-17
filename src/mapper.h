@@ -124,8 +124,8 @@ private:
     virtual void do_cpu_clock() {}
     virtual void do_serialize(Archive &ar) {}
 
-    virtual void do_get_prg_bank_info(BankInfo &info) const {}
-    virtual void do_get_chr_bank_info(BankInfo &ifno) const {}
+    virtual void do_get_prg_bank_info(BankInfo &info) const = 0;
+    virtual void do_get_chr_bank_info(BankInfo &ifno) const = 0;
 
     int nametable_index(uint16_t addr) const;
 };

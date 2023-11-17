@@ -2,7 +2,6 @@
 #define MAPPER_019_H
 
 #include "mapper.h"
-#include "bank_map.h"
 #include <array>
 
 namespace nes {
@@ -50,6 +49,9 @@ private:
     void do_write_prg(uint16_t addr, uint8_t data) override final;
     void do_write_chr(uint16_t addr, uint8_t data) override final;
     void do_write_nametable(uint16_t addr, uint8_t data) override final;
+
+    void do_get_prg_bank_info(BankInfo &info) const override;
+    void do_get_chr_bank_info(BankInfo &ifno) const override;
 
     void do_cpu_clock() override final;
 };

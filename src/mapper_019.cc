@@ -266,6 +266,16 @@ void Mapper_019::write_chr(uint16_t addr, uint8_t data)
     }
 }
 
+void Mapper_019::do_get_prg_bank_info(BankInfo &info) const
+{
+    GetBankInfo(prg_, info);
+}
+
+void Mapper_019::do_get_chr_bank_info(BankInfo &info) const
+{
+    GetBankInfo(chr_, info);
+}
+
 void Mapper_019::do_cpu_clock()
 {
     if (!irq_enabled_)
