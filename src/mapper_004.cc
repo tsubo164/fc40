@@ -265,6 +265,16 @@ void Mapper_004::irq_enable(uint8_t data)
     irq_enabled_ = true;
 }
 
+void Mapper_004::do_get_prg_bank_info(BankInfo &info) const
+{
+    GetBankInfo(prg_, info);
+}
+
+void Mapper_004::do_get_chr_bank_info(BankInfo &info) const
+{
+    GetBankInfo(chr_, info);
+}
+
 void Mapper_004::do_ppu_clock(int cycle, int scanline)
 {
     if (cycle != 261)
@@ -290,16 +300,6 @@ void Mapper_004::do_ppu_clock(int cycle, int scanline)
     if (irq_counter_ == 0 && irq_enabled_) {
         set_irq();
     }
-}
-
-void Mapper_004::do_get_prg_bank_info(BankInfo &info) const
-{
-    GetBankInfo(prg_, info);
-}
-
-void Mapper_004::do_get_chr_bank_info(BankInfo &info) const
-{
-    GetBankInfo(chr_, info);
 }
 
 } // namespace

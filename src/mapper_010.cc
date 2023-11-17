@@ -154,4 +154,30 @@ void Mapper_010::do_write_chr(uint16_t addr, uint8_t data)
 {
 }
 
+void Mapper_010::do_get_prg_bank_info(BankInfo &info) const
+{
+    GetBankInfo(prg_, info);
+}
+
+void Mapper_010::do_get_chr_bank_info(BankInfo &info) const
+{
+    info.selected.resize(2);
+
+    if (latch_0_ == 0xFD) {
+        info.selected[0] = chr_fd_.bank(0);
+    }
+    if (latch_0_ == 0xFE) {
+        info.selected[0] = chr_fe_.bank(0);
+    }
+
+    if (latch_1_ == 0xFD) {
+        info.selected[1] = chr_fd_.bank(1);
+    }
+    if (latch_1_ == 0xFE) {
+        info.selected[1] = chr_fe_.bank(1);
+    }
+
+    info.bank_count = chr_fd_.bank_count();
+}
+
 } // namespace
