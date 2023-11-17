@@ -100,6 +100,15 @@ void GetBankInfo(const bank_map<BANK_SIZE, WINDOW_COUNT> &map, BankInfo &info)
     info.bank_count = map.bank_count();
 }
 
+inline
+void GetDefaultBankInfo(BankInfo &info)
+{
+    info.selected.resize(1);
+    info.selected[0] = 0;
+
+    info.bank_count = 1;
+}
+
 } // namespace
 
 #endif // _H
