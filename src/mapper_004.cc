@@ -292,4 +292,14 @@ void Mapper_004::do_ppu_clock(int cycle, int scanline)
     }
 }
 
+void Mapper_004::do_get_prg_bank_info(BankInfo &info) const
+{
+    GetBankInfo(prg_, info);
+}
+
+void Mapper_004::do_get_chr_bank_info(BankInfo &info) const
+{
+    GetBankInfo(chr_, info);
+}
+
 } // namespace

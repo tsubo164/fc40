@@ -387,4 +387,14 @@ void Mapper_001::write_chr_bank(int window, uint8_t data)
     }
 }
 
+void Mapper_001::do_get_prg_bank_info(BankInfo &info) const
+{
+    GetBankInfo(prg_, info);
+}
+
+void Mapper_001::do_get_chr_bank_info(BankInfo &info) const
+{
+    GetBankInfo(chr_, info);
+}
+
 } // namespace
