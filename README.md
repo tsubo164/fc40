@@ -1,4 +1,4 @@
-# Famulator: A Famicom/NES Emulator
+# fc40: A Famicom/NES Emulator
 
 <img src ="./image/smb_debug.png" width=656>
 
