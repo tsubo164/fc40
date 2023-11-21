@@ -36,32 +36,40 @@
 - Emulator pause and play  -> `Space` key
     - Displaying pause status on the bottom of screen when paused
     - Displaying information on CPU, PPU and cartridge on the left
+
     <img src ="./image/smb_debug.png" width=164>
 - Display Tile Grid -> `G` key
     - The background tile grid follows the PPU scroll per scanline
+
     <img src ="./image/zelda_debug.png" width=164>
-    - The sprite grid shows the OAM data when the cursor hovers      
+
+    - The sprite grid shows the OAM data when the cursor hovers
+
     <img src ="./image/rockman_2_debug.png" width=164>
 - Display Tiles and OAM -> `P` and `O` keys
     - Updating their graphics per frame in real time
     - Tile pattern and OAM pattern can be turned on/off independently
+
     <img src ="./image/final_fantasy_3_debug.png" width=164>
 - Stepping through instructions, scanlines and frames  -> `7` to `0` keys
     - Displaying PPU cycle and scanline in blue lines
     - Step to next instruction -> Pause emulator then hit `7`
     - Step to next scanline -> Pause emulator then hit `8`
     - Step to next 8th scanline -> Pause emulator then hit `9`
-    - Step to next frame -> Pause emulator then hit `0`    
+    - Step to next frame -> Pause emulator then hit `0`
+
     <img src ="./image/dr_mario_debug.png" width=164>
 - Turning on/off individual audio channels -> `` ` `` and `1` to `5` keys
     - Mute/unmute all channels -> `` ` `` key
     - Mute/unmute individual channel -> `1` to `5` keys
     - Displaying channel status on top of screen unless playing them all
+
     <img src ="./image/fire_emblem_debug.png" width=164>
 - Information on CPU, PPU and Cartridge
     - Displaying the CPU registers when paused
     - Displaying the PPU registers when paused
     - Displaying the cartridge registers including bank info
+
     <img src ="./image/smb_3_debug.png" width=164>
 - Save/Load emulator statu
     - `F1` to save and `F2` to load
@@ -87,8 +95,10 @@
             5F 5F 5F 00 FA 5F FA 00  00 00 00 00 05 1C 05 00
             ...
         ```
-    - Modifying the work RAM allows cheating    
+    - Modifying the work RAM allows cheating
+
     <img src ="./image/dragon_quest_2_debug.png" width=164>
+
 - Battery backed up RAM
     - The RAM file name is `nes_file_name.nes.sram`
     - The RAM file is raw binary format which means there is compatibility with some other emulators
