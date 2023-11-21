@@ -40,7 +40,7 @@
 - Display Tile Grid -> `G` key
     - The background tile grid follows the PPU scroll per scanline
     <img src ="./image/zelda_debug.png" width=164>
-    - The sprite grid shows the OAM data when the cursor hovers 
+    - The sprite grid shows the OAM data when the cursor hovers      
     <img src ="./image/rockman_2_debug.png" width=164>
 - Display Tiles and OAM -> `P` and `O` keys
     - Updating their graphics per frame in real time
