@@ -48,6 +48,7 @@ private:
     int render_cart_info(int x, int y, int step_y) const;
 
     void render_pattern_table() const;
+    void render_palette_table() const;
     void render_oam_table() const;
     void render_grid(int width, int height) const;
     void render_sprite_box() const;

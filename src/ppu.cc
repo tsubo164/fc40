@@ -1136,4 +1136,12 @@ PpuStatus PPU::GetStatus() const
     return stat;
 }
 
+Color PPU::GetPaletteColor(uint8_t palette_id, uint8_t value) const
+{
+    const uint16_t addr = 0x3F00 + 4 * palette_id + value;
+    const uint8_t index = read_byte(addr);
+
+    return get_color(index);
+}
+
 } // namespace

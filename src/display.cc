@@ -313,6 +313,7 @@ void Display::render() const
     if (show_patt_) {
         LoadPatternTable(nes_.patt, nes_.GetCartridge());
         render_pattern_table();
+        render_palette_table();
     }
 
     if (show_oam_) {
@@ -660,8 +661,47 @@ void Display::render_pattern_table() const
         glVertex2f(W/2, 0);
         glVertex2f(W/2, H);
     glEnd();
-    glPopAttrib();
 
+    glPopAttrib();
+    glPopMatrix();
+}
+
+void Display::render_palette_table() const
+{
+    const int H = nes_.patt.Height();
+    const int SIZE = 8;
+
+    glPushMatrix();
+    glPushAttrib(GL_CURRENT_BIT);
+    glTranslatef(0, RESY / 2.0 - H / 2.0 - SIZE, 0);
+
+    for (int palette_id = 0; palette_id < 8; palette_id++) {
+        // Palettes
+        glBegin(GL_QUADS);
+        for (int value = 0; value < 4; value++) {
+            const float offsetx = (4 * palette_id + value) * SIZE;
+            const Color color = nes_.ppu.GetPaletteColor(palette_id, value);
+
+            glColor3f(color.r / 255., color.g / 255., color.b / 255.);
+            glVertex2f(offsetx + 0,    SIZE);
+            glVertex2f(offsetx + SIZE, SIZE);
+            glVertex2f(offsetx + SIZE, 0);
+            glVertex2f(offsetx + 0,    0);
+        }
+        glEnd();
+
+        // Outlines
+        glColor3f(1, 1, 1);
+        glBegin(GL_LINE_LOOP);
+            const float offsetx = 4 * palette_id * SIZE;
+            glVertex2f(offsetx + 0,        SIZE);
+            glVertex2f(offsetx + SIZE * 4, SIZE);
+            glVertex2f(offsetx + SIZE * 4, 0);
+            glVertex2f(offsetx + 0,        0);
+        glEnd();
+    }
+
+    glPopAttrib();
     glPopMatrix();
 }
 

@@ -103,6 +103,7 @@ public:
     bool IsSprite8x16() const;
     Scroll GetScroll(int scanline) const;
     PpuStatus GetStatus() const;
+    Color GetPaletteColor(uint8_t palette_id, uint8_t value) const;
 
 private:
     Cartridge *cart_ = nullptr;

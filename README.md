@@ -49,6 +49,7 @@
 - Display Tiles and OAM -> `P` and `O` keys
     - Updating their graphics per frame in real time
     - Tile pattern and OAM pattern can be turned on/off independently
+    - Palette table is also displayed with pattern table
 
     <img src ="./image/final_fantasy_3_debug.png" width=164>
 - Stepping through instructions, scanlines and frames  -> `7` to `0` keys
