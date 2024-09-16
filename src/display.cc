@@ -673,7 +673,7 @@ void Display::render_palette_table() const
 
     glPushMatrix();
     glPushAttrib(GL_CURRENT_BIT);
-    glTranslatef(0, RESY / 2.0 - H / 2.0 - SIZE, 0);
+    glTranslatef(0, RESY / 2.0 + H / 2.0, 0);
 
     for (int palette_id = 0; palette_id < 8; palette_id++) {
         // Palettes
